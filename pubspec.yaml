@@ -1,0 +1,50 @@
+name: nekoton_flutter
+description: Flutter plugin for TON wallets core
+version: 0.1.0
+author: "Vadim Ledyaev <vl@pmobi.tech>"
+homepage: "https://github.com/broxus/nekoton-flutter"
+
+environment:
+  sdk: ">=2.13.0 <3.0.0"
+  flutter: ">=2.2.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  dio: ^4.0.0
+  ffi: ^1.0.0
+  freezed_annotation: ^0.14.2
+  hive: ^2.0.4
+  hive_flutter: ^1.0.0
+  json_annotation: ^4.0.0
+  logger: ^1.0.0
+  recase: ^4.0.0
+  rxdart: ^0.27.0
+  synchronized: ^3.0.0
+  tuple: ^2.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  build_runner: ^2.0.3
+  ffigen: ^3.0.0
+  freezed: ^0.14.2
+  json_serializable: ^4.1.2
+  lint: ^1.5.3
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: com.broxus.nekoton_flutter
+        pluginClass: NekotonFlutterPlugin
+      ios:
+        pluginClass: NekotonFlutterPlugin
+
+ffigen:
+  name: "Bindings"
+  description: "Generated bindings"
+  output: "lib/src/bindings.g.dart"
+  headers:
+    entry-points:
+      - "rust/target/bindings.h"

@@ -1,0 +1,4 @@
+enum PollingMethod {
+  manual,
+  reliable,
+}
