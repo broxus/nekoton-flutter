@@ -96,7 +96,7 @@ class Nekoton {
 
   Future<void> setCurrentKey(KeySubject? currentKey) async {
     _currentKeySubject.add(currentKey);
-    _updateSubscriptions(currentKey);
+    await _updateSubscriptions(currentKey);
   }
 
   Future<KeySubject> addKey(CreateKeyInput createKeyInput) async {
