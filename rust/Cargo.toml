@@ -22,7 +22,7 @@ lazy_static = "1.4"
 nekoton = {git = "https://github.com/broxus/nekoton.git", features = ["gql_transport"]}
 nekoton-abi = {git = "https://github.com/broxus/nekoton.git"}
 nekoton-contracts = {git = "https://github.com/broxus/nekoton.git"}
-nekoton-depool = {git = "https://git.pmobi.tech/plugins/nekoton-depool.git"}
+nekoton-depool = {git = "https://github.com/broxus/nekoton-depool.git"}
 nekoton-derive = {git = "https://github.com/broxus/nekoton.git"}
 nekoton-utils = {git = "https://github.com/broxus/nekoton.git"}
 openssl = {version = "0.10", features = ["vendored"]}
