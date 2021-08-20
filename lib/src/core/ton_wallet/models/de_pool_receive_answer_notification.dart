@@ -8,7 +8,7 @@ part 'de_pool_receive_answer_notification.g.dart';
 class DePoolReceiveAnswerNotification with _$DePoolReceiveAnswerNotification {
   @JsonSerializable(fieldRename: FieldRename.snake)
   const factory DePoolReceiveAnswerNotification({
-    required String errorCode,
+    required int errorCode,
     required String comment,
   }) = _DePoolReceiveAnswerNotification;
 
