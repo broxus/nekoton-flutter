@@ -299,6 +299,23 @@ class Nekoton {
     await _clearSubscriptions();
   }
 
+  Future<void> findAndSubscribeToExistingWallets(String publicKey) async {
+    final wallets = await findExistingWallets(
+      publicKey: publicKey,
+      workchainId: _workchain,
+    );
+
+    final activeWallets = wallets.where((e) => e.contractState.isDeployed || e.contractState.balance != "0");
+
+    for (final activeWallet in activeWallets) {
+      await addAccount(
+        name: activeWallet.walletType.describe(),
+        publicKey: publicKey,
+        walletType: activeWallet.walletType,
+      );
+    }
+  }
+
   Future<void> _updateSubscriptions(KeySubject? currentKey) async {
     try {
       final subscriptions = [..._subscriptionsSubject.value];

@@ -35,3 +35,21 @@ extension ToInt on WalletType {
         walletV3: () => 0,
       );
 }
+
+extension Describe on WalletType {
+  String describe() => when(
+        multisig: (multisigType) {
+          switch (multisigType) {
+            case MultisigType.safeMultisigWallet:
+              return "SafeMultisig";
+            case MultisigType.safeMultisigWallet24h:
+              return "SafeMultisig24";
+            case MultisigType.setcodeMultisigWallet:
+              return "SetcodeMultisig";
+            case MultisigType.surfWallet:
+              return "Surf";
+          }
+        },
+        walletV3: () => "WalletV3",
+      );
+}
