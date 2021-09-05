@@ -818,6 +818,7 @@ pub unsafe extern "C" fn ton_wallet_prepare_transfer(
         let (expiration, destination, body) = match result {
             Ok((expiration, destination, body)) => (expiration, destination, body),
             Err(error) => {
+                *ton_wallet_guard = Some(ton_wallet);
                 let result = match_result(Err(error));
                 send_to_result_port(result_port, result);
                 return;
@@ -1325,11 +1326,11 @@ pub unsafe extern "C" fn ton_wallet_send(
         let mut keystore = match keystore {
             Some(keystore) => keystore,
             None => {
+                *ton_wallet_guard = Some(ton_wallet);
                 let result = match_result(Err(NativeError {
                     status: NativeStatus::KeyStoreError,
                     info: KEY_STORE_NOT_FOUND.to_owned(),
                 }));
-                *ton_wallet_guard = Some(ton_wallet);
                 send_to_result_port(result_port, result);
                 return;
             }

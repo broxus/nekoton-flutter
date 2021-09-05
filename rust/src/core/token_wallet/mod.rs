@@ -393,11 +393,11 @@ pub unsafe extern "C" fn token_wallet_prepare_deploy(
         let mut ton_wallet = match ton_wallet {
             Some(ton_wallet) => ton_wallet,
             None => {
+                *token_wallet_guard = Some(token_wallet);
                 let result = match_result(Err(NativeError {
                     status: NativeStatus::TonWalletError,
                     info: TON_WALLET_NOT_FOUND.to_owned(),
                 }));
-                *token_wallet_guard = Some(token_wallet);
                 send_to_result_port(result_port, result);
                 return;
             }
@@ -500,11 +500,11 @@ pub unsafe extern "C" fn token_wallet_prepare_transfer(
         let mut ton_wallet = match ton_wallet {
             Some(ton_wallet) => ton_wallet,
             None => {
+                *token_wallet_guard = Some(token_wallet);
                 let result = match_result(Err(NativeError {
                     status: NativeStatus::TonWalletError,
                     info: TON_WALLET_NOT_FOUND.to_owned(),
                 }));
-                *token_wallet_guard = Some(token_wallet);
                 send_to_result_port(result_port, result);
                 return;
             }
