@@ -16,6 +16,7 @@ pub struct NativeError {
 
 pub enum NativeStatus {
     Success,
+    MutexError,
     ConversionError,
     AccountsStorageError,
     KeyStoreError,

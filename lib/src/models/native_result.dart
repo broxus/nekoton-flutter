@@ -19,6 +19,8 @@ extension Handle on NativeResult {
     switch (status) {
       case NativeStatus.success:
         return payload;
+      case NativeStatus.mutexError:
+        throw MutexException(cStringToDart(payload));
       case NativeStatus.conversionError:
         throw ConversionException(cStringToDart(payload));
       case NativeStatus.accountsStorageError:

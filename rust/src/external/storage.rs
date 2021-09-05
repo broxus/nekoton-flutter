@@ -1,4 +1,4 @@
-use crate::{runtime, FromPtr, RUNTIME};
+use crate::{match_result, models::NativeError, runtime, FromPtr, RUNTIME};
 use allo_isolate::Isolate;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
@@ -6,17 +6,43 @@ use nekoton::external::Storage;
 use serde::Serialize;
 use std::{
     ffi::c_void,
-    os::raw::{c_char, c_uint},
+    os::raw::{c_char, c_longlong, c_uint, c_ulonglong},
     sync::Arc,
+    u64,
 };
 use tokio::sync::{
     oneshot::{self, Sender},
     Mutex,
 };
 
-type MutexStorageSender = Mutex<Option<Sender<Result<Option<String>, String>>>>;
+pub type MutexStorage = Mutex<Arc<StorageImpl>>;
+pub type MutexStorageSender = Mutex<Option<Sender<Result<Option<String>, String>>>>;
 
 const STORAGE_REQUEST_ERROR: &str = "Unable to make storage request";
+
+#[no_mangle]
+pub unsafe extern "C" fn get_storage(port: c_longlong) -> *mut c_void {
+    let result = internal_get_storage(port);
+    match_result(result)
+}
+
+fn internal_get_storage(port: c_longlong) -> Result<u64, NativeError> {
+    let storage = StorageImpl { port };
+    let storage = Arc::new(storage);
+    let storage = Mutex::new(storage);
+    let storage = Arc::new(storage);
+
+    let ptr = Arc::into_raw(storage) as *mut c_void;
+    let ptr = ptr as c_ulonglong;
+
+    Ok(ptr)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn free_storage(storage: *mut c_void) {
+    let storage = storage as *mut MutexStorage;
+    Arc::from_raw(storage);
+}
 
 pub struct StorageImpl {
     pub port: i64,

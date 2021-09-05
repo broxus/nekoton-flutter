@@ -28,55 +28,8 @@ import 'models/symbol.dart';
 import 'models/token_wallet_transaction_with_data.dart';
 import 'models/token_wallet_version.dart';
 
-Future<TokenWallet> tokenWalletSubscribe({
-  required TonWallet tonWallet,
-  required String rootTokenContract,
-  Logger? logger,
-}) async {
-  final tokenWallet = TokenWallet._();
-
-  tokenWallet._logger = logger;
-
-  tokenWallet._tonWallet = tonWallet;
-  tokenWallet._subscription = tokenWallet._receivePort.listen(tokenWallet._subscriptionListener);
-  tokenWallet._gql = await Gql.getInstance(logger: tokenWallet._logger);
-
-  final tonWalletAddress = tokenWallet._tonWallet.address;
-  final result = await proceedAsync((port) => tokenWallet._nativeLibrary.bindings.token_wallet_subscribe(
-        port,
-        tokenWallet._receivePort.sendPort.nativePort,
-        tokenWallet._gql.nativeTransport.ptr!,
-        tonWalletAddress.toNativeUtf8().cast<Int8>(),
-        rootTokenContract.toNativeUtf8().cast<Int8>(),
-      ));
-  final ptr = Pointer.fromAddress(result).cast<Void>();
-
-  tokenWallet._nativeTokenWallet = NativeTokenWallet(ptr);
-  tokenWallet._timer = Timer.periodic(
-    const Duration(seconds: 15),
-    tokenWallet._refreshTimer,
-  );
-  tokenWallet.owner = await tokenWallet._owner;
-  tokenWallet.address = await tokenWallet._address;
-  tokenWallet.symbol = await tokenWallet._symbol;
-  tokenWallet.version = await tokenWallet._version;
-  tokenWallet.ownerPublicKey = tonWallet.publicKey;
-
-  return tokenWallet;
-}
-
-Future<void> tokenWalletUnsubscribe(TokenWallet tokenWallet) async {
-  await proceedAsync((port) => tokenWallet._nativeLibrary.bindings.token_wallet_unsubscribe(
-        port,
-        tokenWallet._nativeTokenWallet.ptr!,
-      ));
-  tokenWallet._nativeTokenWallet.ptr = null;
-  tokenWallet._receivePort.close();
-  tokenWallet._subscription.cancel();
-  tokenWallet._timer.cancel();
-  tokenWallet._onBalanceChangedSubject.close();
-  tokenWallet._onTransactionsFoundSubject.close();
-}
+part 'free_token_wallet.dart';
+part 'token_wallet_subscribe.dart';
 
 class TokenWallet {
   final _receivePort = ReceivePort();

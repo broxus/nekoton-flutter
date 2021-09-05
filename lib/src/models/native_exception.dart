@@ -4,6 +4,10 @@ abstract class NativeException extends NekotonException {
   NativeException([String? info]) : super(info);
 }
 
+class MutexException extends NativeException {
+  MutexException([String? info]) : super(info);
+}
+
 class ConversionException extends NativeException {
   ConversionException([String? info]) : super(info);
 }

@@ -1,5 +1,6 @@
 enum NativeStatus {
   success,
+  mutexError,
   conversionError,
   accountsStorageError,
   keyStoreError,

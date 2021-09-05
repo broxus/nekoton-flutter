@@ -1,19 +1,22 @@
 pub mod models;
 
-use crate::crypto::{
-    derived_key::{DerivedKeyCreateInput, DerivedKeySignParams},
-    encrypted_key::{EncryptedKeyCreateInput, EncryptedKeyExportOutput},
-};
 use crate::{
     core::keystore::models::{KeySigner, MutexKeyStore},
     crypto::{
         derived_key::{DerivedKeyExportParams, DerivedKeyUpdateParams},
         encrypted_key::{EncryptedKeyPassword, EncryptedKeyUpdateParams},
     },
-    external::{storage::StorageImpl, MutexStorage},
+    external::storage::StorageImpl,
     match_result,
     models::{NativeError, NativeStatus},
     runtime, send_to_result_port, FromPtr, ToPtr, RUNTIME,
+};
+use crate::{
+    crypto::{
+        derived_key::{DerivedKeyCreateInput, DerivedKeySignParams},
+        encrypted_key::{EncryptedKeyCreateInput, EncryptedKeyExportOutput},
+    },
+    external::storage::MutexStorage,
 };
 use anyhow::anyhow;
 use nekoton::{
@@ -93,7 +96,7 @@ pub unsafe extern "C" fn get_entries(result_port: c_longlong, keystore: *mut c_v
             Some(keystore) => keystore,
             None => {
                 let result = match_result(Err(NativeError {
-                    status: NativeStatus::KeyStoreError,
+                    status: NativeStatus::MutexError,
                     info: KEY_STORE_NOT_FOUND.to_owned(),
                 }));
                 send_to_result_port(result_port, result);
@@ -144,7 +147,7 @@ pub unsafe extern "C" fn add_key(
             Some(keystore) => keystore,
             None => {
                 let result = match_result(Err(NativeError {
-                    status: NativeStatus::KeyStoreError,
+                    status: NativeStatus::MutexError,
                     info: KEY_STORE_NOT_FOUND.to_owned(),
                 }));
                 send_to_result_port(result_port, result);
@@ -222,7 +225,7 @@ pub unsafe extern "C" fn update_key(
             Some(keystore) => keystore,
             None => {
                 let result = match_result(Err(NativeError {
-                    status: NativeStatus::KeyStoreError,
+                    status: NativeStatus::MutexError,
                     info: KEY_STORE_NOT_FOUND.to_owned(),
                 }));
                 send_to_result_port(result_port, result);
@@ -300,7 +303,7 @@ pub unsafe extern "C" fn export_key(
             Some(keystore) => keystore,
             None => {
                 let result = match_result(Err(NativeError {
-                    status: NativeStatus::KeyStoreError,
+                    status: NativeStatus::MutexError,
                     info: KEY_STORE_NOT_FOUND.to_owned(),
                 }));
                 send_to_result_port(result_port, result);
@@ -383,7 +386,7 @@ pub unsafe extern "C" fn check_key_password(
             Some(keystore) => keystore,
             None => {
                 let result = match_result(Err(NativeError {
-                    status: NativeStatus::KeyStoreError,
+                    status: NativeStatus::MutexError,
                     info: KEY_STORE_NOT_FOUND.to_owned(),
                 }));
                 send_to_result_port(result_port, result);
@@ -440,7 +443,7 @@ pub unsafe extern "C" fn remove_key(
             Some(keystore) => keystore,
             None => {
                 let result = match_result(Err(NativeError {
-                    status: NativeStatus::KeyStoreError,
+                    status: NativeStatus::MutexError,
                     info: KEY_STORE_NOT_FOUND.to_owned(),
                 }));
                 send_to_result_port(result_port, result);
@@ -496,7 +499,7 @@ pub unsafe extern "C" fn clear_keystore(result_port: c_longlong, keystore: *mut 
             Some(keystore) => keystore,
             None => {
                 let result = match_result(Err(NativeError {
-                    status: NativeStatus::KeyStoreError,
+                    status: NativeStatus::MutexError,
                     info: KEY_STORE_NOT_FOUND.to_owned(),
                 }));
                 send_to_result_port(result_port, result);
@@ -520,4 +523,10 @@ async fn internal_clear_keystore(keystore: &KeyStore) -> Result<u64, NativeError
     })?;
 
     Ok(0)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn free_keystore(keystore: *mut c_void) {
+    let keystore = keystore as *mut MutexKeyStore;
+    Arc::from_raw(keystore);
 }

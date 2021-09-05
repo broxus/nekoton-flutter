@@ -2,7 +2,7 @@ use crate::{
     match_result,
     models::{FromPtr, NativeError, NativeStatus, ToPtr},
     runtime, send_to_result_port,
-    transport::MutexGqlTransport,
+    transport::gql_transport::MutexGqlTransport,
     RUNTIME,
 };
 use nekoton::transport::gql::GqlTransport;

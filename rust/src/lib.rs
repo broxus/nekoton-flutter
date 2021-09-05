@@ -1,10 +1,10 @@
-mod core;
-mod crypto;
-mod depool;
-mod external;
-mod helpers;
-mod models;
-mod transport;
+pub mod core;
+pub mod crypto;
+pub mod depool;
+pub mod external;
+pub mod helpers;
+pub mod models;
+pub mod transport;
 
 use allo_isolate::{
     ffi::{DartCObject, DartPort},
@@ -46,7 +46,7 @@ pub unsafe extern "C" fn store_post_cobject(ptr: *mut c_void) {
     allo_isolate::store_dart_post_cobject(ptr);
 }
 
-fn match_result(result: Result<u64, NativeError>) -> *mut c_void {
+pub fn match_result(result: Result<u64, NativeError>) -> *mut c_void {
     let result = match result {
         Ok(success) => NativeResult {
             status_code: NativeStatus::Success as c_uint,
@@ -65,7 +65,7 @@ fn match_result(result: Result<u64, NativeError>) -> *mut c_void {
     result
 }
 
-fn send_to_result_port(port: c_longlong, result: *mut c_void) {
+pub fn send_to_result_port(port: c_longlong, result: *mut c_void) {
     let result = result as c_ulonglong;
     let isolate = Isolate::new(port);
     isolate.post(result);

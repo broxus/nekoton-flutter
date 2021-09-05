@@ -41,152 +41,11 @@ import 'models/polling_method.dart';
 import 'models/ton_wallet_details.dart';
 import 'models/ton_wallet_transaction_with_data.dart';
 
-Future<TonWallet> tonWalletSubscribe({
-  required Keystore keystore,
-  required int workchain,
-  required KeyStoreEntry entry,
-  required WalletType walletType,
-  Logger? logger,
-}) async {
-  final tonWallet = TonWallet._();
-
-  tonWallet._logger = logger;
-
-  tonWallet._gql = await Gql.getInstance(logger: tonWallet._logger);
-  tonWallet._keystore = keystore;
-  tonWallet._entry = entry;
-  tonWallet._subscription = tonWallet._receivePort.listen(tonWallet._subscriptionListener);
-
-  final contractTypeStr = jsonEncode(walletType.toJson());
-  final result = await proceedAsync((port) => tonWallet._nativeLibrary.bindings.ton_wallet_subscribe(
-        port,
-        tonWallet._receivePort.sendPort.nativePort,
-        tonWallet._gql.nativeTransport.ptr!,
-        workchain,
-        entry.publicKey.toNativeUtf8().cast<Int8>(),
-        contractTypeStr.toNativeUtf8().cast<Int8>(),
-      ));
-  final ptr = Pointer.fromAddress(result).cast<Void>();
-
-  tonWallet.nativeTonWallet = NativeTonWallet(ptr);
-  tonWallet._timer = Timer.periodic(
-    const Duration(seconds: 15),
-    tonWallet._refreshTimer,
-  );
-  tonWallet.address = await tonWallet._address;
-  tonWallet.publicKey = await tonWallet._publicKey;
-  tonWallet.walletType = await tonWallet._walletType;
-  tonWallet.details = await tonWallet._details;
-  tonWallet.custodians = await tonWallet._custodians;
-
-  return tonWallet;
-}
-
-Future<TonWallet> tonWalletSubscribeByAddress({
-  required String address,
-  Logger? logger,
-}) async {
-  final tonWallet = TonWallet._();
-
-  tonWallet._logger = logger;
-
-  tonWallet._gql = await Gql.getInstance(logger: tonWallet._logger);
-  tonWallet._subscription = tonWallet._receivePort.listen(tonWallet._subscriptionListener);
-
-  final result = await proceedAsync((port) => tonWallet._nativeLibrary.bindings.ton_wallet_subscribe_by_address(
-        port,
-        tonWallet._receivePort.sendPort.nativePort,
-        tonWallet._gql.nativeTransport.ptr!,
-        address.toNativeUtf8().cast<Int8>(),
-      ));
-  final ptr = Pointer.fromAddress(result).cast<Void>();
-
-  tonWallet.nativeTonWallet = NativeTonWallet(ptr);
-  tonWallet._timer = Timer.periodic(
-    const Duration(seconds: 15),
-    tonWallet._refreshTimer,
-  );
-  tonWallet.address = await tonWallet._address;
-  tonWallet.publicKey = await tonWallet._publicKey;
-  tonWallet.walletType = await tonWallet._walletType;
-  tonWallet.details = await tonWallet._details;
-  tonWallet.custodians = await tonWallet._custodians;
-
-  return tonWallet;
-}
-
-Future<TonWallet> tonWalletSubscribeByExisting({
-  required Keystore keystore,
-  required KeyStoreEntry entry,
-  required ExistingWalletInfo existingWalletInfo,
-  Logger? logger,
-}) async {
-  final tonWallet = TonWallet._();
-
-  tonWallet._logger = logger;
-
-  tonWallet._gql = await Gql.getInstance(logger: tonWallet._logger);
-  tonWallet._keystore = keystore;
-  tonWallet._entry = entry;
-  tonWallet._subscription = tonWallet._receivePort.listen(tonWallet._subscriptionListener);
-
-  final existingWalletInfoStr = jsonEncode(existingWalletInfo.toJson());
-  final result = await proceedAsync((port) => tonWallet._nativeLibrary.bindings.ton_wallet_subscribe_by_existing(
-        port,
-        tonWallet._receivePort.sendPort.nativePort,
-        tonWallet._gql.nativeTransport.ptr!,
-        existingWalletInfoStr.toNativeUtf8().cast<Int8>(),
-      ));
-  final ptr = Pointer.fromAddress(result).cast<Void>();
-
-  tonWallet.nativeTonWallet = NativeTonWallet(ptr);
-  tonWallet._timer = Timer.periodic(
-    const Duration(seconds: 15),
-    tonWallet._refreshTimer,
-  );
-  tonWallet.address = await tonWallet._address;
-  tonWallet.publicKey = await tonWallet._publicKey;
-  tonWallet.walletType = await tonWallet._walletType;
-  tonWallet.details = await tonWallet._details;
-  tonWallet.custodians = await tonWallet._custodians;
-
-  return tonWallet;
-}
-
-Future<void> tonWalletUnsubscribe(TonWallet tonWallet) async {
-  await proceedAsync(
-      (port) => tonWallet._nativeLibrary.bindings.ton_wallet_unsubscribe(port, tonWallet.nativeTonWallet.ptr!));
-  tonWallet.nativeTonWallet.ptr = null;
-  tonWallet._receivePort.close();
-  tonWallet._subscription.cancel();
-  tonWallet._timer.cancel();
-  tonWallet._onMessageSentSubject.close();
-  tonWallet._onMessageExpiredSubject.close();
-  tonWallet._onStateChangedSubject.close();
-  tonWallet._onTransactionsFoundSubject.close();
-}
-
-Future<List<ExistingWalletInfo>> findExistingWallets({
-  required String publicKey,
-  required int workchainId,
-}) async {
-  final nativeLibrary = NativeLibrary.instance();
-  final gql = await Gql.getInstance();
-
-  final result = await proceedAsync((port) => nativeLibrary.bindings.find_existing_wallets(
-        port,
-        gql.nativeTransport.ptr!,
-        publicKey.toNativeUtf8().cast<Int8>(),
-        workchainId,
-      ));
-
-  final string = cStringToDart(result);
-  final json = jsonDecode(string) as List<dynamic>;
-  final jsonList = json.cast<Map<String, dynamic>>();
-  final existingWallets = jsonList.map((e) => ExistingWalletInfo.fromJson(e)).toList();
-
-  return existingWallets;
-}
+part 'find_existing_wallets.dart';
+part 'free_ton_wallet.dart';
+part 'ton_wallet_subscribe.dart';
+part 'ton_wallet_subscribe_by_address.dart';
+part 'ton_wallet_subscribe_by_existing.dart';
 
 class TonWallet {
   final _receivePort = ReceivePort();
@@ -483,7 +342,7 @@ class TonWallet {
     required UnsignedMessage message,
     required String password,
   }) async {
-    if (_keystore == null) {
+    if (_entry == null) {
       throw TonWalletReadOnlyException();
     }
 

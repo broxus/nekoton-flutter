@@ -452,7 +452,7 @@ class Nekoton {
     tokenWallets
       ..remove(tokenWallet)
       ..sort(_sortTokenWallets);
-    await tokenWalletUnsubscribe(tokenWallet);
+    freeTokenWallet(tokenWallet);
 
     final subscription = subject.value.copyWith(tokenWallets: tokenWallets);
     subject.add(subscription);
@@ -516,11 +516,11 @@ class Nekoton {
   Future<void> _unsubscribe(SubscriptionSubject subscription) async {
     try {
       final tonWallet = subscription.value.tonWallet;
-      await tonWalletUnsubscribe(tonWallet);
+      freeTonWallet(tonWallet);
 
       final tokenWallets = subscription.value.tokenWallets;
       for (final tokenWallet in tokenWallets) {
-        await tokenWalletUnsubscribe(tokenWallet);
+        freeTokenWallet(tokenWallet);
       }
     } catch (err, st) {
       _logger?.e(err, err, st);

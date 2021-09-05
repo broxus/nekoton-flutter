@@ -1,6 +1,6 @@
-mod accounts_storage;
-mod keystore;
-mod token_wallet;
+pub mod accounts_storage;
+pub mod keystore;
+pub mod token_wallet;
 pub mod ton_wallet;
 
 use allo_isolate::Isolate;

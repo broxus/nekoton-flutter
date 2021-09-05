@@ -1,4 +1,4 @@
-use crate::{runtime, FromPtr, RUNTIME};
+use crate::{match_result, models::NativeError, runtime, FromPtr, RUNTIME};
 use allo_isolate::Isolate;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
@@ -6,17 +6,43 @@ use nekoton::external::GqlConnection;
 use serde::Serialize;
 use std::{
     ffi::c_void,
-    os::raw::{c_char, c_uint},
+    os::raw::{c_char, c_longlong, c_uint, c_ulonglong},
     sync::Arc,
+    u64,
 };
 use tokio::sync::{
     oneshot::{self, Sender},
     Mutex,
 };
 
-type MutexGqlSender = Mutex<Option<Sender<Result<String, String>>>>;
+pub type MutexGqlConnection = Mutex<Arc<GqlConnectionImpl>>;
+pub type MutexGqlSender = Mutex<Option<Sender<Result<String, String>>>>;
 
 const GQL_REQUEST_ERROR: &str = "Unable to make gql request";
+
+#[no_mangle]
+pub unsafe extern "C" fn get_gql_connection(port: c_longlong) -> *mut c_void {
+    let result = internal_get_gql_connection(port);
+    match_result(result)
+}
+
+fn internal_get_gql_connection(port: c_longlong) -> Result<u64, NativeError> {
+    let connection = GqlConnectionImpl { port };
+    let connection = Arc::new(connection);
+    let connection = Mutex::new(connection);
+    let connection = Arc::new(connection);
+
+    let ptr = Arc::into_raw(connection) as *mut c_void;
+    let ptr = ptr as c_ulonglong;
+
+    Ok(ptr)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn free_gql_connection(gql_connection: *mut c_void) {
+    let gql_connection = gql_connection as *mut MutexGqlConnection;
+    Arc::from_raw(gql_connection);
+}
 
 pub struct GqlConnectionImpl {
     pub port: i64,

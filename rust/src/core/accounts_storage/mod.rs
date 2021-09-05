@@ -1,11 +1,11 @@
-mod models;
+pub mod models;
 
 use crate::{
     core::{
         accounts_storage::models::{AssetsList, MutexAccountsStorage},
         ton_wallet::models::WalletType,
     },
-    external::{storage::StorageImpl, MutexStorage},
+    external::storage::{MutexStorage, StorageImpl},
     match_result,
     models::{NativeError, NativeStatus},
     runtime, send_to_result_port, FromPtr, ToPtr, RUNTIME,
@@ -68,7 +68,7 @@ pub unsafe extern "C" fn get_accounts(result_port: c_longlong, accounts_storage:
             Some(accounts_storage) => accounts_storage,
             None => {
                 let result = match_result(Err(NativeError {
-                    status: NativeStatus::AccountsStorageError,
+                    status: NativeStatus::MutexError,
                     info: ACCOUNTS_STORAGE_NOT_FOUND.to_owned(),
                 }));
                 send_to_result_port(result_port, result);
@@ -130,7 +130,7 @@ pub unsafe extern "C" fn add_account(
             Some(accounts_storage) => accounts_storage,
             None => {
                 let result = match_result(Err(NativeError {
-                    status: NativeStatus::AccountsStorageError,
+                    status: NativeStatus::MutexError,
                     info: ACCOUNTS_STORAGE_NOT_FOUND.to_owned(),
                 }));
                 send_to_result_port(result_port, result);
@@ -209,7 +209,7 @@ pub unsafe extern "C" fn rename_account(
             Some(accounts_storage) => accounts_storage,
             None => {
                 let result = match_result(Err(NativeError {
-                    status: NativeStatus::AccountsStorageError,
+                    status: NativeStatus::MutexError,
                     info: ACCOUNTS_STORAGE_NOT_FOUND.to_owned(),
                 }));
                 send_to_result_port(result_port, result);
@@ -267,7 +267,7 @@ pub unsafe extern "C" fn remove_account(
             Some(accounts_storage) => accounts_storage,
             None => {
                 let result = match_result(Err(NativeError {
-                    status: NativeStatus::AccountsStorageError,
+                    status: NativeStatus::MutexError,
                     info: ACCOUNTS_STORAGE_NOT_FOUND.to_owned(),
                 }));
                 send_to_result_port(result_port, result);
@@ -327,7 +327,7 @@ pub unsafe extern "C" fn add_token_wallet(
             Some(accounts_storage) => accounts_storage,
             None => {
                 let result = match_result(Err(NativeError {
-                    status: NativeStatus::AccountsStorageError,
+                    status: NativeStatus::MutexError,
                     info: ACCOUNTS_STORAGE_NOT_FOUND.to_owned(),
                 }));
                 send_to_result_port(result_port, result);
@@ -402,7 +402,7 @@ pub unsafe extern "C" fn remove_token_wallet(
             Some(accounts_storage) => accounts_storage,
             None => {
                 let result = match_result(Err(NativeError {
-                    status: NativeStatus::AccountsStorageError,
+                    status: NativeStatus::MutexError,
                     info: ACCOUNTS_STORAGE_NOT_FOUND.to_owned(),
                 }));
                 send_to_result_port(result_port, result);
@@ -470,7 +470,7 @@ pub unsafe extern "C" fn clear_accounts_storage(
             Some(accounts_storage) => accounts_storage,
             None => {
                 let result = match_result(Err(NativeError {
-                    status: NativeStatus::AccountsStorageError,
+                    status: NativeStatus::MutexError,
                     info: ACCOUNTS_STORAGE_NOT_FOUND.to_owned(),
                 }));
                 send_to_result_port(result_port, result);
@@ -496,4 +496,10 @@ async fn internal_clear_accounts_storage(
     })?;
 
     Ok(0)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn free_accounts_storage(accounts_storage: *mut c_void) {
+    let accounts_storage = accounts_storage as *mut MutexAccountsStorage;
+    Arc::from_raw(accounts_storage);
 }

@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
-import '../external/gql.dart';
 
+import '../external/gql.dart';
 import '../ffi_utils.dart';
 import '../native_library.dart';
 import 'models/depool_info.dart';
