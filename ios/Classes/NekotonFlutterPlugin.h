@@ -1,6 +1,6 @@
 #import <Flutter/Flutter.h>
 
-@interface NekotonFlutterPlugin : NSObject<FlutterPlugin>
+@interface NekotonFlutterPlugin : NSObject <FlutterPlugin>
 @end
 
 void store_post_cobject(void *ptr);
@@ -17,7 +17,8 @@ void add_account(long long result_port,
                  void *accounts_storage,
                  char *name,
                  char *public_key,
-                 char *contract);
+                 char *contract,
+                 signed char workchain);
 
 void rename_account(long long result_port, void *accounts_storage, char *address, char *name);
 
@@ -37,6 +38,8 @@ void remove_token_wallet(long long result_port,
 
 void clear_accounts_storage(long long result_port, void *accounts_storage);
 
+void free_accounts_storage(void *accounts_storage);
+
 void get_keystore(long long result_port, void *storage);
 
 void get_entries(long long result_port, void *keystore);
@@ -52,6 +55,8 @@ void check_key_password(long long result_port, void *keystore, char *sign_input)
 void remove_key(long long result_port, void *keystore, char *public_key);
 
 void clear_keystore(long long result_port, void *keystore);
+
+void free_keystore(void *keystore);
 
 void token_wallet_subscribe(long long result_port,
                             long long port,
@@ -95,11 +100,12 @@ void token_wallet_handle_block(long long result_port,
                                void *transport,
                                char *id);
 
-void token_wallet_unsubscribe(long long result_port, void *token_wallet);
+void free_token_wallet(void *token_wallet);
 
 void ton_wallet_subscribe(long long result_port,
                           long long port,
                           void *transport,
+                          signed char workchain,
                           char *public_key,
                           char *contract);
 
@@ -112,6 +118,11 @@ void ton_wallet_subscribe_by_existing(long long result_port,
                                       long long port,
                                       void *transport,
                                       char *existing_wallet);
+
+void find_existing_wallets(long long result_port,
+                           void *transport,
+                           char *public_key,
+                           signed char workchain_id);
 
 void get_ton_wallet_address(long long result_port, void *ton_wallet);
 
@@ -183,12 +194,7 @@ void ton_wallet_preload_transactions(long long result_port, void *ton_wallet, ch
 
 void ton_wallet_handle_block(long long result_port, void *ton_wallet, void *transport, char *id);
 
-void ton_wallet_unsubscribe(long long result_port, void *ton_wallet);
-
-void find_existing_wallets(long long result_port,
-                           void *transport,
-                           char *public_key,
-                           int workchain_id);
+void free_ton_wallet(void *ton_wallet);
 
 void *generate_key(char *mnemonic_type);
 
@@ -203,11 +209,15 @@ void get_participant_info(long long result_port,
 
 void get_depool_info(long long result_port, void *transport, char *address);
 
-void *get_storage(long long port);
-
 void *get_gql_connection(long long port);
 
+void free_gql_connection(void *gql_connection);
+
 void resolve_gql_request(void *tx, unsigned int is_successful, char *value);
+
+void *get_storage(long long port);
+
+void free_storage(void *storage);
 
 void resolve_storage_request(void *tx, unsigned int is_successful, char *value);
 
@@ -222,6 +232,8 @@ void *repack_address(char *address);
 void *parse_message_body_data(char *data);
 
 void get_gql_transport(long long result_port, void *connection);
+
+void free_gql_transport(void *gql_transport);
 
 void get_latest_block_id(long long result_port, void *transport, char *address);
 

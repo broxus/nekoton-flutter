@@ -21,7 +21,7 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         get_accounts(0, nil);
 
-        add_account(0, nil, nil, nil, nil);
+        add_account(0, nil, nil, nil, nil, 0);
 
         rename_account(0, nil, nil, nil);
 
@@ -32,6 +32,8 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
         remove_token_wallet(0, nil, nil, nil, nil);
 
         clear_accounts_storage(0, nil);
+
+        free_accounts_storage(nil);
 
         get_keystore(0, nil);
 
@@ -48,6 +50,8 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
         remove_key(0, nil, nil);
 
         clear_keystore(0, nil);
+
+        free_keystore(nil);
 
         token_wallet_subscribe(0, 0, nil, nil, nil);
 
@@ -73,13 +77,15 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         token_wallet_handle_block(0, nil, nil, nil);
 
-        token_wallet_unsubscribe(0, nil);
+        free_token_wallet(nil);
 
-        ton_wallet_subscribe(0, 0, nil, nil, nil);
+        ton_wallet_subscribe(0, 0, nil, 0, nil, nil);
 
         ton_wallet_subscribe_by_address(0, 0, nil, nil);
 
         ton_wallet_subscribe_by_existing(0, 0, nil, nil);
+
+        find_existing_wallets(0, nil, nil, 0);
 
         get_ton_wallet_address(0, nil);
 
@@ -121,9 +127,7 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         ton_wallet_handle_block(0, nil, nil, nil);
 
-        ton_wallet_unsubscribe(0, nil);
-
-        find_existing_wallets(0, nil, nil, 0);
+        free_ton_wallet(nil);
 
         generate_key(nil);
 
@@ -135,11 +139,15 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         get_depool_info(0, nil, nil);
 
-        get_storage(0);
-
         get_gql_connection(0);
 
+        free_gql_connection(nil);
+
         resolve_gql_request(nil, 0, nil);
+
+        get_storage(0);
+
+        free_storage(nil);
 
         resolve_storage_request(nil, 0, nil);
 
@@ -154,6 +162,8 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
         parse_message_body_data(nil);
 
         get_gql_transport(0, nil);
+
+        free_gql_transport(nil);
 
         get_latest_block_id(0, nil, nil);
 
