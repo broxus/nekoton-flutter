@@ -1,7 +1,7 @@
 use crate::{
     external::gql_connection::MutexGqlConnection,
     match_result,
-    models::{NativeError, NativeStatus},
+    models::{HandleError, NativeError, NativeStatus},
     runtime, send_to_result_port, FromPtr, ToPtr, RUNTIME,
 };
 use nekoton::transport::gql::GqlTransport;
@@ -77,18 +77,12 @@ async fn internal_get_latest_block_id(
 ) -> Result<u64, NativeError> {
     let transport = transport.lock().await;
 
-    let address = MsgAddressInt::from_str(&address).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
+    let address = MsgAddressInt::from_str(&address).handle_error(NativeStatus::ConversionError)?;
 
     let latest_block = transport
         .get_latest_block(&address)
         .await
-        .map_err(|e| NativeError {
-            status: NativeStatus::TransportError,
-            info: e.to_string(),
-        })?;
+        .handle_error(NativeStatus::TransportError)?;
 
     let id = latest_block.id;
 
@@ -122,19 +116,13 @@ async fn internal_wait_for_next_block_id(
 ) -> Result<u64, NativeError> {
     let transport = transport.lock().await;
 
-    let address = MsgAddressInt::from_str(&address).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
+    let address = MsgAddressInt::from_str(&address).handle_error(NativeStatus::ConversionError)?;
     let timeout = Duration::from_secs(30);
 
     let next_block_id = transport
         .wait_for_next_block(&current_block_id, &address, timeout)
         .await
-        .map_err(|e| NativeError {
-            status: NativeStatus::TransportError,
-            info: e.to_string(),
-        })?;
+        .handle_error(NativeStatus::TransportError)?;
 
     Ok(next_block_id.to_ptr() as c_ulonglong)
 }

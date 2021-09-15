@@ -1,6 +1,6 @@
 use crate::{
     match_result,
-    models::{NativeError, NativeStatus},
+    models::{HandleError, NativeError, NativeStatus},
     FromPtr, ToPtr,
 };
 use nekoton_abi::{create_boc_payload, parse_comment_payload, FunctionBuilder};
@@ -34,10 +34,7 @@ fn internal_pack_std_smc_addr(
     let bounceable = bounceable != 0;
 
     let addr = addr.from_ptr();
-    let addr = MsgAddressInt::from_str(&addr).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
+    let addr = MsgAddressInt::from_str(&addr).handle_error(NativeStatus::ConversionError)?;
 
     let packed_addr =
         nekoton_utils::pack_std_smc_addr(base64_url, &addr, bounceable).map_err(|e| {
@@ -66,11 +63,8 @@ fn internal_unpack_std_smc_addr(
     let base64_url = base64_url != 0;
     let packed = packed.from_ptr();
 
-    let unpacked_addr =
-        nekoton_utils::unpack_std_smc_addr(&packed, base64_url).map_err(|e| NativeError {
-            status: NativeStatus::ConversionError,
-            info: e.to_string(),
-        })?;
+    let unpacked_addr = nekoton_utils::unpack_std_smc_addr(&packed, base64_url)
+        .handle_error(NativeStatus::ConversionError)?;
     let unpacked_addr = unpacked_addr.to_string();
 
     Ok(unpacked_addr.to_ptr() as c_ulonglong)
@@ -91,10 +85,8 @@ pub unsafe extern "C" fn repack_address(address: *mut c_char) -> *mut c_void {
 fn internal_repack_address(address: *mut c_char) -> Result<u64, NativeError> {
     let address = address.from_ptr();
 
-    let address = nekoton_utils::repack_address(&address).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
+    let address =
+        nekoton_utils::repack_address(&address).handle_error(NativeStatus::ConversionError)?;
     let address = address.to_string();
 
     Ok(address.to_ptr() as c_ulonglong)
@@ -109,10 +101,7 @@ pub unsafe extern "C" fn parse_message_body_data(data: *mut c_char) -> *mut c_vo
 fn internal_parse_message_body_data(data: *mut c_char) -> Result<u64, NativeError> {
     let data = data.from_ptr();
 
-    let data = create_boc_payload(&data).map_err(|e| NativeError {
-        status: NativeStatus::AbiError,
-        info: e.to_string(),
-    })?;
+    let data = create_boc_payload(&data).handle_error(NativeStatus::AbiError)?;
 
     if let Some(comment) = parse_comment_payload(data.clone()) {
         let result = json!({ "runtimeType": "comment", "value": comment }).to_string();
@@ -264,10 +253,7 @@ fn serialize_tokens(data_type: &str, tokens: Vec<Token>) -> Result<String, Nativ
     tokens.iter().for_each(|e| {
         map.insert(e.name.clone(), e.value.to_string());
     });
-    let string = serde_json::to_string(&map).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
+    let string = serde_json::to_string(&map).handle_error(NativeStatus::ConversionError)?;
 
     Ok(string)
 }

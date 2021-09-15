@@ -1,6 +1,6 @@
 use crate::{
     match_result,
-    models::{FromPtr, NativeError, NativeStatus, ToPtr},
+    models::{FromPtr, HandleError, NativeError, NativeStatus, ToPtr},
     runtime, send_to_result_port,
     transport::gql_transport::MutexGqlTransport,
     RUNTIME,
@@ -43,25 +43,14 @@ async fn internal_get_participant_info(
     address: String,
     wallet_address: String,
 ) -> Result<u64, NativeError> {
-    let address = MsgAddressInt::from_str(&address).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
-    let wallet_address = MsgAddressInt::from_str(&wallet_address).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
+    let address = MsgAddressInt::from_str(&address).handle_error(NativeStatus::ConversionError)?;
+    let wallet_address =
+        MsgAddressInt::from_str(&wallet_address).handle_error(NativeStatus::ConversionError)?;
 
     let result = nekoton_depool::get_participant_info(transport, address, wallet_address)
         .await
-        .map_err(|e| NativeError {
-            status: NativeStatus::DePoolError,
-            info: e.to_string(),
-        })?;
-    let result = serde_json::to_string(&result).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
+        .handle_error(NativeStatus::DePoolError)?;
+    let result = serde_json::to_string(&result).handle_error(NativeStatus::ConversionError)?;
 
     let result = result.to_ptr();
 
@@ -94,21 +83,12 @@ async fn internal_get_depool_info(
     transport: Arc<GqlTransport>,
     address: String,
 ) -> Result<u64, NativeError> {
-    let address = MsgAddressInt::from_str(&address).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
+    let address = MsgAddressInt::from_str(&address).handle_error(NativeStatus::ConversionError)?;
 
     let result = nekoton_depool::get_depool_info(transport, address)
         .await
-        .map_err(|e| NativeError {
-            status: NativeStatus::DePoolError,
-            info: e.to_string(),
-        })?;
-    let result = serde_json::to_string(&result).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
+        .handle_error(NativeStatus::DePoolError)?;
+    let result = serde_json::to_string(&result).handle_error(NativeStatus::ConversionError)?;
 
     let result = result.to_ptr();
 

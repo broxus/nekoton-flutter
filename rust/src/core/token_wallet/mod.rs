@@ -10,7 +10,7 @@ use crate::{
         ContractState, Expiration,
     },
     match_result,
-    models::{NativeError, NativeStatus},
+    models::{HandleError, NativeError, NativeStatus},
     runtime, send_to_result_port,
     transport::gql_transport::MutexGqlTransport,
     FromPtr, ToPtr, RUNTIME,
@@ -63,25 +63,16 @@ async fn internal_token_wallet_subscribe(
     owner: String,
     root_token_contract: String,
 ) -> Result<u64, NativeError> {
-    let owner = MsgAddressInt::from_str(&owner).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
-    let root_token_contract =
-        MsgAddressInt::from_str(&root_token_contract).map_err(|e| NativeError {
-            status: NativeStatus::ConversionError,
-            info: e.to_string(),
-        })?;
+    let owner = MsgAddressInt::from_str(&owner).handle_error(NativeStatus::ConversionError)?;
+    let root_token_contract = MsgAddressInt::from_str(&root_token_contract)
+        .handle_error(NativeStatus::ConversionError)?;
 
     let handler = TokenWalletSubscriptionHandlerImpl { port };
     let handler = Arc::new(handler);
 
     let token_wallet = TokenWallet::subscribe(transport, owner, root_token_contract, handler)
         .await
-        .map_err(|e| NativeError {
-            status: NativeStatus::TokenWalletError,
-            info: e.to_string(),
-        })?;
+        .handle_error(NativeStatus::TokenWalletError)?;
 
     let token_wallet = Mutex::new(Some(token_wallet));
     let token_wallet = Arc::new(token_wallet);
@@ -212,10 +203,7 @@ async fn internal_get_token_wallet_symbol(
     token_wallet: &mut TokenWallet,
 ) -> Result<u64, NativeError> {
     let symbol = token_wallet.symbol();
-    let symbol = serde_json::to_string(&symbol).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
+    let symbol = serde_json::to_string(&symbol).handle_error(NativeStatus::ConversionError)?;
 
     Ok(symbol.to_ptr() as c_ulonglong)
 }
@@ -257,10 +245,7 @@ async fn internal_get_token_wallet_version(
     token_wallet: &mut TokenWallet,
 ) -> Result<u64, NativeError> {
     let version = token_wallet.version();
-    let version = serde_json::to_string(&version).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
+    let version = serde_json::to_string(&version).handle_error(NativeStatus::ConversionError)?;
 
     Ok(version.to_ptr() as c_ulonglong)
 }
@@ -345,10 +330,8 @@ async fn internal_get_token_wallet_contract_state(
 ) -> Result<u64, NativeError> {
     let contract_state = token_wallet.contract_state();
     let contract_state = ContractState::from_core(contract_state.clone());
-    let contract_state = serde_json::to_string(&contract_state).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
+    let contract_state =
+        serde_json::to_string(&contract_state).handle_error(NativeStatus::ConversionError)?;
 
     Ok(contract_state.to_ptr() as c_ulonglong)
 }
@@ -428,16 +411,13 @@ async fn internal_token_wallet_prepare_deploy(
     transport: Arc<GqlTransport>,
     expiration: String,
 ) -> Result<u64, NativeError> {
-    let expiration = serde_json::from_str::<Expiration>(&expiration).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
+    let expiration = serde_json::from_str::<Expiration>(&expiration)
+        .handle_error(NativeStatus::ConversionError)?;
     let expiration = expiration.to_core();
 
-    let message = token_wallet.prepare_deploy().map_err(|e| NativeError {
-        status: NativeStatus::TokenWalletError,
-        info: e.to_string(),
-    })?;
+    let message = token_wallet
+        .prepare_deploy()
+        .handle_error(NativeStatus::TokenWalletError)?;
 
     let message = internal_ton_wallet_prepare_transfer(
         ton_wallet,
@@ -541,21 +521,14 @@ async fn internal_token_wallet_prepare_transfer(
     tokens: String,
     notify_receiver: bool,
 ) -> Result<u64, NativeError> {
-    let expiration = serde_json::from_str::<Expiration>(&expiration).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
+    let expiration = serde_json::from_str::<Expiration>(&expiration)
+        .handle_error(NativeStatus::ConversionError)?;
     let expiration = expiration.to_core();
 
-    let destination = MsgAddressInt::from_str(&destination).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
+    let destination =
+        MsgAddressInt::from_str(&destination).handle_error(NativeStatus::ConversionError)?;
 
-    let tokens = BigUint::from_str(&tokens).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
+    let tokens = BigUint::from_str(&tokens).handle_error(NativeStatus::ConversionError)?;
 
     let message = token_wallet
         .prepare_transfer(
@@ -564,10 +537,7 @@ async fn internal_token_wallet_prepare_transfer(
             notify_receiver,
             ton_types::Cell::default(),
         )
-        .map_err(|e| NativeError {
-            status: NativeStatus::TokenWalletError,
-            info: e.to_string(),
-        })?;
+        .handle_error(NativeStatus::TokenWalletError)?;
 
     let message = internal_ton_wallet_prepare_transfer(
         ton_wallet,
@@ -615,10 +585,10 @@ pub unsafe extern "C" fn token_wallet_refresh(result_port: c_longlong, token_wal
 }
 
 async fn internal_token_wallet_refresh(token_wallet: &mut TokenWallet) -> Result<u64, NativeError> {
-    let _ = token_wallet.refresh().await.map_err(|e| NativeError {
-        status: NativeStatus::TokenWalletError,
-        info: e.to_string(),
-    })?;
+    let _ = token_wallet
+        .refresh()
+        .await
+        .handle_error(NativeStatus::TokenWalletError)?;
 
     Ok(0)
 }
@@ -663,18 +633,13 @@ async fn internal_token_wallet_preload_transactions(
     token_wallet: &mut TokenWallet,
     from: String,
 ) -> Result<u64, NativeError> {
-    let from = serde_json::from_str::<TransactionId>(&from).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
+    let from =
+        serde_json::from_str::<TransactionId>(&from).handle_error(NativeStatus::ConversionError)?;
 
     let _ = token_wallet
         .preload_transactions(from)
         .await
-        .map_err(|e| NativeError {
-            status: NativeStatus::TokenWalletError,
-            info: e.to_string(),
-        })?;
+        .handle_error(NativeStatus::TokenWalletError)?;
 
     Ok(0)
 }
@@ -727,18 +692,15 @@ async fn internal_token_wallet_handle_block(
     transport: Arc<GqlTransport>,
     id: String,
 ) -> Result<u64, NativeError> {
-    let block = transport.get_block(&id).await.map_err(|e| NativeError {
-        status: NativeStatus::TransportError,
-        info: e.to_string(),
-    })?;
+    let block = transport
+        .get_block(&id)
+        .await
+        .handle_error(NativeStatus::TransportError)?;
 
     let _ = token_wallet
         .handle_block(&block)
         .await
-        .map_err(|e| NativeError {
-            status: NativeStatus::TokenWalletError,
-            info: e.to_string(),
-        })?;
+        .handle_error(NativeStatus::TokenWalletError)?;
 
     Ok(0)
 }

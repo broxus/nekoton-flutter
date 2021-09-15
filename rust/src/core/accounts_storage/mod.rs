@@ -7,7 +7,7 @@ use crate::{
     },
     external::storage::{MutexStorage, StorageImpl},
     match_result,
-    models::{NativeError, NativeStatus},
+    models::{HandleError, NativeError, NativeStatus},
     runtime, send_to_result_port, FromPtr, ToPtr, RUNTIME,
 };
 use nekoton::core::accounts_storage::AccountsStorage;
@@ -41,10 +41,7 @@ pub unsafe extern "C" fn get_accounts_storage(result_port: c_longlong, storage: 
 async fn internal_get_accounts_storage(storage: Arc<StorageImpl>) -> Result<u64, NativeError> {
     let accounts_storage = AccountsStorage::load(storage)
         .await
-        .map_err(|e| NativeError {
-            status: NativeStatus::AccountsStorageError,
-            info: e.to_string(),
-        })?;
+        .handle_error(NativeStatus::AccountsStorageError)?;
 
     let accounts_storage = Mutex::new(Some(accounts_storage));
     let accounts_storage = Arc::new(accounts_storage);
@@ -97,10 +94,7 @@ async fn internal_get_accounts(accounts_storage: &AccountsStorage) -> Result<u64
             result.push(address);
         }
 
-        serde_json::to_string(&result).map_err(|e| NativeError {
-            status: NativeStatus::ConversionError,
-            info: e.to_string(),
-        })?
+        serde_json::to_string(&result).handle_error(NativeStatus::ConversionError)?
     };
 
     Ok(accounts.to_ptr() as c_ulonglong)
@@ -155,35 +149,21 @@ async fn internal_add_account(
     contract: String,
     workchain: i8,
 ) -> Result<u64, NativeError> {
-    let contract = serde_json::from_str::<WalletType>(&contract).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
+    let contract = serde_json::from_str::<WalletType>(&contract)
+        .handle_error(NativeStatus::ConversionError)?;
     let contract = contract.to_core();
 
-    let public_key = hex::decode(public_key).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
-    let public_key =
-        ed25519_dalek::PublicKey::from_bytes(&public_key).map_err(|e| NativeError {
-            status: NativeStatus::ConversionError,
-            info: e.to_string(),
-        })?;
+    let public_key = hex::decode(public_key).handle_error(NativeStatus::ConversionError)?;
+    let public_key = ed25519_dalek::PublicKey::from_bytes(&public_key)
+        .handle_error(NativeStatus::ConversionError)?;
 
     let assets = accounts_storage
         .add_account(&name, public_key, contract, workchain)
         .await
-        .map_err(|e| NativeError {
-            status: NativeStatus::AccountsStorageError,
-            info: e.to_string(),
-        })?;
+        .handle_error(NativeStatus::AccountsStorageError)?;
 
     let assets = AssetsList::from_core(assets);
-    let assets = serde_json::to_string(&assets).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
+    let assets = serde_json::to_string(&assets).handle_error(NativeStatus::ConversionError)?;
 
     Ok(assets.to_ptr() as c_ulonglong)
 }
@@ -234,16 +214,10 @@ async fn internal_rename_account(
     let assets = accounts_storage
         .rename_account(&address, name)
         .await
-        .map_err(|e| NativeError {
-            status: NativeStatus::AccountsStorageError,
-            info: e.to_string(),
-        })?;
+        .handle_error(NativeStatus::AccountsStorageError)?;
 
     let assets = AssetsList::from_core(assets);
-    let assets = serde_json::to_string(&assets).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
+    let assets = serde_json::to_string(&assets).handle_error(NativeStatus::ConversionError)?;
 
     Ok(assets.to_ptr() as c_ulonglong)
 }
@@ -291,15 +265,9 @@ async fn internal_remove_account(
     let assets = accounts_storage
         .remove_account(&address)
         .await
-        .map_err(|e| NativeError {
-            status: NativeStatus::AccountsStorageError,
-            info: e.to_string(),
-        })?;
+        .handle_error(NativeStatus::AccountsStorageError)?;
     let assets = assets.map(|assets| AssetsList::from_core(assets));
-    let assets = serde_json::to_string(&assets).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
+    let assets = serde_json::to_string(&assets).handle_error(NativeStatus::ConversionError)?;
 
     Ok(assets.to_ptr() as c_ulonglong)
 }
@@ -356,25 +324,16 @@ async fn internal_add_token_wallet(
     network_group: String,
     root_token_contract: String,
 ) -> Result<u64, NativeError> {
-    let root_token_contract =
-        MsgAddressInt::from_str(&root_token_contract).map_err(|e| NativeError {
-            status: NativeStatus::ConversionError,
-            info: e.to_string(),
-        })?;
+    let root_token_contract = MsgAddressInt::from_str(&root_token_contract)
+        .handle_error(NativeStatus::ConversionError)?;
 
     let assets = accounts_storage
         .add_token_wallet(&address, &network_group, root_token_contract)
         .await
-        .map_err(|e| NativeError {
-            status: NativeStatus::AccountsStorageError,
-            info: e.to_string(),
-        })?;
+        .handle_error(NativeStatus::AccountsStorageError)?;
 
     let assets = AssetsList::from_core(assets);
-    let assets = serde_json::to_string(&assets).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
+    let assets = serde_json::to_string(&assets).handle_error(NativeStatus::ConversionError)?;
 
     Ok(assets.to_ptr() as c_ulonglong)
 }
@@ -431,25 +390,16 @@ async fn internal_remove_token_wallet(
     network_group: String,
     root_token_contract: String,
 ) -> Result<u64, NativeError> {
-    let root_token_contract =
-        MsgAddressInt::from_str(&root_token_contract).map_err(|e| NativeError {
-            status: NativeStatus::ConversionError,
-            info: e.to_string(),
-        })?;
+    let root_token_contract = MsgAddressInt::from_str(&root_token_contract)
+        .handle_error(NativeStatus::ConversionError)?;
 
     let assets = accounts_storage
         .remove_token_wallet(&address, &network_group, &root_token_contract)
         .await
-        .map_err(|e| NativeError {
-            status: NativeStatus::AccountsStorageError,
-            info: e.to_string(),
-        })?;
+        .handle_error(NativeStatus::AccountsStorageError)?;
 
     let assets = AssetsList::from_core(assets);
-    let assets = serde_json::to_string(&assets).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
+    let assets = serde_json::to_string(&assets).handle_error(NativeStatus::ConversionError)?;
 
     Ok(assets.to_ptr() as c_ulonglong)
 }
@@ -490,10 +440,10 @@ pub unsafe extern "C" fn clear_accounts_storage(
 async fn internal_clear_accounts_storage(
     accounts_storage: &AccountsStorage,
 ) -> Result<u64, NativeError> {
-    let _ = accounts_storage.clear().await.map_err(|e| NativeError {
-        status: NativeStatus::AccountsStorageError,
-        info: e.to_string(),
-    })?;
+    let _ = accounts_storage
+        .clear()
+        .await
+        .handle_error(NativeStatus::AccountsStorageError)?;
 
     Ok(0)
 }

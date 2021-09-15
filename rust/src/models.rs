@@ -48,3 +48,23 @@ impl FromPtr for *mut c_char {
         string.to_str().unwrap().to_owned()
     }
 }
+
+pub trait HandleError {
+    type Output;
+
+    fn handle_error(self, status: NativeStatus) -> Result<Self::Output, NativeError>;
+}
+
+impl<T, E> HandleError for Result<T, E>
+where
+    E: ToString,
+{
+    type Output = T;
+
+    fn handle_error(self, status: NativeStatus) -> Result<Self::Output, NativeError> {
+        self.map_err(|e| NativeError {
+            status,
+            info: e.to_string(),
+        })
+    }
+}

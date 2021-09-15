@@ -17,6 +17,7 @@ use crate::{
         encrypted_key::{EncryptedKeyCreateInput, EncryptedKeyExportOutput},
     },
     external::storage::MutexStorage,
+    models::HandleError,
 };
 use anyhow::anyhow;
 use nekoton::{
@@ -55,24 +56,15 @@ async fn internal_get_keystore(storage: Arc<StorageImpl>) -> Result<u64, NativeE
             &KeySigner::EncryptedKeySigner.to_string(),
             EncryptedKeySigner::new(),
         )
-        .map_err(|e| NativeError {
-            status: NativeStatus::KeyStoreError,
-            info: e.to_string(),
-        })?
+        .handle_error(NativeStatus::KeyStoreError)?
         .with_signer::<DerivedKeySigner>(
             &KeySigner::DerivedKeySigner.to_string(),
             DerivedKeySigner::new(),
         )
-        .map_err(|e| NativeError {
-            status: NativeStatus::KeyStoreError,
-            info: e.to_string(),
-        })?
+        .handle_error(NativeStatus::KeyStoreError)?
         .load()
         .await
-        .map_err(|e| NativeError {
-            status: NativeStatus::KeyStoreError,
-            info: e.to_string(),
-        })?;
+        .handle_error(NativeStatus::KeyStoreError)?;
 
     let keystore = Mutex::new(Some(keystore));
     let keystore = Arc::new(keystore);
@@ -120,10 +112,7 @@ async fn internal_get_entries(keystore: &KeyStore) -> Result<u64, NativeError> {
     for entry in entries {
         result.push(entry);
     }
-    let result = serde_json::to_string(&result).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
+    let result = serde_json::to_string(&result).handle_error(NativeStatus::ConversionError)?;
 
     Ok(result.to_ptr() as c_ulonglong)
 }
@@ -174,28 +163,16 @@ async fn internal_add_key(
         let entry = keystore
             .add_key::<EncryptedKeySigner>(create_key_input.to_core())
             .await
-            .map_err(|e| NativeError {
-                status: NativeStatus::KeyStoreError,
-                info: e.to_string(),
-            })?;
-        serde_json::to_string(&entry).map_err(|e| NativeError {
-            status: NativeStatus::ConversionError,
-            info: e.to_string(),
-        })?
+            .handle_error(NativeStatus::KeyStoreError)?;
+        serde_json::to_string(&entry).handle_error(NativeStatus::ConversionError)?
     } else if let Ok(create_key_input) =
         serde_json::from_str::<DerivedKeyCreateInput>(&create_key_input)
     {
         let entry = keystore
             .add_key::<DerivedKeySigner>(create_key_input.to_core())
             .await
-            .map_err(|e| NativeError {
-                status: NativeStatus::KeyStoreError,
-                info: e.to_string(),
-            })?;
-        serde_json::to_string(&entry).map_err(|e| NativeError {
-            status: NativeStatus::ConversionError,
-            info: e.to_string(),
-        })?
+            .handle_error(NativeStatus::KeyStoreError)?;
+        serde_json::to_string(&entry).handle_error(NativeStatus::ConversionError)?
     } else {
         return Err(NativeError {
             status: NativeStatus::KeyStoreError,
@@ -252,28 +229,16 @@ async fn internal_update_key(
         let entry = keystore
             .update_key::<EncryptedKeySigner>(update_key_input.to_core())
             .await
-            .map_err(|e| NativeError {
-                status: NativeStatus::KeyStoreError,
-                info: e.to_string(),
-            })?;
-        serde_json::to_string(&entry).map_err(|e| NativeError {
-            status: NativeStatus::ConversionError,
-            info: e.to_string(),
-        })?
+            .handle_error(NativeStatus::KeyStoreError)?;
+        serde_json::to_string(&entry).handle_error(NativeStatus::ConversionError)?
     } else if let Ok(update_key_input) =
         serde_json::from_str::<DerivedKeyUpdateParams>(&update_key_input)
     {
         let entry = keystore
             .update_key::<DerivedKeySigner>(update_key_input.to_core())
             .await
-            .map_err(|e| NativeError {
-                status: NativeStatus::KeyStoreError,
-                info: e.to_string(),
-            })?;
-        serde_json::to_string(&entry).map_err(|e| NativeError {
-            status: NativeStatus::ConversionError,
-            info: e.to_string(),
-        })?
+            .handle_error(NativeStatus::KeyStoreError)?;
+        serde_json::to_string(&entry).handle_error(NativeStatus::ConversionError)?
     } else {
         return Err(NativeError {
             status: NativeStatus::KeyStoreError,
@@ -330,16 +295,10 @@ async fn internal_export_key(
         let output = keystore
             .export_key::<EncryptedKeySigner>(export_key_input.to_core())
             .await
-            .map_err(|e| NativeError {
-                status: NativeStatus::KeyStoreError,
-                info: e.to_string(),
-            })?;
+            .handle_error(NativeStatus::KeyStoreError)?;
 
         let output = EncryptedKeyExportOutput::from_core(output);
-        let output = serde_json::to_string(&output).map_err(|e| NativeError {
-            status: NativeStatus::ConversionError,
-            info: e.to_string(),
-        })?;
+        let output = serde_json::to_string(&output).handle_error(NativeStatus::ConversionError)?;
         output
     } else if let Ok(export_key_input) =
         serde_json::from_str::<DerivedKeyExportParams>(&export_key_input)
@@ -347,15 +306,9 @@ async fn internal_export_key(
         let output = keystore
             .export_key::<DerivedKeySigner>(export_key_input.to_core())
             .await
-            .map_err(|e| NativeError {
-                status: NativeStatus::KeyStoreError,
-                info: e.to_string(),
-            })?;
+            .handle_error(NativeStatus::KeyStoreError)?;
 
-        let output = serde_json::to_string(&output).map_err(|e| NativeError {
-            status: NativeStatus::ConversionError,
-            info: e.to_string(),
-        })?;
+        let output = serde_json::to_string(&output).handle_error(NativeStatus::ConversionError)?;
         output
     } else {
         return Err(NativeError {
@@ -461,27 +414,15 @@ pub unsafe extern "C" fn remove_key(
 }
 
 async fn internal_remove_key(keystore: &KeyStore, public_key: String) -> Result<u64, NativeError> {
-    let public_key = hex::decode(public_key).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
-    let public_key =
-        ed25519_dalek::PublicKey::from_bytes(&public_key).map_err(|e| NativeError {
-            status: NativeStatus::ConversionError,
-            info: e.to_string(),
-        })?;
+    let public_key = hex::decode(public_key).handle_error(NativeStatus::ConversionError)?;
+    let public_key = ed25519_dalek::PublicKey::from_bytes(&public_key)
+        .handle_error(NativeStatus::ConversionError)?;
 
     let entry = keystore
         .remove_key(&public_key)
         .await
-        .map_err(|e| NativeError {
-            status: NativeStatus::KeyStoreError,
-            info: e.to_string(),
-        })?;
-    let entry = serde_json::to_string(&entry).map_err(|e| NativeError {
-        status: NativeStatus::ConversionError,
-        info: e.to_string(),
-    })?;
+        .handle_error(NativeStatus::KeyStoreError)?;
+    let entry = serde_json::to_string(&entry).handle_error(NativeStatus::ConversionError)?;
 
     Ok(entry.to_ptr() as c_ulonglong)
 }
@@ -517,10 +458,10 @@ pub unsafe extern "C" fn clear_keystore(result_port: c_longlong, keystore: *mut 
 }
 
 async fn internal_clear_keystore(keystore: &KeyStore) -> Result<u64, NativeError> {
-    let _ = keystore.clear().await.map_err(|e| NativeError {
-        status: NativeStatus::KeyStoreError,
-        info: e.to_string(),
-    })?;
+    let _ = keystore
+        .clear()
+        .await
+        .handle_error(NativeStatus::KeyStoreError)?;
 
     Ok(0)
 }
