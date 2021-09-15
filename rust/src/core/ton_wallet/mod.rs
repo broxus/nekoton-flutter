@@ -27,8 +27,7 @@ use nekoton::{
     crypto::{DerivedKeySigner, EncryptedKeySigner},
     transport::{gql::GqlTransport, models::RawContractState, Transport},
 };
-use nekoton_abi::create_comment_payload;
-use nekoton_abi::TransactionId;
+use nekoton_abi::{create_comment_payload, TransactionId};
 use std::{
     ffi::c_void,
     os::raw::{c_char, c_longlong, c_schar, c_uchar, c_ulonglong},
