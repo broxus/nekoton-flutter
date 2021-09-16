@@ -1,5 +1,8 @@
 use crate::core::ContractState;
-use nekoton::core::models::{PendingTransaction, Transaction, TransactionsBatchInfo};
+use nekoton::core::{
+    generic_contract::GenericContract,
+    models::{PendingTransaction, Transaction, TransactionsBatchInfo},
+};
 use serde::Serialize;
 use tokio::sync::Mutex;
 

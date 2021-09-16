@@ -14,7 +14,7 @@ anyhow = "1.0"
 async-trait = "0.1"
 base64 = "0.13"
 dyn-clone = "1.0"
-ed25519-dalek = "1.0"
+ed25519-dalek = {git = "https://github.com/broxus/ed25519-dalek.git"}
 hex = "0.4"
 js-sys = "0.3"
 lazy_static = "1.4"
@@ -25,7 +25,7 @@ nekoton-depool = {git = "https://github.com/broxus/nekoton-depool.git"}
 nekoton-derive = {git = "https://github.com/broxus/nekoton.git"}
 nekoton-utils = {git = "https://github.com/broxus/nekoton.git"}
 openssl = {version = "0.10", features = ["vendored"]}
-secstr = "0.4.0"
+secstr = {version = "0.4.0", features = ["serde"]}
 serde = {version = "1.0", features = ["derive"]}
 serde_json = "1.0"
 thiserror = "1.0"

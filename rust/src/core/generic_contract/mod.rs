@@ -7,7 +7,7 @@ use crate::{
     core::{
         generic_contract::models::MutexGenericContract,
         keystore::{models::MutexKeyStore, KEY_STORE_NOT_FOUND},
-        ContractState, Expiration, MutexUnsignedMessage,
+        ContractState, MutexUnsignedMessage,
     },
     crypto::{derived_key::DerivedKeySignParams, encrypted_key::EncryptedKeyPassword},
     match_result,
@@ -17,29 +17,21 @@ use crate::{
     FromPtr, ToPtr, RUNTIME,
 };
 use nekoton::{
-    core::{
-        generic_contract::GenericContract,
-        keystore::KeyStore,
-        ton_wallet::{TonWallet, TransferAction},
-        TransactionExecutionOptions,
-    },
+    core::{generic_contract::GenericContract, keystore::KeyStore, TransactionExecutionOptions},
     crypto::{DerivedKeySigner, EncryptedKeySigner},
-    transport::{gql::GqlTransport, models::RawContractState, Transport},
+    transport::gql::GqlTransport,
 };
-use nekoton_abi::{create_comment_payload, TransactionId};
+use nekoton_abi::TransactionId;
 use std::{
     ffi::c_void,
-    os::raw::{c_char, c_longlong, c_schar, c_uchar, c_ulonglong},
+    os::raw::{c_char, c_longlong, c_ulonglong},
     str::FromStr,
     sync::Arc,
 };
 use tokio::sync::Mutex;
 use ton_block::MsgAddressInt;
-use ton_types::SliceData;
 
 pub const GENERIC_CONTRACT_NOT_FOUND: &str = "Generic contract not found";
-const NOT_EXISTS: &str = "Not exists";
-const DEPLOY_FIRST: &str = "Deploy first";
 
 #[no_mangle]
 pub unsafe extern "C" fn generic_contract_subscribe(

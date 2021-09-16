@@ -110,13 +110,13 @@ fn internal_parse_message_body_data(data: *mut c_char) -> Result<u64, NativeErro
 
     let function_name = "onRoundComplete";
     let depool_message = FunctionBuilder::new(function_name)
-        .in_arg("roundId", ParamType::Uint(64))
-        .in_arg("reward", ParamType::Uint(64))
-        .in_arg("ordinaryStake", ParamType::Uint(64))
-        .in_arg("vestingStake", ParamType::Uint(64))
-        .in_arg("lockStake", ParamType::Uint(64))
-        .in_arg("reinvest", ParamType::Bool)
-        .in_arg("reason", ParamType::Uint(8))
+        .input("roundId", ParamType::Uint(64))
+        .input("reward", ParamType::Uint(64))
+        .input("ordinaryStake", ParamType::Uint(64))
+        .input("vestingStake", ParamType::Uint(64))
+        .input("lockStake", ParamType::Uint(64))
+        .input("reinvest", ParamType::Bool)
+        .input("reason", ParamType::Uint(8))
         .build();
     if let Ok(tokens) = depool_message.decode_input(data.clone(), true) {
         let result = serialize_tokens(function_name, tokens)?;
@@ -125,8 +125,8 @@ fn internal_parse_message_body_data(data: *mut c_char) -> Result<u64, NativeErro
 
     let function_name = "receiveAnswer";
     let depool_message = FunctionBuilder::new(function_name)
-        .in_arg("errcode", ParamType::Uint(32))
-        .in_arg("comment", ParamType::Uint(64))
+        .input("errcode", ParamType::Uint(32))
+        .input("comment", ParamType::Uint(64))
         .build();
     if let Ok(tokens) = depool_message.decode_input(data.clone(), true) {
         let result = serialize_tokens(function_name, tokens)?;
@@ -135,8 +135,8 @@ fn internal_parse_message_body_data(data: *mut c_char) -> Result<u64, NativeErro
 
     let function_name = "onTransfer";
     let depool_message = FunctionBuilder::new(function_name)
-        .in_arg("source", ParamType::Address)
-        .in_arg("amount", ParamType::Uint(128))
+        .input("source", ParamType::Address)
+        .input("amount", ParamType::Uint(128))
         .build();
     if let Ok(tokens) = depool_message.decode_input(data.clone(), true) {
         let result = serialize_tokens(function_name, tokens)?;
@@ -145,7 +145,7 @@ fn internal_parse_message_body_data(data: *mut c_char) -> Result<u64, NativeErro
 
     let function_name = "withdrawFromPoolingRound";
     let depool_message = FunctionBuilder::new(function_name)
-        .in_arg("withdrawValue", ParamType::Uint(64))
+        .input("withdrawValue", ParamType::Uint(64))
         .build();
     if let Ok(tokens) = depool_message.decode_input(data.clone(), true) {
         let result = serialize_tokens(function_name, tokens)?;
@@ -154,7 +154,7 @@ fn internal_parse_message_body_data(data: *mut c_char) -> Result<u64, NativeErro
 
     let function_name = "withdrawPart";
     let depool_message = FunctionBuilder::new(function_name)
-        .in_arg("withdrawValue", ParamType::Uint(64))
+        .input("withdrawValue", ParamType::Uint(64))
         .build();
     if let Ok(tokens) = depool_message.decode_input(data.clone(), true) {
         let result = serialize_tokens(function_name, tokens)?;
@@ -177,7 +177,7 @@ fn internal_parse_message_body_data(data: *mut c_char) -> Result<u64, NativeErro
 
     let function_name = "addOrdinaryStake";
     let depool_message = FunctionBuilder::new(function_name)
-        .in_arg("stake", ParamType::Uint(64))
+        .input("stake", ParamType::Uint(64))
         .build();
     if let Ok(tokens) = depool_message.decode_input(data.clone(), true) {
         let result = serialize_tokens(function_name, tokens)?;
@@ -186,7 +186,7 @@ fn internal_parse_message_body_data(data: *mut c_char) -> Result<u64, NativeErro
 
     let function_name = "setVestingDonor";
     let depool_message = FunctionBuilder::new(function_name)
-        .in_arg("donor", ParamType::Address)
+        .input("donor", ParamType::Address)
         .build();
     if let Ok(tokens) = depool_message.decode_input(data.clone(), true) {
         let result = serialize_tokens(function_name, tokens)?;
@@ -195,7 +195,7 @@ fn internal_parse_message_body_data(data: *mut c_char) -> Result<u64, NativeErro
 
     let function_name = "setLockDonor";
     let depool_message = FunctionBuilder::new(function_name)
-        .in_arg("donor", ParamType::Address)
+        .input("donor", ParamType::Address)
         .build();
     if let Ok(tokens) = depool_message.decode_input(data.clone(), true) {
         let result = serialize_tokens(function_name, tokens)?;
@@ -204,10 +204,10 @@ fn internal_parse_message_body_data(data: *mut c_char) -> Result<u64, NativeErro
 
     let function_name = "addVestingStake";
     let depool_message = FunctionBuilder::new(function_name)
-        .in_arg("stake", ParamType::Uint(64))
-        .in_arg("beneficiary", ParamType::Address)
-        .in_arg("withdrawalPeriod", ParamType::Uint(32))
-        .in_arg("totalPeriod", ParamType::Uint(32))
+        .input("stake", ParamType::Uint(64))
+        .input("beneficiary", ParamType::Address)
+        .input("withdrawalPeriod", ParamType::Uint(32))
+        .input("totalPeriod", ParamType::Uint(32))
         .build();
     if let Ok(tokens) = depool_message.decode_input(data.clone(), true) {
         let result = serialize_tokens(function_name, tokens)?;
@@ -216,10 +216,10 @@ fn internal_parse_message_body_data(data: *mut c_char) -> Result<u64, NativeErro
 
     let function_name = "addLockStake";
     let depool_message = FunctionBuilder::new(function_name)
-        .in_arg("stake", ParamType::Uint(64))
-        .in_arg("beneficiary", ParamType::Address)
-        .in_arg("withdrawalPeriod", ParamType::Uint(32))
-        .in_arg("totalPeriod", ParamType::Uint(32))
+        .input("stake", ParamType::Uint(64))
+        .input("beneficiary", ParamType::Address)
+        .input("withdrawalPeriod", ParamType::Uint(32))
+        .input("totalPeriod", ParamType::Uint(32))
         .build();
     if let Ok(tokens) = depool_message.decode_input(data.clone(), true) {
         let result = serialize_tokens(function_name, tokens)?;
@@ -228,8 +228,8 @@ fn internal_parse_message_body_data(data: *mut c_char) -> Result<u64, NativeErro
 
     let function_name = "transferStake";
     let depool_message = FunctionBuilder::new(function_name)
-        .in_arg("dest", ParamType::Address)
-        .in_arg("amount", ParamType::Uint(64))
+        .input("dest", ParamType::Address)
+        .input("amount", ParamType::Uint(64))
         .build();
     if let Ok(tokens) = depool_message.decode_input(data.clone(), true) {
         let result = serialize_tokens(function_name, tokens)?;
