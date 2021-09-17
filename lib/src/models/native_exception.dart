@@ -28,6 +28,10 @@ class TonWalletException extends NativeException {
   TonWalletException([String? info]) : super(info);
 }
 
+class GenericContractException extends NativeException {
+  GenericContractException([String? info]) : super(info);
+}
+
 class CryptoException extends NativeException {
   CryptoException([String? info]) : super(info);
 }

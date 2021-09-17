@@ -323,7 +323,7 @@ class Nekoton {
       _subscriptionsSubject.add([]);
 
       for (final subscription in subscriptions) {
-        await _freeWallet(subscription);
+        await _freeSubscription(subscription);
       }
 
       if (currentKey == null) {
@@ -391,7 +391,7 @@ class Nekoton {
 
     _subscriptionsSubject.add(subscriptions);
 
-    await _freeWallet(subject);
+    await _freeSubscription(subject);
   }
 
   Future<void> _addTokenWalletToSubscription({
@@ -464,7 +464,7 @@ class Nekoton {
     _subscriptionsSubject.add([]);
 
     for (final subscription in subscriptions) {
-      await _freeWallet(subscription);
+      await _freeSubscription(subscription);
     }
   }
 
@@ -474,7 +474,6 @@ class Nekoton {
   }) async {
     try {
       final tonWallet = await tonWalletSubscribe(
-        keystore: _keystore,
         workchain: _workchain,
         entry: key.value,
         walletType: account.value.tonWallet.contract,
@@ -513,7 +512,7 @@ class Nekoton {
     }
   }
 
-  Future<void> _freeWallet(SubscriptionSubject subscription) async {
+  Future<void> _freeSubscription(SubscriptionSubject subscription) async {
     try {
       final tonWallet = subscription.value.tonWallet;
       freeTonWallet(tonWallet);

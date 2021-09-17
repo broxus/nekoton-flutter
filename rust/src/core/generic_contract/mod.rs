@@ -68,7 +68,7 @@ async fn internal_generic_contract_subscribe(
 
     let generic_contract = GenericContract::subscribe(transport, address, handler)
         .await
-        .handle_error(NativeStatus::TonWalletError)?;
+        .handle_error(NativeStatus::GenericContractError)?;
 
     let generic_contract = Mutex::new(Some(generic_contract));
     let generic_contract = Arc::new(generic_contract);
@@ -356,7 +356,7 @@ async fn internal_generic_contract_send(
     let pending_transaction = generic_contract
         .send(&message.message, message.expire_at)
         .await
-        .handle_error(NativeStatus::TonWalletError)?;
+        .handle_error(NativeStatus::GenericContractError)?;
 
     let pending_transaction =
         serde_json::to_string(&pending_transaction).handle_error(NativeStatus::ConversionError)?;
@@ -403,7 +403,7 @@ async fn internal_generic_contract_refresh(
     let _ = generic_contract
         .refresh()
         .await
-        .handle_error(NativeStatus::TonWalletError)?;
+        .handle_error(NativeStatus::GenericContractError)?;
 
     Ok(0)
 }
@@ -465,7 +465,7 @@ async fn internal_generic_contract_handle_block(
     let _ = generic_contract
         .handle_block(&block)
         .await
-        .handle_error(NativeStatus::TonWalletError)?;
+        .handle_error(NativeStatus::GenericContractError)?;
 
     Ok(0)
 }
@@ -517,7 +517,7 @@ async fn internal_generic_contract_preload_transactions(
     let _ = generic_contract
         .preload_transactions(from)
         .await
-        .handle_error(NativeStatus::TonWalletError)?;
+        .handle_error(NativeStatus::GenericContractError)?;
 
     Ok(0)
 }
@@ -570,13 +570,13 @@ async fn internal_generic_contract_estimate_fees(
 
     let message = message
         .sign(&signature)
-        .handle_error(NativeStatus::TonWalletError)?;
+        .handle_error(NativeStatus::GenericContractError)?;
     let message = message.message;
 
     let fees = generic_contract
         .estimate_fees(&message)
         .await
-        .handle_error(NativeStatus::TonWalletError)?;
+        .handle_error(NativeStatus::GenericContractError)?;
 
     Ok(fees)
 }
@@ -693,7 +693,7 @@ async fn internal_generic_contract_execute_transaction_locally(
     let transaction = generic_contract
         .execute_transaction_locally(&message.message, options)
         .await
-        .handle_error(NativeStatus::TonWalletError)?;
+        .handle_error(NativeStatus::GenericContractError)?;
 
     let transaction =
         serde_json::to_string(&transaction).handle_error(NativeStatus::ConversionError)?;

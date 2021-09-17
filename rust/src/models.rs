@@ -22,6 +22,7 @@ pub enum NativeStatus {
     KeyStoreError,
     TokenWalletError,
     TonWalletError,
+    GenericContractError,
     CryptoError,
     DePoolError,
     AbiError,

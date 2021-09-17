@@ -7,15 +7,13 @@ import 'package:collection/collection.dart';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
+import 'package:nekoton_flutter/src/core/models/on_message_expired_payload.dart';
+import 'package:nekoton_flutter/src/core/models/on_message_sent_payload.dart';
+import 'package:nekoton_flutter/src/core/models/polling_method.dart';
 import 'package:recase/recase.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../../core/keystore/keystore.dart';
-import '../../crypto/models/derived_key_sign_params.dart';
-import '../../crypto/models/encrypted_key_password.dart';
-import '../../crypto/models/password.dart';
-import '../../crypto/models/password_cache_behavior.dart';
-import '../../crypto/models/sign_input.dart';
 import '../../external/gql.dart';
 import '../../ffi_utils.dart';
 import '../../models/nekoton_exception.dart';
@@ -34,10 +32,7 @@ import '../models/unsigned_message.dart';
 import 'models/existing_wallet_info.dart';
 import 'models/multisig_pending_transaction.dart';
 import 'models/native_ton_wallet.dart';
-import 'models/on_message_expired_payload.dart';
-import 'models/on_message_sent_payload.dart';
 import 'models/on_ton_wallet_transactions_found_payload.dart';
-import 'models/polling_method.dart';
 import 'models/ton_wallet_details.dart';
 import 'models/ton_wallet_transaction_with_data.dart';
 
@@ -52,7 +47,7 @@ class TonWallet {
   final _nativeLibrary = NativeLibrary.instance();
   late final Logger? _logger;
   late final Gql _gql;
-  late final Keystore? _keystore;
+  late final Keystore _keystore;
   late final KeyStoreEntry? _entry;
   late final NativeTonWallet nativeTonWallet;
   late final StreamSubscription _subscription;
@@ -347,13 +342,16 @@ class TonWallet {
     }
 
     final currentBlockId = await _gql.getLatestBlockId(address);
-    final signInput = await _getSignInput(password);
+    final signInput = await _keystore.getSignInput(
+      entry: _entry!,
+      password: password,
+    );
     final signInputStr = jsonEncode(signInput.toJson());
 
     final result = await proceedAsync((port) => _nativeLibrary.bindings.ton_wallet_send(
           port,
           nativeTonWallet.ptr!,
-          _keystore!.nativeKeystore.ptr!,
+          _keystore.nativeKeystore.ptr!,
           message.nativeUnsignedMessage.ptr!,
           signInputStr.toNativeUtf8().cast<Int8>(),
         ));
@@ -382,23 +380,6 @@ class TonWallet {
           fromStr.toNativeUtf8().cast<Int8>(),
         ));
   }
-
-  Future<SignInput> _getSignInput(String password) async => _entry!.isLegacy
-      ? EncryptedKeyPassword(
-          publicKey: _entry!.publicKey,
-          password: Password.explicit(
-            password: password,
-            cacheBehavior: const PasswordCacheBehavior.remove(),
-          ),
-        )
-      : DerivedKeySignParams.byAccountId(
-          masterKey: _entry!.masterKey,
-          accountId: _entry!.accountId,
-          password: Password.explicit(
-            password: password,
-            cacheBehavior: const PasswordCacheBehavior.remove(),
-          ),
-        );
 
   Future<void> _handleBlock(String id) async => proceedAsync((port) => _nativeLibrary.bindings.ton_wallet_handle_block(
         port,

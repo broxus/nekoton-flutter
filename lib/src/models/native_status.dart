@@ -6,6 +6,7 @@ enum NativeStatus {
   keyStoreError,
   tokenWalletError,
   tonWalletError,
+  genericContractError,
   cryptoError,
   dePoolError,
   abiError,

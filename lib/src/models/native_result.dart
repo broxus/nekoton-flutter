@@ -31,6 +31,8 @@ extension Handle on NativeResult {
         throw TokenWalletException(cStringToDart(payload));
       case NativeStatus.tonWalletError:
         throw TonWalletException(cStringToDart(payload));
+      case NativeStatus.genericContractError:
+        throw GenericContractException(cStringToDart(payload));
       case NativeStatus.cryptoError:
         throw CryptoException(cStringToDart(payload));
       case NativeStatus.dePoolError:

@@ -8,10 +8,13 @@ import 'package:logger/logger.dart';
 import '../../crypto/models/create_key_input.dart';
 import '../../crypto/models/derived_key_export_output.dart';
 import '../../crypto/models/derived_key_export_params.dart';
+import '../../crypto/models/derived_key_sign_params.dart';
 import '../../crypto/models/encrypted_key_export_output.dart';
 import '../../crypto/models/encrypted_key_password.dart';
 import '../../crypto/models/export_key_input.dart';
 import '../../crypto/models/export_key_output.dart';
+import '../../crypto/models/password.dart';
+import '../../crypto/models/password_cache_behavior.dart';
 import '../../crypto/models/sign_input.dart';
 import '../../crypto/models/update_key_input.dart';
 import '../../external/storage.dart';
@@ -120,6 +123,27 @@ class Keystore {
 
     return result == 1;
   }
+
+  Future<SignInput> getSignInput({
+    required KeyStoreEntry entry,
+    required String password,
+  }) async =>
+      entry.isLegacy
+          ? EncryptedKeyPassword(
+              publicKey: entry.publicKey,
+              password: Password.explicit(
+                password: password,
+                cacheBehavior: const PasswordCacheBehavior.remove(),
+              ),
+            )
+          : DerivedKeySignParams.byAccountId(
+              masterKey: entry.masterKey,
+              accountId: entry.accountId,
+              password: Password.explicit(
+                password: password,
+                cacheBehavior: const PasswordCacheBehavior.remove(),
+              ),
+            );
 
   Future<KeyStoreEntry?> removeKey(String publicKey) async {
     final result = await proceedAsync((port) => _nativeLibrary.bindings.remove_key(

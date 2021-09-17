@@ -1,7 +1,6 @@
 part of 'ton_wallet.dart';
 
 Future<TonWallet> tonWalletSubscribeByExisting({
-  required Keystore keystore,
   required KeyStoreEntry entry,
   required ExistingWalletInfo existingWalletInfo,
   Logger? logger,
@@ -11,7 +10,7 @@ Future<TonWallet> tonWalletSubscribeByExisting({
   tonWallet._logger = logger;
 
   tonWallet._gql = await Gql.getInstance(logger: tonWallet._logger);
-  tonWallet._keystore = keystore;
+  tonWallet._keystore = await Keystore.getInstance(logger: tonWallet._logger);
   tonWallet._entry = entry;
   tonWallet._subscription = tonWallet._receivePort.listen(tonWallet._subscriptionListener);
 
