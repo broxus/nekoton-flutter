@@ -5,7 +5,6 @@ pub mod external;
 pub mod helpers;
 pub mod models;
 pub mod transport;
-pub mod web;
 
 use allo_isolate::{
     ffi::{DartCObject, DartPort},
