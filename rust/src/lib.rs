@@ -22,11 +22,10 @@ use std::{
 use tokio::runtime::{Builder, Runtime};
 
 lazy_static! {
-    static ref RUNTIME: io::Result<Runtime> = Builder::new()
-        .threaded_scheduler()
-        .enable_all()
-        .core_threads(4)
+    static ref RUNTIME: io::Result<Runtime> = Builder::new_multi_thread()
+        .worker_threads(4)
         .thread_name("nekoton_flutter")
+        .thread_stack_size(3 * 1024 * 1024)
         .build();
 }
 

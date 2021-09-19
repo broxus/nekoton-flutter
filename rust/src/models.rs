@@ -26,6 +26,7 @@ pub enum NativeStatus {
     CryptoError,
     DePoolError,
     AbiError,
+    ConnectionError,
     TransportError,
 }
 

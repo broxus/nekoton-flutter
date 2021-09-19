@@ -13,24 +13,30 @@ allo-isolate = "0.1.7"
 anyhow = "1.0"
 async-trait = "0.1"
 base64 = "0.13"
+bb8 = "0.7"
 dyn-clone = "1.0"
 ed25519-dalek = {git = "https://github.com/broxus/ed25519-dalek.git"}
+futures = "0.3"
 hex = "0.4"
 js-sys = "0.3"
 lazy_static = "1.4"
-nekoton = {git = "https://github.com/broxus/nekoton.git", features = ["gql_transport"]}
+log = "0.4"
+nekoton = {git = "https://github.com/broxus/nekoton.git", features = ["gql_transport", "adnl_transport"]}
 nekoton-abi = {git = "https://github.com/broxus/nekoton.git"}
 nekoton-contracts = {git = "https://github.com/broxus/nekoton.git"}
 nekoton-depool = {git = "https://github.com/broxus/nekoton-depool.git"}
 nekoton-derive = {git = "https://github.com/broxus/nekoton.git"}
 nekoton-utils = {git = "https://github.com/broxus/nekoton.git"}
 openssl = {version = "0.10", features = ["vendored"]}
+parking_lot = "0.11"
 secstr = {version = "0.4.0", features = ["serde"]}
 serde = {version = "1.0", features = ["derive"]}
 serde_json = "1.0"
 thiserror = "1.0"
-tokio = {version = "0.2", features = ["full"]}
+tiny-adnl = {git = "https://github.com/broxus/tiny-adnl.git"}
+tokio = {version = "1.0", features = ["full"]}
 ton_abi = {git = "https://github.com/broxus/ton-labs-abi.git"}
+ton_api = {git = "https://github.com/broxus/ton-labs-tl.git", package = "ton_api"}
 ton_block = {git = "https://github.com/broxus/ton-labs-block.git"}
 ton_types = {git = "https://github.com/broxus/ton-labs-types.git"}
 wasm-bindgen = {version = "=0.2.74", features = ["serde-serialize"]}

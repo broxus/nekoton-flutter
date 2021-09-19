@@ -286,12 +286,12 @@ pub unsafe extern "C" fn run_local(
 }
 
 fn internal_run_local(
-    gen_timings: String,
-    last_transaction_id: String,
-    account_stuff_boc: String,
-    contract_abi: String,
-    method: String,
-    input: String,
+    _gen_timings: String,
+    _last_transaction_id: String,
+    _account_stuff_boc: String,
+    _contract_abi: String,
+    _method: String,
+    _input: String,
 ) -> Result<u64, NativeError> {
     let result = String::from("{output: {}, code: 0}");
 
@@ -317,11 +317,11 @@ pub unsafe extern "C" fn get_expected_address(
 }
 
 fn internal_get_expected_address(
-    tvc: String,
-    contract_abi: String,
-    workchain_id: i8,
-    public_key: String,
-    init_data: String,
+    _tvc: String,
+    _contract_abi: String,
+    _workchain_id: i8,
+    _public_key: String,
+    _init_data: String,
 ) -> Result<u64, NativeError> {
     let result = String::new();
 
@@ -337,7 +337,7 @@ pub unsafe extern "C" fn pack_into_cell(params: *mut c_char, tokens: *mut c_char
     match_result(result)
 }
 
-fn internal_pack_into_cell(params: String, tokens: String) -> Result<u64, NativeError> {
+fn internal_pack_into_cell(_params: String, _tokens: String) -> Result<u64, NativeError> {
     let result = String::new();
 
     Ok(result.to_ptr() as c_ulonglong)
@@ -358,9 +358,9 @@ pub unsafe extern "C" fn unpack_from_cell(
 }
 
 fn internal_unpack_from_cell(
-    params: String,
-    boc: String,
-    allow_partial: bool,
+    _params: String,
+    _boc: String,
+    _allow_partial: bool,
 ) -> Result<u64, NativeError> {
     let result = String::from("{}");
 
@@ -375,7 +375,7 @@ pub unsafe extern "C" fn extract_public_key(boc: *mut c_char) -> *mut c_void {
     match_result(result)
 }
 
-fn internal_extract_public_key(boc: String) -> Result<u64, NativeError> {
+fn internal_extract_public_key(_boc: String) -> Result<u64, NativeError> {
     let result = String::new();
 
     Ok(result.to_ptr() as c_ulonglong)
@@ -389,7 +389,7 @@ pub unsafe extern "C" fn code_to_tvc(code: *mut c_char) -> *mut c_void {
     match_result(result)
 }
 
-fn internal_code_to_tvc(code: String) -> Result<u64, NativeError> {
+fn internal_code_to_tvc(_code: String) -> Result<u64, NativeError> {
     let result = String::new();
 
     Ok(result.to_ptr() as c_ulonglong)
@@ -403,7 +403,7 @@ pub unsafe extern "C" fn split_tvc(tvc: *mut c_char) -> *mut c_void {
     match_result(result)
 }
 
-fn internal_split_tvc(tvc: String) -> Result<u64, NativeError> {
+fn internal_split_tvc(_tvc: String) -> Result<u64, NativeError> {
     let result = String::from("{data:\"data\", code: \"code\"}");
 
     Ok(result.to_ptr() as c_ulonglong)
@@ -424,9 +424,9 @@ pub unsafe extern "C" fn encode_internal_input(
 }
 
 fn internal_encode_internal_input(
-    contract_abi: String,
-    method: String,
-    input: String,
+    _contract_abi: String,
+    _method: String,
+    _input: String,
 ) -> Result<u64, NativeError> {
     let result = String::new();
 
@@ -450,10 +450,10 @@ pub unsafe extern "C" fn decode_input(
 }
 
 fn internal_decode_input(
-    message_body: String,
-    contract_abi: String,
-    method: String,
-    internal: bool,
+    _message_body: String,
+    _contract_abi: String,
+    _method: String,
+    _internal: bool,
 ) -> Result<u64, NativeError> {
     let result = String::from("{method:\"method\", input: {}}");
 
@@ -475,9 +475,9 @@ pub unsafe extern "C" fn decode_output(
 }
 
 fn internal_decode_output(
-    message_body: String,
-    contract_abi: String,
-    method: String,
+    _message_body: String,
+    _contract_abi: String,
+    _method: String,
 ) -> Result<u64, NativeError> {
     let result = String::from("{method:\"method\", output: {}}");
 
@@ -499,9 +499,9 @@ pub unsafe extern "C" fn decode_event(
 }
 
 fn internal_decode_event(
-    message_body: String,
-    contract_abi: String,
-    event: String,
+    _message_body: String,
+    _contract_abi: String,
+    _event: String,
 ) -> Result<u64, NativeError> {
     let result = String::from("{event:\"event\", data: {}}");
 
@@ -523,9 +523,9 @@ pub unsafe extern "C" fn decode_transaction(
 }
 
 fn internal_decode_transaction(
-    transaction: String,
-    contract_abi: String,
-    method: String,
+    _transaction: String,
+    _contract_abi: String,
+    _method: String,
 ) -> Result<u64, NativeError> {
     let result = String::from("{method:\"method\", input: {}, output:{}}");
 
@@ -545,8 +545,8 @@ pub unsafe extern "C" fn decode_transaction_events(
 }
 
 fn internal_decode_transaction_events(
-    transaction: String,
-    contract_abi: String,
+    _transaction: String,
+    _contract_abi: String,
 ) -> Result<u64, NativeError> {
     let result = String::from("[{event:\"event\", data: {}}]");
 
@@ -587,13 +587,13 @@ pub unsafe extern "C" fn create_external_message(
 }
 
 fn internal_create_external_message(
-    dst: String,
-    contract_abi: String,
-    method: String,
-    state_init: Option<String>,
-    input: String,
-    public_key: String,
-    timeout: u32,
+    _dst: String,
+    _contract_abi: String,
+    _method: String,
+    _state_init: Option<String>,
+    _input: String,
+    _public_key: String,
+    _timeout: u32,
 ) -> Result<u64, NativeError> {
     let result = String::new();
 
