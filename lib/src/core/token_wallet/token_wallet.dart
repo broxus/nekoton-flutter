@@ -6,10 +6,10 @@ import 'dart:isolate';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
+import '../../transport/gql_transport.dart';
 import 'package:recase/recase.dart';
 import 'package:rxdart/rxdart.dart';
 
-import '../../external/gql.dart';
 import '../../ffi_utils.dart';
 import '../../native_library.dart';
 import '../models/contract_state.dart';
@@ -35,7 +35,7 @@ class TokenWallet {
   final _receivePort = ReceivePort();
   final _nativeLibrary = NativeLibrary.instance();
   late final Logger? _logger;
-  late final Gql _gql;
+  late final GqlTransport _transport;
   late final NativeTokenWallet _nativeTokenWallet;
   late final TonWallet _tonWallet;
   late final StreamSubscription _subscription;
@@ -132,7 +132,7 @@ class TokenWallet {
           port,
           _nativeTokenWallet.ptr!,
           _tonWallet.nativeTonWallet.ptr!,
-          _gql.nativeTransport.ptr!,
+          _transport.nativeGqlTransport.ptr!,
           expirationStr.toNativeUtf8().cast<Int8>(),
         ));
 
@@ -155,7 +155,7 @@ class TokenWallet {
           port,
           _nativeTokenWallet.ptr!,
           _tonWallet.nativeTonWallet.ptr!,
-          _gql.nativeTransport.ptr!,
+          _transport.nativeGqlTransport.ptr!,
           expirationStr.toNativeUtf8().cast<Int8>(),
           destination.toNativeUtf8().cast<Int8>(),
           tokens.toNativeUtf8().cast<Int8>(),
@@ -175,7 +175,7 @@ class TokenWallet {
     required UnsignedMessage message,
     required String password,
   }) async {
-    final currentBlockId = await _gql.getLatestBlockId(address);
+    final currentBlockId = await _transport.getLatestBlockId(address);
 
     final result = await _tonWallet.send(
       message: message,
@@ -206,14 +206,14 @@ class TokenWallet {
       proceedAsync((port) => _nativeLibrary.bindings.token_wallet_handle_block(
             port,
             _nativeTokenWallet.ptr!,
-            _gql.nativeTransport.ptr!,
+            _transport.nativeGqlTransport.ptr!,
             id.toNativeUtf8().cast<Int8>(),
           ));
 
   Future<void> _internalRefresh(String currentBlockId) async {
     for (var i = 0; 0 < 10; i++) {
       try {
-        final nextBlockId = await _gql.waitForNextBlockId(
+        final nextBlockId = await _transport.waitForNextBlockId(
           currentBlockId: currentBlockId,
           address: address,
         );

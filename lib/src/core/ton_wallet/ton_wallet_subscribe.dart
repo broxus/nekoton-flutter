@@ -10,7 +10,7 @@ Future<TonWallet> tonWalletSubscribe({
 
   tonWallet._logger = logger;
 
-  tonWallet._gql = await Gql.getInstance(logger: tonWallet._logger);
+  tonWallet._transport = await GqlTransport.getInstance(logger: tonWallet._logger);
   tonWallet._keystore = await Keystore.getInstance(logger: tonWallet._logger);
   tonWallet._entry = entry;
   tonWallet._subscription = tonWallet._receivePort.listen(tonWallet._subscriptionListener);
@@ -19,7 +19,7 @@ Future<TonWallet> tonWalletSubscribe({
   final result = await proceedAsync((port) => tonWallet._nativeLibrary.bindings.ton_wallet_subscribe(
         port,
         tonWallet._receivePort.sendPort.nativePort,
-        tonWallet._gql.nativeTransport.ptr!,
+        tonWallet._transport.nativeGqlTransport.ptr!,
         workchain,
         entry.publicKey.toNativeUtf8().cast<Int8>(),
         walletTypeStr.toNativeUtf8().cast<Int8>(),

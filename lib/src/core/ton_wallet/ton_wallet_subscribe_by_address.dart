@@ -8,13 +8,13 @@ Future<TonWallet> tonWalletSubscribeByAddress({
 
   tonWallet._logger = logger;
 
-  tonWallet._gql = await Gql.getInstance(logger: tonWallet._logger);
+  tonWallet._transport = await GqlTransport.getInstance(logger: tonWallet._logger);
   tonWallet._subscription = tonWallet._receivePort.listen(tonWallet._subscriptionListener);
 
   final result = await proceedAsync((port) => tonWallet._nativeLibrary.bindings.ton_wallet_subscribe_by_address(
         port,
         tonWallet._receivePort.sendPort.nativePort,
-        tonWallet._gql.nativeTransport.ptr!,
+        tonWallet._transport.nativeGqlTransport.ptr!,
         address.toNativeUtf8().cast<Int8>(),
       ));
   final ptr = Pointer.fromAddress(result).cast<Void>();

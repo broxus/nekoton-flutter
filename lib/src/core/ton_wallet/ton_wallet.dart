@@ -7,14 +7,14 @@ import 'package:collection/collection.dart';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
-import 'package:nekoton_flutter/src/core/models/on_message_expired_payload.dart';
-import 'package:nekoton_flutter/src/core/models/on_message_sent_payload.dart';
-import 'package:nekoton_flutter/src/core/models/polling_method.dart';
+import '../models/on_message_expired_payload.dart';
+import '../models/on_message_sent_payload.dart';
+import '../models/polling_method.dart';
+import '../../transport/gql_transport.dart';
 import 'package:recase/recase.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../../core/keystore/keystore.dart';
-import '../../external/gql.dart';
 import '../../ffi_utils.dart';
 import '../../models/nekoton_exception.dart';
 import '../../native_library.dart';
@@ -46,7 +46,7 @@ class TonWallet {
   final _receivePort = ReceivePort();
   final _nativeLibrary = NativeLibrary.instance();
   late final Logger? _logger;
-  late final Gql _gql;
+  late final GqlTransport _transport;
   late final Keystore _keystore;
   late final KeyStoreEntry? _entry;
   late final NativeTonWallet nativeTonWallet;
@@ -241,7 +241,7 @@ class TonWallet {
     final result = await proceedAsync((port) => _nativeLibrary.bindings.ton_wallet_prepare_transfer(
           port,
           nativeTonWallet.ptr!,
-          _gql.nativeTransport.ptr!,
+          _transport.nativeGqlTransport.ptr!,
           expirationStr.toNativeUtf8().cast<Int8>(),
           destination.toNativeUtf8().cast<Int8>(),
           amount,
@@ -264,7 +264,7 @@ class TonWallet {
     final result = await proceedAsync((port) => _nativeLibrary.bindings.ton_wallet_prepare_confirm_transaction(
           port,
           nativeTonWallet.ptr!,
-          _gql.nativeTransport.ptr!,
+          _transport.nativeGqlTransport.ptr!,
           transactionId,
           expirationStr.toNativeUtf8().cast<Int8>(),
         ));
@@ -287,7 +287,7 @@ class TonWallet {
     final result = await proceedAsync((port) => _nativeLibrary.bindings.prepare_add_ordinary_stake(
           port,
           nativeTonWallet.ptr!,
-          _gql.nativeTransport.ptr!,
+          _transport.nativeGqlTransport.ptr!,
           expirationStr.toNativeUtf8().cast<Int8>(),
           depool.toNativeUtf8().cast<Int8>(),
           depoolFee,
@@ -312,7 +312,7 @@ class TonWallet {
     final result = await proceedAsync((port) => _nativeLibrary.bindings.prepare_withdraw_part(
           port,
           nativeTonWallet.ptr!,
-          _gql.nativeTransport.ptr!,
+          _transport.nativeGqlTransport.ptr!,
           expirationStr.toNativeUtf8().cast<Int8>(),
           depool.toNativeUtf8().cast<Int8>(),
           depoolFee,
@@ -341,7 +341,7 @@ class TonWallet {
       throw TonWalletReadOnlyException();
     }
 
-    final currentBlockId = await _gql.getLatestBlockId(address);
+    final currentBlockId = await _transport.getLatestBlockId(address);
     final signInput = await _keystore.getSignInput(
       entry: _entry!,
       password: password,
@@ -384,14 +384,14 @@ class TonWallet {
   Future<void> _handleBlock(String id) async => proceedAsync((port) => _nativeLibrary.bindings.ton_wallet_handle_block(
         port,
         nativeTonWallet.ptr!,
-        _gql.nativeTransport.ptr!,
+        _transport.nativeGqlTransport.ptr!,
         id.toNativeUtf8().cast<Int8>(),
       ));
 
   Future<void> _internalRefresh(String currentBlockId) async {
     for (var i = 0; 0 < 10; i++) {
       try {
-        final nextBlockId = await _gql.waitForNextBlockId(
+        final nextBlockId = await _transport.waitForNextBlockId(
           currentBlockId: currentBlockId,
           address: address,
         );

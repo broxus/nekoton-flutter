@@ -10,58 +10,28 @@ import 'package:logger/logger.dart';
 import '../ffi_utils.dart';
 import '../native_library.dart';
 import 'models/gql_request.dart';
-import 'models/native_connection.dart';
-import 'models/native_transport.dart';
+import 'models/native_gql_connection.dart';
 
-class Gql {
-  static Gql? _instance;
+class GqlConnection {
+  static GqlConnection? _instance;
   final _nativeLibrary = NativeLibrary.instance();
   final Logger? _logger;
   late final Dio _dio;
   final _receivePort = ReceivePort();
-  late final NativeConnection _nativeConnection;
-  late final NativeTransport nativeTransport;
+  late final NativeGqlConnection nativeGqlConnection;
 
-  Gql._(this._logger);
+  GqlConnection._(this._logger);
 
-  static Future<Gql> getInstance({
+  static Future<GqlConnection> getInstance({
     Logger? logger,
   }) async {
     if (_instance == null) {
-      final instance = Gql._(logger);
+      final instance = GqlConnection._(logger);
       await instance._initialize();
       _instance = instance;
     }
 
     return _instance!;
-  }
-
-  Future<String> getLatestBlockId(String address) async {
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.get_latest_block_id(
-          port,
-          nativeTransport.ptr!,
-          address.toNativeUtf8().cast<Int8>(),
-        ));
-
-    final id = cStringToDart(result);
-
-    return id;
-  }
-
-  Future<String> waitForNextBlockId({
-    required String currentBlockId,
-    required String address,
-  }) async {
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.wait_for_next_block_id(
-          port,
-          nativeTransport.ptr!,
-          currentBlockId.toNativeUtf8().cast<Int8>(),
-          address.toNativeUtf8().cast<Int8>(),
-        ));
-
-    final nextBlockId = cStringToDart(result);
-
-    return nextBlockId;
   }
 
   Future<void> _initialize() async {
@@ -75,20 +45,15 @@ class Gql {
     );
     _dio = Dio(baseOptions);
 
-    _receivePort.listen(_gqlListener);
+    _receivePort.listen(_gqlConnectionListener);
 
     final connectionResult =
         proceedSync(() => _nativeLibrary.bindings.get_gql_connection(_receivePort.sendPort.nativePort));
     final connectionPtr = Pointer.fromAddress(connectionResult).cast<Void>();
-    _nativeConnection = NativeConnection(connectionPtr);
-
-    final transportResult =
-        await proceedAsync((port) => _nativeLibrary.bindings.get_gql_transport(port, _nativeConnection.ptr!));
-    final transportPtr = Pointer.fromAddress(transportResult).cast<Void>();
-    nativeTransport = NativeTransport(transportPtr);
+    nativeGqlConnection = NativeGqlConnection(connectionPtr);
   }
 
-  Future<void> _gqlListener(dynamic data) async {
+  Future<void> _gqlConnectionListener(dynamic data) async {
     try {
       if (data is! String) {
         return;

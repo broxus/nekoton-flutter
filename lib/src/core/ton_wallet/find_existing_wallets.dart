@@ -5,11 +5,11 @@ Future<List<ExistingWalletInfo>> findExistingWallets({
   required int workchainId,
 }) async {
   final nativeLibrary = NativeLibrary.instance();
-  final gql = await Gql.getInstance();
+  final transport = await GqlTransport.getInstance();
 
   final result = await proceedAsync((port) => nativeLibrary.bindings.find_existing_wallets(
         port,
-        gql.nativeTransport.ptr!,
+        transport.nativeGqlTransport.ptr!,
         publicKey.toNativeUtf8().cast<Int8>(),
         workchainId,
       ));

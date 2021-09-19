@@ -7,14 +7,14 @@ import 'package:collection/collection.dart';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
-import 'package:nekoton_flutter/src/core/models/on_message_expired_payload.dart';
-import 'package:nekoton_flutter/src/core/models/on_message_sent_payload.dart';
-import 'package:nekoton_flutter/src/core/models/polling_method.dart';
+import '../models/on_message_expired_payload.dart';
+import '../models/on_message_sent_payload.dart';
+import '../models/polling_method.dart';
+import '../../transport/gql_transport.dart';
 import 'package:recase/recase.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../../core/keystore/keystore.dart';
-import '../../external/gql.dart';
 import '../../ffi_utils.dart';
 import '../../native_library.dart';
 import '../keystore/models/key_store_entry.dart';
@@ -36,7 +36,7 @@ class GenericContract {
   final _receivePort = ReceivePort();
   final _nativeLibrary = NativeLibrary.instance();
   late final Logger? _logger;
-  late final Gql _gql;
+  late final GqlTransport _transport;
   late final Keystore _keystore;
   late final KeyStoreEntry? _entry;
   late final NativeGenericContract _nativeGenericContract;
@@ -109,7 +109,7 @@ class GenericContract {
       throw Exception();
     }
 
-    final currentBlockId = await _gql.getLatestBlockId(address);
+    final currentBlockId = await _transport.getLatestBlockId(address);
     final signInput = await _keystore.getSignInput(
       entry: _entry!,
       password: password,
@@ -206,14 +206,14 @@ class GenericContract {
       proceedAsync((port) => _nativeLibrary.bindings.generic_contract_handle_block(
             port,
             _nativeGenericContract.ptr!,
-            _gql.nativeTransport.ptr!,
+            _transport.nativeGqlTransport.ptr!,
             id.toNativeUtf8().cast<Int8>(),
           ));
 
   Future<void> _internalRefresh(String currentBlockId) async {
     for (var i = 0; 0 < 10; i++) {
       try {
-        final nextBlockId = await _gql.waitForNextBlockId(
+        final nextBlockId = await _transport.waitForNextBlockId(
           currentBlockId: currentBlockId,
           address: address,
         );

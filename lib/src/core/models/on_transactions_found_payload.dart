@@ -1,6 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:json_annotation/json_annotation.dart';
-import 'package:nekoton_flutter/src/core/models/transaction.dart';
+import 'transaction.dart';
 
 import '../models/transactions_batch_info.dart';
 

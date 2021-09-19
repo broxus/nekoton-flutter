@@ -48,3 +48,29 @@ extension TokensConvert on String {
     }
   }
 }
+
+extension VersionConvert on String {
+  int toInt() {
+    final parts = split('.');
+
+    if (parts.length != 3) {
+      throw Exception('Received invalid version string');
+    }
+
+    for (final part in parts) {
+      if (int.parse(part) > 999) {
+        throw Exception('Version string invalid, $part is too large');
+      }
+    }
+
+    int multiplier = 1000000;
+    int numericVersion = 0;
+
+    for (var i = 0; i < 3; i++) {
+      numericVersion += int.parse(parts[i]) * multiplier;
+      multiplier = multiplier ~/ 1000;
+    }
+
+    return numericVersion;
+  }
+}

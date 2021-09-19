@@ -11,13 +11,13 @@ Future<TokenWallet> tokenWalletSubscribe({
 
   tokenWallet._tonWallet = tonWallet;
   tokenWallet._subscription = tokenWallet._receivePort.listen(tokenWallet._subscriptionListener);
-  tokenWallet._gql = await Gql.getInstance(logger: tokenWallet._logger);
+  tokenWallet._transport = await GqlTransport.getInstance(logger: tokenWallet._logger);
 
   final tonWalletAddress = tokenWallet._tonWallet.address;
   final result = await proceedAsync((port) => tokenWallet._nativeLibrary.bindings.token_wallet_subscribe(
         port,
         tokenWallet._receivePort.sendPort.nativePort,
-        tokenWallet._gql.nativeTransport.ptr!,
+        tokenWallet._transport.nativeGqlTransport.ptr!,
         tonWalletAddress.toNativeUtf8().cast<Int8>(),
         rootTokenContract.toNativeUtf8().cast<Int8>(),
       ));
