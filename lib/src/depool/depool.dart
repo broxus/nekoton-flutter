@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
-import '../transport/gql_transport.dart';
 
 import '../ffi_utils.dart';
 import '../native_library.dart';
+import '../transport/gql_transport.dart';
 import 'models/depool_info.dart';
 import 'models/participant_info.dart';
 

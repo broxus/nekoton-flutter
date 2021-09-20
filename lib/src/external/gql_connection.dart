@@ -81,4 +81,15 @@ class GqlConnection {
       _logger?.e(err, err, st);
     }
   }
+
+  @override
+  String toString() => 'GqlConnection(${nativeGqlConnection.ptr?.address})';
+
+  @override
+  bool operator ==(dynamic other) =>
+      identical(this, other) ||
+      other is GqlConnection && other.nativeGqlConnection.ptr?.address == nativeGqlConnection.ptr?.address;
+
+  @override
+  int get hashCode => nativeGqlConnection.ptr?.address ?? 0;
 }

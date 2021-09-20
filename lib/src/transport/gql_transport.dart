@@ -1,15 +1,18 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
 import 'package:logger/logger.dart';
 
+import '../core/models/transaction_id.dart';
 import '../external/gql_connection.dart';
 import '../ffi_utils.dart';
 import '../native_library.dart';
 import 'models/native_gql_transport.dart';
+import 'transport.dart';
 
-class GqlTransport {
+class GqlTransport implements Transport {
   static GqlTransport? _instance;
   final _nativeLibrary = NativeLibrary.instance();
   final Logger? _logger;
@@ -28,6 +31,44 @@ class GqlTransport {
     }
 
     return _instance!;
+  }
+
+  @override
+  Future<Map<String, dynamic>> getContractState({
+    required String address,
+  }) async {
+    final result = await proceedAsync((port) => _nativeLibrary.bindings.get_contract_state(
+          port,
+          nativeGqlTransport.ptr!,
+          address.toNativeUtf8().cast<Int8>(),
+        ));
+
+    final string = cStringToDart(result);
+    final json = jsonDecode(string) as Map<String, dynamic>;
+
+    return json;
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getTransactions({
+    required String address,
+    required TransactionId from,
+    required int count,
+  }) async {
+    final fromStr = jsonEncode(from.toJson());
+
+    final result = await proceedAsync((port) => _nativeLibrary.bindings.get_transactions(
+          port,
+          nativeGqlTransport.ptr!,
+          address.toNativeUtf8().cast<Int8>(),
+          fromStr.toNativeUtf8().cast<Int8>(),
+          count,
+        ));
+
+    final string = cStringToDart(result);
+    final json = jsonDecode(string) as List<Map<String, dynamic>>;
+
+    return json;
   }
 
   Future<String> getLatestBlockId(String address) async {
@@ -66,4 +107,15 @@ class GqlTransport {
     final transportPtr = Pointer.fromAddress(transportResult).cast<Void>();
     nativeGqlTransport = NativeGqlTransport(transportPtr);
   }
+
+  @override
+  String toString() => 'GqlTransport(${nativeGqlTransport.ptr?.address})';
+
+  @override
+  bool operator ==(dynamic other) =>
+      identical(this, other) ||
+      other is GqlTransport && other.nativeGqlTransport.ptr?.address == nativeGqlTransport.ptr?.address;
+
+  @override
+  int get hashCode => nativeGqlTransport.ptr?.address ?? 0;
 }

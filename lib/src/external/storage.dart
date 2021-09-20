@@ -86,4 +86,14 @@ class Storage {
       _logger?.e(err, err, st);
     }
   }
+
+  @override
+  String toString() => 'Storage(${nativeStorage.ptr?.address})';
+
+  @override
+  bool operator ==(dynamic other) =>
+      identical(this, other) || other is Storage && other.nativeStorage.ptr?.address == nativeStorage.ptr?.address;
+
+  @override
+  int get hashCode => nativeStorage.ptr?.address ?? 0;
 }

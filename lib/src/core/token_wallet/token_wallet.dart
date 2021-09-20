@@ -6,12 +6,12 @@ import 'dart:isolate';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
-import '../../transport/gql_transport.dart';
 import 'package:recase/recase.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../../ffi_utils.dart';
 import '../../native_library.dart';
+import '../../transport/gql_transport.dart';
 import '../models/contract_state.dart';
 import '../models/expiration.dart';
 import '../models/native_unsigned_message.dart';
