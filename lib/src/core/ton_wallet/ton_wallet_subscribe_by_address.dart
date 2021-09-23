@@ -1,14 +1,12 @@
 part of 'ton_wallet.dart';
 
 Future<TonWallet> tonWalletSubscribeByAddress({
+  required GqlTransport transport,
   required String address,
-  Logger? logger,
 }) async {
   final tonWallet = TonWallet._();
 
-  tonWallet._logger = logger;
-
-  tonWallet._transport = await GqlTransport.getInstance(logger: tonWallet._logger);
+  tonWallet._transport = transport;
   tonWallet._subscription = tonWallet._receivePort.listen(tonWallet._subscriptionListener);
 
   final result = await proceedAsync((port) => tonWallet._nativeLibrary.bindings.ton_wallet_subscribe_by_address(

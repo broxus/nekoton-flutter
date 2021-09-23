@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
-import 'package:logger/logger.dart';
 
 import '../core/models/transaction_id.dart';
 import '../external/gql_connection.dart';
+import '../external/models/connection_data.dart';
 import '../ffi_utils.dart';
 import '../native_library.dart';
 import 'models/native_gql_transport.dart';
@@ -15,18 +15,17 @@ import 'transport.dart';
 class GqlTransport implements Transport {
   static GqlTransport? _instance;
   final _nativeLibrary = NativeLibrary.instance();
-  final Logger? _logger;
   late final GqlConnection _gqlConnection;
   late final NativeGqlTransport nativeGqlTransport;
+  @override
+  late final ConnectionData connectionData;
 
-  GqlTransport._(this._logger);
+  GqlTransport._();
 
-  static Future<GqlTransport> getInstance({
-    Logger? logger,
-  }) async {
+  static Future<GqlTransport> getInstance(ConnectionData connectionData) async {
     if (_instance == null) {
-      final instance = GqlTransport._(logger);
-      await instance._initialize();
+      final instance = GqlTransport._();
+      await instance._initialize(connectionData);
       _instance = instance;
     }
 
@@ -99,8 +98,17 @@ class GqlTransport implements Transport {
     return nextBlockId;
   }
 
-  Future<void> _initialize() async {
-    _gqlConnection = await GqlConnection.getInstance(logger: _logger);
+  void free() {
+    _nativeLibrary.bindings.free_gql_transport(
+      nativeGqlTransport.ptr!,
+    );
+    nativeGqlTransport.ptr = null;
+  }
+
+  Future<void> _initialize(ConnectionData connectionData) async {
+    this.connectionData = connectionData;
+
+    _gqlConnection = await GqlConnection.getInstance(connectionData);
 
     final transportResult = await proceedAsync(
         (port) => _nativeLibrary.bindings.get_gql_transport(port, _gqlConnection.nativeGqlConnection.ptr!));

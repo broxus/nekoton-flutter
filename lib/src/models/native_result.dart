@@ -39,6 +39,8 @@ extension Handle on NativeResult {
         throw DePoolException(cStringToDart(payload));
       case NativeStatus.abiError:
         throw AbiException(cStringToDart(payload));
+      case NativeStatus.connectionError:
+        throw ConnectionException(cStringToDart(payload));
       case NativeStatus.transportError:
         throw TransportException(cStringToDart(payload));
     }

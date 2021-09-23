@@ -5,12 +5,12 @@ import 'dart:isolate';
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
-import 'package:logger/logger.dart';
 import 'package:recase/recase.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../../ffi_utils.dart';
 import '../../native_library.dart';
+import '../../nekoton.dart';
 import '../../transport/gql_transport.dart';
 import '../models/contract_state.dart';
 import '../models/expiration.dart';
@@ -29,12 +29,12 @@ import 'models/token_wallet_transaction_with_data.dart';
 import 'models/token_wallet_version.dart';
 
 part 'free_token_wallet.dart';
+part 'token_wallet_check_validity.dart';
 part 'token_wallet_subscribe.dart';
 
 class TokenWallet {
   final _receivePort = ReceivePort();
   final _nativeLibrary = NativeLibrary.instance();
-  late final Logger? _logger;
   late final GqlTransport _transport;
   late final NativeTokenWallet _nativeTokenWallet;
   late final TonWallet _tonWallet;
@@ -225,7 +225,7 @@ class TokenWallet {
           break;
         }
       } catch (err, st) {
-        _logger?.e(err, err, st);
+        nekotonLogger?.e(err, err, st);
       }
     }
   }
@@ -234,7 +234,7 @@ class TokenWallet {
     try {
       await refresh();
     } catch (err, st) {
-      _logger?.e(err, err, st);
+      nekotonLogger?.e(err, err, st);
     }
   }
 
@@ -267,7 +267,7 @@ class TokenWallet {
           break;
       }
     } catch (err, st) {
-      _logger?.e(err, err, st);
+      nekotonLogger?.e(err, err, st);
     }
   }
 

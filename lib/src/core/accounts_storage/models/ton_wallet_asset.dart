@@ -19,4 +19,8 @@ class TonWalletAsset with _$TonWalletAsset {
   }) = _TonWalletAsset;
 
   factory TonWalletAsset.fromJson(Map<String, dynamic> json) => _$TonWalletAssetFromJson(json);
+
+  const TonWalletAsset._();
+
+  int get workchain => int.parse(address.split(":").first);
 }

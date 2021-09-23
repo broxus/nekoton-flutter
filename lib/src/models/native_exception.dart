@@ -44,6 +44,10 @@ class AbiException extends NativeException {
   AbiException([String? info]) : super(info);
 }
 
+class ConnectionException extends NativeException {
+  ConnectionException([String? info]) : super(info);
+}
+
 class TransportException extends NativeException {
   TransportException([String? info]) : super(info);
 }

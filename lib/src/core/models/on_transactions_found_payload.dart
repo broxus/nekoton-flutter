@@ -1,8 +1,8 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:json_annotation/json_annotation.dart';
-import 'transaction.dart';
 
 import '../models/transactions_batch_info.dart';
+import 'transaction.dart';
 
 part 'on_transactions_found_payload.freezed.dart';
 part 'on_transactions_found_payload.g.dart';

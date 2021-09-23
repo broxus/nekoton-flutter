@@ -3,6 +3,7 @@ import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
 
+import '../connection_controller.dart';
 import '../ffi_utils.dart';
 import '../native_library.dart';
 import '../transport/gql_transport.dart';
@@ -13,7 +14,8 @@ Future<ParticipantInfo> getParticipantInfo({
   required String address,
   required String walletAddress,
 }) async {
-  final transport = await GqlTransport.getInstance();
+  final connectionController = await ConnectionController.getInstance();
+  final transport = connectionController.transport as GqlTransport;
 
   final nativeLibrary = NativeLibrary.instance();
   final result = await proceedAsync((port) => nativeLibrary.bindings.get_participant_info(
@@ -31,7 +33,8 @@ Future<ParticipantInfo> getParticipantInfo({
 }
 
 Future<DePoolInfo> getDePoolInfo(String address) async {
-  final transport = await GqlTransport.getInstance();
+  final connectionController = await ConnectionController.getInstance();
+  final transport = connectionController.transport as GqlTransport;
 
   final nativeLibrary = NativeLibrary.instance();
   final result = await proceedAsync((port) => nativeLibrary.bindings.get_depool_info(

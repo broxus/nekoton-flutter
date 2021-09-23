@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
-import 'package:logger/logger.dart';
 
 import '../../crypto/models/create_key_input.dart';
 import '../../crypto/models/derived_key_export_output.dart';
@@ -27,17 +26,14 @@ import 'models/native_keystore.dart';
 class Keystore {
   static Keystore? _instance;
   final _nativeLibrary = NativeLibrary.instance();
-  final Logger? _logger;
   late final Storage _storage;
   late final NativeKeystore nativeKeystore;
 
-  Keystore._(this._logger);
+  Keystore._();
 
-  static Future<Keystore> getInstance({
-    Logger? logger,
-  }) async {
+  static Future<Keystore> getInstance() async {
     if (_instance == null) {
-      final instance = Keystore._(logger);
+      final instance = Keystore._();
       await instance._initialize();
       _instance = instance;
     }
@@ -164,8 +160,15 @@ class Keystore {
         nativeKeystore.ptr!,
       ));
 
+  void free() {
+    _nativeLibrary.bindings.free_keystore(
+      nativeKeystore.ptr!,
+    );
+    nativeKeystore.ptr = null;
+  }
+
   Future<void> _initialize() async {
-    _storage = await Storage.getInstance(logger: _logger);
+    _storage = await Storage.getInstance();
 
     final result = await proceedAsync((port) => _nativeLibrary.bindings.get_keystore(
           port,

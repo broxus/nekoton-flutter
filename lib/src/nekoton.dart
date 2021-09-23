@@ -1,564 +1,186 @@
 import 'dart:async';
-import 'dart:ffi';
 
-import 'package:collection/collection.dart';
 import 'package:logger/logger.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:synchronized/synchronized.dart';
+import 'package:tuple/tuple.dart';
 
-import 'core/accounts_storage/accounts_storage.dart';
-import 'core/accounts_storage/models/wallet_type.dart';
-import 'core/keystore/keystore.dart';
-import 'core/models/account_subscription.dart';
+import 'accounts_storage_controller.dart';
+import 'approval_controller.dart';
+import 'connection_controller.dart';
+import 'core/accounts_storage/models/assets_list.dart';
+import 'core/keystore/models/key_store_entry.dart';
 import 'core/token_wallet/token_wallet.dart';
 import 'core/ton_wallet/ton_wallet.dart';
-import 'crypto/models/create_key_input.dart';
-import 'crypto/models/export_key_input.dart';
-import 'crypto/models/export_key_output.dart';
-import 'crypto/models/sign_input.dart';
-import 'crypto/models/update_key_input.dart';
-import 'models/account_subject.dart';
-import 'models/key_subject.dart';
-import 'models/subscription_subject.dart';
-import 'native_library.dart';
+import 'keystore_controller.dart';
+import 'permissions_controller.dart';
+import 'subscriptions_controller.dart';
+import 'transport/transport.dart';
+
+Logger? nekotonLogger;
 
 class Nekoton {
-  static const _workchain = 0;
-  static const _networkGroup = 'mainnet';
   static Nekoton? _instance;
   static final _lock = Lock();
-  final _nativeLibrary = NativeLibrary.instance();
-  final Logger? _logger;
-  late final Keystore _keystore;
-  late final AccountsStorage _accountsStorage;
-  final _keysSubject = BehaviorSubject<List<KeySubject>>.seeded([]);
-  final _accountsSubject = BehaviorSubject<List<AccountSubject>>.seeded([]);
-  final _subscriptionsSubject = BehaviorSubject<List<SubscriptionSubject>>.seeded([]);
-  final _currentKeySubject = BehaviorSubject<KeySubject?>.seeded(null);
+  late final KeystoreController keystoreController;
+  late final AccountsStorageController accountsStorageController;
+  late final SubscriptionsController subscriptionsController;
+  late final ConnectionController connectionController;
+  late final ApprovalController approvalController;
+  late final PermissionsController permissionsController;
+  late final StreamSubscription _keysStreamSubscription;
+  late final StreamSubscription _currentKeyStreamSubscription;
+  late final StreamSubscription _currentAccountStreamSubscription;
+  late List<KeyStoreEntry> _previousKeys;
+  late List<AssetsList> _previousAccounts;
+  KeyStoreEntry? _previousKey;
+  Transport? _previousTransport;
 
-  Nekoton._(this._logger);
+  Nekoton._();
 
-  static Future<Nekoton> getInstance({
-    Logger? logger,
-    String? currentPublicKey,
-  }) async =>
-      _lock.synchronized<Nekoton>(() async {
+  static Future<Nekoton> getInstance(Logger? logger) async => _lock.synchronized<Nekoton>(() async {
+        nekotonLogger ??= logger;
+
         if (_instance == null) {
-          final instance = Nekoton._(logger);
-          await instance._initialize(
-            currentPublicKey: currentPublicKey,
-          );
+          final instance = Nekoton._();
+          await instance._initialize();
           _instance = instance;
         }
 
         return _instance!;
       });
 
-  Stream<List<KeySubject>> get keysStream => _keysSubject.stream.distinct();
+  Future<void> _keysStreamListener(List<KeyStoreEntry> event) async {
+    final addedKeys = [...event]..removeWhere((e) => _previousKeys.contains(e));
+    final removedKeys = [..._previousKeys]..removeWhere((e) => event.contains(e));
 
-  Stream<List<AccountSubject>> get accountsStream => _accountsSubject.stream.distinct();
+    for (final key in addedKeys) {
+      await accountsStorageController.findExistingAccounts(key.publicKey);
+    }
 
-  Stream<List<SubscriptionSubject>> get subscriptionsStream => _subscriptionsSubject.stream.distinct();
+    for (final key in removedKeys) {
+      final accounts = accountsStorageController.accounts.where((e) => e.publicKey == key.publicKey);
 
-  Stream<KeySubject?> get currentKeyStream => _currentKeySubject.stream.distinct();
+      for (final account in accounts) {
+        await accountsStorageController.removeAccount(account.address);
+      }
+    }
 
-  Stream<bool> get keysPresenceStream => _keysSubject.stream
-      .transform<bool>(
-        StreamTransformer.fromHandlers(
-          handleData: (data, sink) => sink.add(data.isNotEmpty),
-        ),
-      )
-      .distinct();
-
-  Stream<bool> get accountsPresenceStream => _accountsSubject.stream
-      .transform<bool>(
-        StreamTransformer.fromHandlers(
-          handleData: (data, sink) => sink.add(data.isNotEmpty),
-        ),
-      )
-      .distinct();
-
-  Stream<bool> get subscriptionsPresenceStream => _subscriptionsSubject.stream
-      .transform<bool>(
-        StreamTransformer.fromHandlers(
-          handleData: (data, sink) => sink.add(data.isNotEmpty),
-        ),
-      )
-      .distinct();
-
-  List<KeySubject> get keys => _keysSubject.value;
-
-  List<AccountSubject> get accounts => _accountsSubject.value;
-
-  List<SubscriptionSubject> get subscriptions => _subscriptionsSubject.value;
-
-  KeySubject? get currentKey => _currentKeySubject.value;
-
-  Future<void> setCurrentKey(KeySubject? currentKey) async {
-    _currentKeySubject.add(currentKey);
-    await _updateSubscriptions(currentKey);
+    _previousKeys = event;
   }
 
-  Future<KeySubject> addKey(CreateKeyInput createKeyInput) async {
-    final entry = await _keystore.addKey(createKeyInput);
-    final subject = KeySubject(entry);
+  Future<void> _currentKeyStreamListener(Tuple3<KeyStoreEntry?, List<AssetsList>, Transport> event) async {
+    final currentKey = event.item1;
+    final currentTransport = event.item3;
 
-    final keys = [..._keysSubject.value];
-
-    keys
-      ..removeWhere((e) => e.value == entry)
-      ..add(subject)
-      ..sort(_sortKeys);
-
-    _keysSubject.add(keys);
+    if (_previousKey == currentKey && _previousTransport == currentTransport) {
+      return;
+    }
 
     if (currentKey == null) {
-      await setCurrentKey(_keysSubject.value.firstOrNull);
+      subscriptionsController.clearTonWalletsSubscriptions();
+      subscriptionsController.clearTokenWalletsSubscriptions();
+      _previousKey = currentKey;
+      return;
     }
 
-    return subject;
+    final accounts = event.item2.where((e) => e.publicKey == currentKey.publicKey).toList();
+
+    await subscriptionsController.updateCurrentSubscriptions(
+      publicKey: currentKey.publicKey,
+      accounts: accounts,
+    );
+
+    _previousKey = currentKey;
+    _previousTransport = currentTransport;
   }
 
-  Future<KeySubject> updateKey(UpdateKeyInput updateKeyInput) async {
-    final entry = await _keystore.updateKey(updateKeyInput);
-    final subject = _keysSubject.value.firstWhere((e) => e.value.publicKey == entry.publicKey);
+  Future<void> _currentAccountStreamListener(
+      Tuple5<KeyStoreEntry?, List<AssetsList>, Transport, List<TonWallet>, List<TokenWallet>> event) async {
+    final currentKey = event.item1;
+    final currentAccounts = event.item2;
 
-    subject.add(entry);
-
-    return subject;
-  }
-
-  Future<ExportKeyOutput> exportKey(ExportKeyInput exportKeyInput) async => _keystore.exportKey(exportKeyInput);
-
-  Future<bool> checkKeyPassword(SignInput signInput) async => _keystore.checkKeyPassword(signInput);
-
-  Future<KeySubject?> removeKey(String publicKey) async {
-    final key = _keysSubject.value.firstWhereOrNull((e) => e.value.publicKey == publicKey);
-
-    if (key == null) {
-      return null;
+    if (currentKey == null || currentKey != _previousKey || currentAccounts == _previousAccounts) {
+      _previousAccounts = currentAccounts;
+      return;
     }
 
-    if (currentKey == key) {
-      final newCurrentKey = _keysSubject.value.firstWhereOrNull((e) => e != key);
-      await setCurrentKey(newCurrentKey);
-    }
+    final currentTonWallets = currentAccounts.where((e) => e.publicKey == currentKey.publicKey).map((e) => e.tonWallet);
+    final previousTonWallets =
+        _previousAccounts.where((e) => e.publicKey == currentKey.publicKey).map((e) => e.tonWallet);
 
-    final accounts = _accountsSubject.value.where((e) => e.value.publicKey == key.value.publicKey);
+    final addedTonWallets = ([...currentTonWallets]..removeWhere((e) => previousTonWallets.contains(e)));
+    final removedTonWallets = ([...previousTonWallets]..removeWhere((e) => currentTonWallets.contains(e)));
 
-    for (final account in accounts) {
-      await removeAccount(account.value.address);
-    }
-
-    final keys = [..._keysSubject.value];
-
-    keys
-      ..remove(key)
-      ..sort(_sortKeys);
-
-    _keysSubject.add(keys);
-
-    await _keystore.removeKey(key.value.publicKey);
-
-    final derivedKeys = _keysSubject.value.where((e) => e.value.masterKey == key.value.publicKey);
-
-    for (final key in derivedKeys) {
-      await removeKey(key.value.publicKey);
-    }
-
-    return key;
-  }
-
-  Future<void> clearKeystore() async {
-    await setCurrentKey(null);
-
-    final keys = [..._keysSubject.value];
-
-    for (final key in keys) {
-      final accounts = _accountsSubject.value.where((e) => e.value.publicKey == key.value.publicKey);
-
-      for (final account in accounts) {
-        await removeAccount(account.value.address);
-      }
-    }
-
-    _keysSubject.add([]);
-
-    await _keystore.clear();
-  }
-
-  Future<AccountSubject> addAccount({
-    required String name,
-    required String publicKey,
-    required WalletType walletType,
-  }) async {
-    final assets = await _accountsStorage.addAccount(
-      name: name,
-      publicKey: publicKey,
-      walletType: walletType,
-      workchain: _workchain,
-    );
-    final subject = AccountSubject(assets);
-
-    final accounts = [..._accountsSubject.value];
-
-    accounts
-      ..add(subject)
-      ..sort(_sortAccounts);
-
-    _accountsSubject.add(accounts);
-
-    await _addSubscription(subject);
-
-    return subject;
-  }
-
-  Future<AccountSubject> renameAccount({
-    required String address,
-    required String name,
-  }) async {
-    final assets = await _accountsStorage.renameAccount(
-      address: address,
-      name: name,
-    );
-    final subject = _accountsSubject.value.firstWhere((e) => e.value.address == assets.tonWallet.address);
-    final account = subject.value.copyWith(name: assets.name);
-
-    subject.add(account);
-
-    return subject;
-  }
-
-  Future<AccountSubject?> removeAccount(String address) async {
-    final subject = _accountsSubject.value.firstWhereOrNull((e) => e.value.address == address);
-
-    if (subject == null) {
-      return null;
-    }
-
-    final accounts = [..._accountsSubject.value];
-
-    accounts
-      ..remove(subject)
-      ..sort(_sortAccounts);
-
-    _accountsSubject.add(accounts);
-
-    await _accountsStorage.removeAccount(subject.value.address);
-
-    await _removeSubscription(subject);
-
-    return subject;
-  }
-
-  Future<AccountSubject> addTokenWallet({
-    required String address,
-    required String rootTokenContract,
-  }) async {
-    final subject = _accountsSubject.value.firstWhere((e) => e.value.address == address);
-    final assets = await _accountsStorage.addTokenWallet(
-      address: subject.value.address,
-      rootTokenContract: rootTokenContract,
-      networkGroup: _networkGroup,
-    );
-    subject.add(assets);
-
-    await _addTokenWalletToSubscription(
-      account: subject,
-      rootTokenContract: rootTokenContract,
-    );
-
-    return subject;
-  }
-
-  Future<AccountSubject> removeTokenWallet({
-    required String address,
-    required String rootTokenContract,
-  }) async {
-    final subject = _accountsSubject.value.firstWhere((e) => e.value.address == address);
-    final assets = await _accountsStorage.removeTokenWallet(
-      address: subject.value.address,
-      rootTokenContract: rootTokenContract,
-      networkGroup: _networkGroup,
-    );
-    subject.add(assets);
-
-    await _removeTokenWalletFromSubscription(
-      account: subject,
-      rootTokenContract: rootTokenContract,
-    );
-
-    return subject;
-  }
-
-  Future<void> clearAccountsStorage() async {
-    _accountsSubject.add([]);
-
-    await _accountsStorage.clear();
-
-    await _clearSubscriptions();
-  }
-
-  Future<void> findAndSubscribeToExistingWallets(String publicKey) async {
-    final wallets = await findExistingWallets(
-      publicKey: publicKey,
-      workchainId: _workchain,
-    );
-
-    final activeWallets = wallets.where((e) => e.contractState.isDeployed || e.contractState.balance != "0");
-
-    for (final activeWallet in activeWallets) {
-      await addAccount(
-        name: activeWallet.walletType.describe(),
-        publicKey: publicKey,
-        walletType: activeWallet.walletType,
+    for (final tonWallet in addedTonWallets) {
+      await subscriptionsController.subscribeToTonWallet(
+        publicKey: currentKey.publicKey,
+        tonWalletAsset: tonWallet,
       );
     }
-  }
 
-  Future<void> _updateSubscriptions(KeySubject? currentKey) async {
-    try {
-      final subscriptions = [..._subscriptionsSubject.value];
+    for (final tonWallet in removedTonWallets) {
+      subscriptionsController.removeTonWalletSubscription(tonWallet);
+    }
 
-      _subscriptionsSubject.add([]);
+    final networkGroup = event.item3.connectionData.group;
 
-      for (final subscription in subscriptions) {
-        await _freeSubscription(subscription);
-      }
+    final currentTokenWallets = currentAccounts
+        .where((e) => e.publicKey == currentKey.publicKey)
+        .map((e) => Tuple2(e.tonWallet, e.additionalAssets[networkGroup]?.tokenWallets ?? []));
+    final previousTokenWallets = _previousAccounts
+        .where((e) => e.publicKey == currentKey.publicKey)
+        .map((e) => Tuple2(e.tonWallet, e.additionalAssets[networkGroup]?.tokenWallets ?? []));
 
-      if (currentKey == null) {
-        return;
-      }
+    final addedTokenWallets = ([...currentTokenWallets]..removeWhere((e) => previousTokenWallets.contains(e)));
+    final removedTokenWallets = ([...previousTokenWallets]..removeWhere((e) => currentTokenWallets.contains(e)));
 
-      subscriptions.clear();
-
-      final accounts = _accountsSubject.value.where((e) => e.value.publicKey == currentKey.value.publicKey);
-
-      for (final account in accounts) {
-        final subject = await _subscribe(
-          key: currentKey,
-          account: account,
+    for (final tokenWalletTuple in addedTokenWallets) {
+      for (final tokenWallet in tokenWalletTuple.item2) {
+        await subscriptionsController.subscribeToTokenWallet(
+          tonWalletAsset: tokenWalletTuple.item1,
+          tokenWalletAsset: tokenWallet,
         );
-
-        subscriptions.add(subject);
       }
-
-      subscriptions.sort(_sortSubscriptions);
-
-      _subscriptionsSubject.add(subscriptions);
-    } catch (err, st) {
-      _logger?.e(err, err, st);
-    }
-  }
-
-  Future<void> _addSubscription(AccountSubject account) async {
-    if (account.value.publicKey != currentKey?.value.publicKey) {
-      return;
     }
 
-    final keySubject = _keysSubject.value.firstWhere((e) => e.value.publicKey == account.value.publicKey);
-
-    final subject = await _subscribe(
-      key: keySubject,
-      account: account,
-    );
-
-    final subscriptions = [..._subscriptionsSubject.value];
-
-    subscriptions
-      ..add(subject)
-      ..sort(_sortSubscriptions);
-
-    _subscriptionsSubject.add(subscriptions);
-  }
-
-  Future<void> _removeSubscription(AccountSubject account) async {
-    if (account.value.publicKey != currentKey?.value.publicKey) {
-      return;
-    }
-
-    final subject = _subscriptionsSubject.value.firstWhereOrNull((e) => e.value.address == account.value.address);
-
-    if (subject == null) {
-      return;
-    }
-
-    final subscriptions = [..._subscriptionsSubject.value];
-
-    subscriptions
-      ..remove(subject)
-      ..sort(_sortSubscriptions);
-
-    _subscriptionsSubject.add(subscriptions);
-
-    await _freeSubscription(subject);
-  }
-
-  Future<void> _addTokenWalletToSubscription({
-    required AccountSubject account,
-    required String rootTokenContract,
-  }) async {
-    if (account.value.publicKey != currentKey?.value.publicKey) {
-      return;
-    }
-
-    final subject = _subscriptionsSubject.value.firstWhereOrNull((e) => e.value.address == account.value.address);
-    if (subject == null) {
-      return;
-    }
-    final tokenWallets = [...subject.value.tokenWallets];
-
-    try {
-      final tokenWallet = await tokenWalletSubscribe(
-        tonWallet: subject.value.tonWallet,
-        rootTokenContract: rootTokenContract,
-      );
-      tokenWallets
-        ..add(tokenWallet)
-        ..sort(_sortTokenWallets);
-
-      final subscription = subject.value.copyWith(tokenWallets: tokenWallets);
-      subject.add(subscription);
-    } catch (err, st) {
-      _logger?.e(err, err, st);
-      await removeTokenWallet(
-        address: account.value.address,
-        rootTokenContract: rootTokenContract,
-      );
-    }
-  }
-
-  Future<void> _removeTokenWalletFromSubscription({
-    required AccountSubject account,
-    required String rootTokenContract,
-  }) async {
-    if (account.value.publicKey != currentKey?.value.publicKey) {
-      return;
-    }
-
-    final subject = _subscriptionsSubject.value.firstWhereOrNull((e) => e.value.address == account.value.address);
-
-    if (subject == null) {
-      return;
-    }
-
-    final tokenWallets = [...subject.value.tokenWallets];
-    final tokenWallet = tokenWallets.firstWhereOrNull((e) => e.symbol.rootTokenContract == rootTokenContract);
-
-    if (tokenWallet == null) {
-      return;
-    }
-
-    tokenWallets
-      ..remove(tokenWallet)
-      ..sort(_sortTokenWallets);
-    freeTokenWallet(tokenWallet);
-
-    final subscription = subject.value.copyWith(tokenWallets: tokenWallets);
-    subject.add(subscription);
-  }
-
-  Future<void> _clearSubscriptions() async {
-    final subscriptions = [..._subscriptionsSubject.value];
-
-    _subscriptionsSubject.add([]);
-
-    for (final subscription in subscriptions) {
-      await _freeSubscription(subscription);
-    }
-  }
-
-  Future<SubscriptionSubject> _subscribe({
-    required KeySubject key,
-    required AccountSubject account,
-  }) async {
-    try {
-      final tonWallet = await tonWalletSubscribe(
-        workchain: _workchain,
-        entry: key.value,
-        walletType: account.value.tonWallet.contract,
-      );
-
-      final tokenWallets = <TokenWallet>[];
-      final tokenWalletAssets = [...account.value.additionalAssets.entries.firstOrNull?.value.tokenWallets ?? []];
-      for (final tokenWalletAsset in tokenWalletAssets) {
-        try {
-          final tokenWallet = await tokenWalletSubscribe(
-            tonWallet: tonWallet,
-            rootTokenContract: tokenWalletAsset.rootTokenContract,
-          );
-          tokenWallets.add(tokenWallet);
-        } catch (err, st) {
-          _logger?.e(err, err, st);
-          await removeTokenWallet(
-            address: account.value.address,
-            rootTokenContract: tokenWalletAsset.rootTokenContract,
-          );
-        }
+    for (final tokenWalletTuple in removedTokenWallets) {
+      for (final tokenWallet in tokenWalletTuple.item2) {
+        subscriptionsController.removeTokenWalletSubscription(tokenWallet);
       }
-
-      final subscription = AccountSubscription(
-        accountSubject: account,
-        tonWallet: tonWallet,
-        tokenWallets: tokenWallets,
-      );
-      final subject = SubscriptionSubject(subscription);
-
-      return subject;
-    } catch (err, st) {
-      _logger?.e(err, err, st);
-      await removeAccount(account.value.address);
-      rethrow;
     }
+
+    _previousAccounts = currentAccounts;
   }
 
-  Future<void> _freeSubscription(SubscriptionSubject subscription) async {
-    try {
-      final tonWallet = subscription.value.tonWallet;
-      freeTonWallet(tonWallet);
+  Future<void> _initialize() async {
+    connectionController = await ConnectionController.getInstance();
+    permissionsController = await PermissionsController.getInstance();
+    approvalController = ApprovalController.instance();
+    keystoreController = await KeystoreController.getInstance();
+    accountsStorageController = await AccountsStorageController.getInstance();
+    subscriptionsController = await SubscriptionsController.getInstance();
 
-      final tokenWallets = subscription.value.tokenWallets;
-      for (final tokenWallet in tokenWallets) {
-        freeTokenWallet(tokenWallet);
-      }
-    } catch (err, st) {
-      _logger?.e(err, err, st);
-    }
+    _previousKeys = keystoreController.keys;
+    _keysStreamSubscription = keystoreController.keysStream.skip(1).listen(_keysStreamListener);
+
+    _currentKeyStreamSubscription = Rx.combineLatest3<KeyStoreEntry?, List<AssetsList>, Transport,
+        Tuple3<KeyStoreEntry?, List<AssetsList>, Transport>>(
+      keystoreController.currentKeyStream,
+      accountsStorageController.accountsStream,
+      connectionController.transportStream,
+      (a, b, c) => Tuple3(a, b, c),
+    ).listen(_currentKeyStreamListener);
+
+    _previousAccounts = accountsStorageController.accounts;
+    _currentAccountStreamSubscription = Rx.combineLatest5<KeyStoreEntry?, List<AssetsList>, Transport, List<TonWallet>,
+        List<TokenWallet>, Tuple5<KeyStoreEntry?, List<AssetsList>, Transport, List<TonWallet>, List<TokenWallet>>>(
+      keystoreController.currentKeyStream,
+      accountsStorageController.accountsStream.skip(1),
+      connectionController.transportStream,
+      subscriptionsController.tonWalletsStream,
+      subscriptionsController.tokenWalletsStream,
+      (a, b, c, d, e) => Tuple5(a, b, c, d, e),
+    ).listen(_currentAccountStreamListener);
   }
-
-  Future<void> _initialize({
-    String? currentPublicKey,
-  }) async {
-    _nativeLibrary.bindings.store_post_cobject(Pointer.fromAddress(NativeApi.postCObject.address));
-
-    _keystore = await Keystore.getInstance(logger: _logger);
-    _accountsStorage = await AccountsStorage.getInstance(logger: _logger);
-
-    final entries = await _keystore.entries;
-
-    _keysSubject.add([
-      ..._keysSubject.value,
-      ...entries.map((e) => KeySubject(e)).toList()..sort(_sortKeys),
-    ]);
-
-    final assets = await _accountsStorage.accounts;
-
-    _accountsSubject.add([
-      ..._accountsSubject.value,
-      ...assets.map((e) => AccountSubject(e)).toList()..sort(_sortAccounts),
-    ]);
-
-    final currentKey = keys.firstWhereOrNull((e) => e.value.publicKey == currentPublicKey);
-
-    await setCurrentKey(currentKey ?? keys.firstOrNull);
-  }
-
-  int _sortKeys(KeySubject a, KeySubject b) => b.value.publicKey.compareTo(a.value.publicKey);
-
-  int _sortAccounts(AccountSubject a, AccountSubject b) => b.value.address.compareTo(a.value.address);
-
-  int _sortSubscriptions(SubscriptionSubject a, SubscriptionSubject b) =>
-      b.value.walletType.toInt().compareTo(a.value.walletType.toInt());
-
-  int _sortTokenWallets(TokenWallet a, TokenWallet b) => b.symbol.name.compareTo(a.symbol.name);
 }

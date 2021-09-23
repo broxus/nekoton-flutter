@@ -6,10 +6,10 @@ import 'dart:isolate';
 import 'package:ffi/ffi.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:logger/logger.dart';
 
 import '../ffi_utils.dart';
 import '../native_library.dart';
+import '../nekoton.dart';
 import 'models/native_storage.dart';
 import 'models/storage_request.dart';
 import 'models/storage_request_type.dart';
@@ -17,23 +17,27 @@ import 'models/storage_request_type.dart';
 class Storage {
   static Storage? _instance;
   final _nativeLibrary = NativeLibrary.instance();
-  final Logger? _logger;
   late final Box<String> _box;
   final _receivePort = ReceivePort();
   late final NativeStorage nativeStorage;
 
-  Storage._(this._logger);
+  Storage._();
 
-  static Future<Storage> getInstance({
-    Logger? logger,
-  }) async {
+  static Future<Storage> getInstance() async {
     if (_instance == null) {
-      final instance = Storage._(logger);
+      final instance = Storage._();
       await instance._initialize();
       _instance = instance;
     }
 
     return _instance!;
+  }
+
+  void free() {
+    _nativeLibrary.bindings.free_storage(
+      nativeStorage.ptr!,
+    );
+    nativeStorage.ptr = null;
   }
 
   Future<void> _initialize() async {
@@ -83,7 +87,7 @@ class Storage {
 
       _nativeLibrary.bindings.resolve_storage_request(tx, isSuccessful, value);
     } catch (err, st) {
-      _logger?.e(err, err, st);
+      nekotonLogger?.e(err, err, st);
     }
   }
 

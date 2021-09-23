@@ -1,18 +1,15 @@
 part of 'ton_wallet.dart';
 
 Future<TonWallet> tonWalletSubscribe({
+  required GqlTransport transport,
   required int workchain,
-  required KeyStoreEntry entry,
+  required String publicKey,
   required WalletType walletType,
-  Logger? logger,
 }) async {
   final tonWallet = TonWallet._();
 
-  tonWallet._logger = logger;
-
-  tonWallet._transport = await GqlTransport.getInstance(logger: tonWallet._logger);
-  tonWallet._keystore = await Keystore.getInstance(logger: tonWallet._logger);
-  tonWallet._entry = entry;
+  tonWallet._transport = transport;
+  tonWallet._keystore = await Keystore.getInstance();
   tonWallet._subscription = tonWallet._receivePort.listen(tonWallet._subscriptionListener);
 
   final walletTypeStr = jsonEncode(walletType.toJson());
@@ -21,7 +18,7 @@ Future<TonWallet> tonWalletSubscribe({
         tonWallet._receivePort.sendPort.nativePort,
         tonWallet._transport.nativeGqlTransport.ptr!,
         workchain,
-        entry.publicKey.toNativeUtf8().cast<Int8>(),
+        publicKey.toNativeUtf8().cast<Int8>(),
         walletTypeStr.toNativeUtf8().cast<Int8>(),
       ));
   final ptr = Pointer.fromAddress(result).cast<Void>();

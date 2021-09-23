@@ -1,6 +1,6 @@
 part of 'generic_contract.dart';
 
-void freeTonWallet(GenericContract genericContract) {
+void freeGenericContract(GenericContract genericContract) {
   genericContract._nativeLibrary.bindings.free_generic_contract(
     genericContract._nativeGenericContract.ptr!,
   );

@@ -26,4 +26,6 @@ class AssetsList with _$AssetsList {
   String get publicKey => tonWallet.publicKey;
 
   String get address => tonWallet.address;
+
+  int get workchain => tonWallet.workchain;
 }

@@ -1,17 +1,13 @@
 part of 'generic_contract.dart';
 
 Future<GenericContract> genericContractSubscribe({
+  required GqlTransport transport,
   required String address,
-  KeyStoreEntry? entry,
-  Logger? logger,
 }) async {
   final genericContract = GenericContract._();
 
-  genericContract._logger = logger;
-
-  genericContract._transport = await GqlTransport.getInstance(logger: genericContract._logger);
-  genericContract._keystore = await Keystore.getInstance(logger: genericContract._logger);
-  genericContract._entry = entry;
+  genericContract._transport = transport;
+  genericContract._keystore = await Keystore.getInstance();
   genericContract._subscription = genericContract._receivePort.listen(genericContract._subscriptionListener);
 
   final result = await proceedAsync((port) => genericContract._nativeLibrary.bindings.generic_contract_subscribe(

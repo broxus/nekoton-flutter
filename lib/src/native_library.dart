@@ -15,7 +15,7 @@ class NativeLibrary {
 
   void _initialize() {
     _dynamicLibrary = _dlOpenPlatformSpecific();
-    bindings = Bindings(_dynamicLibrary);
+    bindings = Bindings(_dynamicLibrary)..store_post_cobject(Pointer.fromAddress(NativeApi.postCObject.address));
   }
 
   DynamicLibrary _dlOpenPlatformSpecific() {

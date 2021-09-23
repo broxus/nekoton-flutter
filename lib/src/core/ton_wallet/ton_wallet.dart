@@ -6,7 +6,6 @@ import 'dart:isolate';
 import 'package:collection/collection.dart';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
-import 'package:logger/logger.dart';
 import 'package:recase/recase.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -14,6 +13,7 @@ import '../../core/keystore/keystore.dart';
 import '../../ffi_utils.dart';
 import '../../models/nekoton_exception.dart';
 import '../../native_library.dart';
+import '../../nekoton.dart';
 import '../../transport/gql_transport.dart';
 import '../accounts_storage/models/wallet_type.dart';
 import '../keystore/models/key_store_entry.dart';
@@ -45,10 +45,8 @@ part 'ton_wallet_subscribe_by_existing.dart';
 class TonWallet {
   final _receivePort = ReceivePort();
   final _nativeLibrary = NativeLibrary.instance();
-  late final Logger? _logger;
   late final GqlTransport _transport;
   late final Keystore _keystore;
-  late final KeyStoreEntry? _entry;
   late final NativeTonWallet nativeTonWallet;
   late final StreamSubscription _subscription;
   late final Timer _timer;
@@ -337,13 +335,16 @@ class TonWallet {
     required UnsignedMessage message,
     required String password,
   }) async {
-    if (_entry == null) {
+    final list = await _keystore.entries;
+    final entry = list.firstWhereOrNull((e) => e.publicKey == publicKey);
+
+    if (entry == null) {
       throw TonWalletReadOnlyException();
     }
 
     final currentBlockId = await _transport.getLatestBlockId(address);
     final signInput = await _keystore.getSignInput(
-      entry: _entry!,
+      entry: entry,
       password: password,
     );
     final signInputStr = jsonEncode(signInput.toJson());
@@ -403,7 +404,7 @@ class TonWallet {
           break;
         }
       } catch (err, st) {
-        _logger?.e(err, err, st);
+        nekotonLogger?.e(err, err, st);
       }
     }
   }
@@ -416,7 +417,7 @@ class TonWallet {
 
       await refresh();
     } catch (err, st) {
-      _logger?.e(err, err, st);
+      nekotonLogger?.e(err, err, st);
     }
   }
 
@@ -499,7 +500,7 @@ class TonWallet {
           break;
       }
     } catch (err, st) {
-      _logger?.e(err, err, st);
+      nekotonLogger?.e(err, err, st);
     }
   }
 

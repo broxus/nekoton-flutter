@@ -1,17 +1,15 @@
 part of 'token_wallet.dart';
 
 Future<TokenWallet> tokenWalletSubscribe({
+  required GqlTransport transport,
   required TonWallet tonWallet,
   required String rootTokenContract,
-  Logger? logger,
 }) async {
   final tokenWallet = TokenWallet._();
 
-  tokenWallet._logger = logger;
-
   tokenWallet._tonWallet = tonWallet;
   tokenWallet._subscription = tokenWallet._receivePort.listen(tokenWallet._subscriptionListener);
-  tokenWallet._transport = await GqlTransport.getInstance(logger: tokenWallet._logger);
+  tokenWallet._transport = transport;
 
   final tonWalletAddress = tokenWallet._tonWallet.address;
   final result = await proceedAsync((port) => tokenWallet._nativeLibrary.bindings.token_wallet_subscribe(

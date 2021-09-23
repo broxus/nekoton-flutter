@@ -10,5 +10,6 @@ enum NativeStatus {
   cryptoError,
   dePoolError,
   abiError,
+  connectionError,
   transportError,
 }

@@ -5,41 +5,44 @@ import 'dart:isolate';
 
 import 'package:dio/dio.dart';
 import 'package:ffi/ffi.dart';
-import 'package:logger/logger.dart';
 
 import '../ffi_utils.dart';
 import '../native_library.dart';
+import '../nekoton.dart';
+import 'models/connection_data.dart';
 import 'models/gql_request.dart';
 import 'models/native_gql_connection.dart';
 
 class GqlConnection {
   static GqlConnection? _instance;
   final _nativeLibrary = NativeLibrary.instance();
-  final Logger? _logger;
   late final Dio _dio;
   final _receivePort = ReceivePort();
   late final NativeGqlConnection nativeGqlConnection;
 
-  GqlConnection._(this._logger);
+  GqlConnection._();
 
-  static Future<GqlConnection> getInstance({
-    Logger? logger,
-  }) async {
+  static Future<GqlConnection> getInstance(ConnectionData connectionData) async {
     if (_instance == null) {
-      final instance = GqlConnection._(logger);
-      await instance._initialize();
+      final instance = GqlConnection._();
+      await instance._initialize(connectionData);
       _instance = instance;
     }
 
     return _instance!;
   }
 
-  Future<void> _initialize() async {
+  void free() {
+    _nativeLibrary.bindings.free_gql_connection(
+      nativeGqlConnection.ptr!,
+    );
+    nativeGqlConnection.ptr = null;
+  }
+
+  Future<void> _initialize(ConnectionData connectionData) async {
     final baseOptions = BaseOptions(
-      connectTimeout: 60000,
-      receiveTimeout: 60000,
-      sendTimeout: 60000,
-      baseUrl: "https://main2.ton.dev/",
+      connectTimeout: connectionData.timeout,
+      baseUrl: connectionData.endpoint,
       responseType: ResponseType.plain,
       headers: {"Content-Type": "application/json"},
     );
@@ -78,7 +81,7 @@ class GqlConnection {
 
       _nativeLibrary.bindings.resolve_gql_request(tx, isSuccessful, value);
     } catch (err, st) {
-      _logger?.e(err, err, st);
+      nekotonLogger?.e(err, err, st);
     }
   }
 

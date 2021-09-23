@@ -1,17 +1,14 @@
 part of 'ton_wallet.dart';
 
 Future<TonWallet> tonWalletSubscribeByExisting({
+  required GqlTransport transport,
   required KeyStoreEntry entry,
   required ExistingWalletInfo existingWalletInfo,
-  Logger? logger,
 }) async {
   final tonWallet = TonWallet._();
 
-  tonWallet._logger = logger;
-
-  tonWallet._transport = await GqlTransport.getInstance(logger: tonWallet._logger);
-  tonWallet._keystore = await Keystore.getInstance(logger: tonWallet._logger);
-  tonWallet._entry = entry;
+  tonWallet._transport = transport;
+  tonWallet._keystore = await Keystore.getInstance();
   tonWallet._subscription = tonWallet._receivePort.listen(tonWallet._subscriptionListener);
 
   final existingWalletInfoStr = jsonEncode(existingWalletInfo.toJson());

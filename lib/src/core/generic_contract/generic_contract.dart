@@ -6,15 +6,15 @@ import 'dart:isolate';
 import 'package:collection/collection.dart';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
-import 'package:logger/logger.dart';
 import 'package:recase/recase.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../../core/keystore/keystore.dart';
 import '../../ffi_utils.dart';
+import '../../models/nekoton_exception.dart';
 import '../../native_library.dart';
+import '../../nekoton.dart';
 import '../../transport/gql_transport.dart';
-import '../keystore/models/key_store_entry.dart';
 import '../models/contract_state.dart';
 import '../models/on_message_expired_payload.dart';
 import '../models/on_message_sent_payload.dart';
@@ -35,10 +35,8 @@ part 'generic_contract_subscribe.dart';
 class GenericContract {
   final _receivePort = ReceivePort();
   final _nativeLibrary = NativeLibrary.instance();
-  late final Logger? _logger;
   late final GqlTransport _transport;
   late final Keystore _keystore;
-  late final KeyStoreEntry? _entry;
   late final NativeGenericContract _nativeGenericContract;
   late final StreamSubscription _subscription;
   late final Timer _timer;
@@ -103,15 +101,19 @@ class GenericContract {
 
   Future<PendingTransaction> send({
     required UnsignedMessage message,
+    required String publicKey,
     required String password,
   }) async {
-    if (_entry == null) {
-      throw Exception();
+    final list = await _keystore.entries;
+    final entry = list.firstWhereOrNull((e) => e.publicKey == publicKey);
+
+    if (entry == null) {
+      throw GenericContractReadOnlyException();
     }
 
     final currentBlockId = await _transport.getLatestBlockId(address);
     final signInput = await _keystore.getSignInput(
-      entry: _entry!,
+      entry: entry,
       password: password,
     );
     final signInputStr = jsonEncode(signInput.toJson());
@@ -158,15 +160,19 @@ class GenericContract {
 
   Future<Transaction> executeTransactionLocally({
     required UnsignedMessage message,
+    required String publicKey,
     required String password,
     required TransactionExecutionOptions options,
   }) async {
-    if (_entry == null) {
-      throw Exception();
+    final list = await _keystore.entries;
+    final entry = list.firstWhereOrNull((e) => e.publicKey == publicKey);
+
+    if (entry == null) {
+      throw GenericContractReadOnlyException();
     }
 
     final signInput = await _keystore.getSignInput(
-      entry: _entry!,
+      entry: entry,
       password: password,
     );
     final signInputStr = jsonEncode(signInput.toJson());
@@ -225,7 +231,7 @@ class GenericContract {
           break;
         }
       } catch (err, st) {
-        _logger?.e(err, err, st);
+        nekotonLogger?.e(err, err, st);
       }
     }
   }
@@ -238,7 +244,7 @@ class GenericContract {
 
       await refresh();
     } catch (err, st) {
-      _logger?.e(err, err, st);
+      nekotonLogger?.e(err, err, st);
     }
   }
 
@@ -321,7 +327,7 @@ class GenericContract {
           break;
       }
     } catch (err, st) {
-      _logger?.e(err, err, st);
+      nekotonLogger?.e(err, err, st);
     }
   }
 

@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
-import 'package:logger/logger.dart';
 
 import '../../external/storage.dart';
 import '../../ffi_utils.dart';
@@ -15,17 +14,14 @@ import 'models/wallet_type.dart';
 class AccountsStorage {
   static AccountsStorage? _instance;
   final _nativeLibrary = NativeLibrary.instance();
-  final Logger? _logger;
   late final Storage _storage;
   late final NativeAccountsStorage _nativeAccountsStorage;
 
-  AccountsStorage._(this._logger);
+  AccountsStorage._();
 
-  static Future<AccountsStorage> getInstance({
-    Logger? logger,
-  }) async {
+  static Future<AccountsStorage> getInstance() async {
     if (_instance == null) {
-      final instance = AccountsStorage._(logger);
+      final instance = AccountsStorage._();
       await instance._initialize();
       _instance = instance;
     }
@@ -148,8 +144,15 @@ class AccountsStorage {
         _nativeAccountsStorage.ptr!,
       ));
 
+  void free() {
+    _nativeLibrary.bindings.free_accounts_storage(
+      _nativeAccountsStorage.ptr!,
+    );
+    _nativeAccountsStorage.ptr = null;
+  }
+
   Future<void> _initialize() async {
-    _storage = await Storage.getInstance(logger: _logger);
+    _storage = await Storage.getInstance();
 
     final result = await proceedAsync((port) => _nativeLibrary.bindings.get_accounts_storage(
           port,
