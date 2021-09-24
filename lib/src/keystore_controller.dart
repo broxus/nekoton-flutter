@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:rxdart/rxdart.dart';
 
+import '../nekoton_flutter.dart';
 import 'core/keystore/keystore.dart';
 import 'core/keystore/models/key_store_entry.dart';
 import 'crypto/models/create_key_input.dart';
@@ -52,7 +53,7 @@ class KeystoreController {
     keys
       ..removeWhere((e) => e.publicKey == key.publicKey)
       ..add(key)
-      ..sort();
+      ..sort(sortKeys);
 
     _keysSubject.add(keys);
 
@@ -69,7 +70,7 @@ class KeystoreController {
     keys
       ..removeWhere((e) => e.publicKey == key.publicKey)
       ..add(key)
-      ..sort();
+      ..sort(sortKeys);
 
     _keysSubject.add(keys);
 
@@ -96,7 +97,7 @@ class KeystoreController {
 
     keys
       ..remove(key)
-      ..sort();
+      ..sort(sortKeys);
 
     _keysSubject.add(keys);
 
@@ -127,7 +128,7 @@ class KeystoreController {
 
     _keysSubject.add([
       ..._keysSubject.value,
-      ...entries..sort(),
+      ...entries..sort(sortKeys),
     ]);
 
     final currentPublicKey = await _preferences.currentPublicKey;

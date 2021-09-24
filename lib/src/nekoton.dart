@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:logger/logger.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:synchronized/synchronized.dart';
@@ -10,8 +11,6 @@ import 'approval_controller.dart';
 import 'connection_controller.dart';
 import 'core/accounts_storage/models/assets_list.dart';
 import 'core/keystore/models/key_store_entry.dart';
-import 'core/token_wallet/token_wallet.dart';
-import 'core/ton_wallet/ton_wallet.dart';
 import 'keystore_controller.dart';
 import 'permissions_controller.dart';
 import 'subscriptions_controller.dart';
@@ -29,16 +28,17 @@ class Nekoton {
   late final ApprovalController approvalController;
   late final PermissionsController permissionsController;
   late final StreamSubscription _keysStreamSubscription;
-  late final StreamSubscription _currentKeyStreamSubscription;
-  late final StreamSubscription _currentAccountStreamSubscription;
+  late final StreamSubscription _subscriptionsUpdateStreamSubscription;
+  late final StreamSubscription _accountsStreamSubscription;
   late List<KeyStoreEntry> _previousKeys;
   late List<AssetsList> _previousAccounts;
-  KeyStoreEntry? _previousKey;
-  Transport? _previousTransport;
 
   Nekoton._();
 
-  static Future<Nekoton> getInstance(Logger? logger) async => _lock.synchronized<Nekoton>(() async {
+  static Future<Nekoton> getInstance({
+    Logger? logger,
+  }) async =>
+      _lock.synchronized<Nekoton>(() async {
         nekotonLogger ??= logger;
 
         if (_instance == null) {
@@ -49,6 +49,12 @@ class Nekoton {
 
         return _instance!;
       });
+
+  Future<void> dispose() async {
+    _keysStreamSubscription.cancel();
+    _subscriptionsUpdateStreamSubscription.cancel();
+    _accountsStreamSubscription.cancel();
+  }
 
   Future<void> _keysStreamListener(List<KeyStoreEntry> event) async {
     final addedKeys = [...event]..removeWhere((e) => _previousKeys.contains(e));
@@ -69,38 +75,11 @@ class Nekoton {
     _previousKeys = event;
   }
 
-  Future<void> _currentKeyStreamListener(Tuple3<KeyStoreEntry?, List<AssetsList>, Transport> event) async {
-    final currentKey = event.item1;
-    final currentTransport = event.item3;
-
-    if (_previousKey == currentKey && _previousTransport == currentTransport) {
-      return;
-    }
-
-    if (currentKey == null) {
-      subscriptionsController.clearTonWalletsSubscriptions();
-      subscriptionsController.clearTokenWalletsSubscriptions();
-      _previousKey = currentKey;
-      return;
-    }
-
-    final accounts = event.item2.where((e) => e.publicKey == currentKey.publicKey).toList();
-
-    await subscriptionsController.updateCurrentSubscriptions(
-      publicKey: currentKey.publicKey,
-      accounts: accounts,
-    );
-
-    _previousKey = currentKey;
-    _previousTransport = currentTransport;
-  }
-
-  Future<void> _currentAccountStreamListener(
-      Tuple5<KeyStoreEntry?, List<AssetsList>, Transport, List<TonWallet>, List<TokenWallet>> event) async {
+  Future<void> _accountsStreamListener(Tuple2<KeyStoreEntry?, List<AssetsList>> event) async {
     final currentKey = event.item1;
     final currentAccounts = event.item2;
 
-    if (currentKey == null || currentKey != _previousKey || currentAccounts == _previousAccounts) {
+    if (currentKey == null) {
       _previousAccounts = currentAccounts;
       return;
     }
@@ -113,6 +92,10 @@ class Nekoton {
     final removedTonWallets = ([...previousTonWallets]..removeWhere((e) => currentTonWallets.contains(e)));
 
     for (final tonWallet in addedTonWallets) {
+      if (subscriptionsController.tonWallets.firstWhereOrNull((e) => e.address == tonWallet.address) != null) {
+        continue;
+      }
+
       await subscriptionsController.subscribeToTonWallet(
         publicKey: currentKey.publicKey,
         tonWalletAsset: tonWallet,
@@ -123,34 +106,59 @@ class Nekoton {
       subscriptionsController.removeTonWalletSubscription(tonWallet);
     }
 
-    final networkGroup = event.item3.connectionData.group;
+    final networkGroup = connectionController.transport.connectionData.group;
 
     final currentTokenWallets = currentAccounts
         .where((e) => e.publicKey == currentKey.publicKey)
-        .map((e) => Tuple2(e.tonWallet, e.additionalAssets[networkGroup]?.tokenWallets ?? []));
+        .map((el) => el.additionalAssets[networkGroup]?.tokenWallets.map((e) => Tuple2(el.tonWallet, e)) ?? [])
+        .expand((e) => e);
     final previousTokenWallets = _previousAccounts
         .where((e) => e.publicKey == currentKey.publicKey)
-        .map((e) => Tuple2(e.tonWallet, e.additionalAssets[networkGroup]?.tokenWallets ?? []));
+        .map((el) => el.additionalAssets[networkGroup]?.tokenWallets.map((e) => Tuple2(el.tonWallet, e)) ?? [])
+        .expand((e) => e);
 
     final addedTokenWallets = ([...currentTokenWallets]..removeWhere((e) => previousTokenWallets.contains(e)));
     final removedTokenWallets = ([...previousTokenWallets]..removeWhere((e) => currentTokenWallets.contains(e)));
 
-    for (final tokenWalletTuple in addedTokenWallets) {
-      for (final tokenWallet in tokenWalletTuple.item2) {
-        await subscriptionsController.subscribeToTokenWallet(
-          tonWalletAsset: tokenWalletTuple.item1,
-          tokenWalletAsset: tokenWallet,
-        );
+    for (final tokenWallet in addedTokenWallets) {
+      if (subscriptionsController.tokenWallets.firstWhereOrNull((e) =>
+              e.owner == tokenWallet.item1.address &&
+              e.symbol.rootTokenContract == tokenWallet.item2.rootTokenContract) !=
+          null) {
+        continue;
       }
+
+      await subscriptionsController.subscribeToTokenWallet(
+        tonWalletAsset: tokenWallet.item1,
+        tokenWalletAsset: tokenWallet.item2,
+      );
     }
 
-    for (final tokenWalletTuple in removedTokenWallets) {
-      for (final tokenWallet in tokenWalletTuple.item2) {
-        subscriptionsController.removeTokenWalletSubscription(tokenWallet);
-      }
+    for (final tokenWallet in removedTokenWallets) {
+      subscriptionsController.removeTokenWalletSubscription(
+        tonWalletAsset: tokenWallet.item1,
+        tokenWalletAsset: tokenWallet.item2,
+      );
     }
 
     _previousAccounts = currentAccounts;
+  }
+
+  Future<void> _subscriptionsUpdateStreamListener(KeyStoreEntry? event) async {
+    final currentKey = event;
+
+    if (currentKey == null) {
+      subscriptionsController.clearTonWalletsSubscriptions();
+      subscriptionsController.clearTokenWalletsSubscriptions();
+      return;
+    }
+
+    final accounts = accountsStorageController.accounts.where((e) => e.publicKey == currentKey.publicKey).toList();
+
+    await subscriptionsController.updateCurrentSubscriptions(
+      publicKey: currentKey.publicKey,
+      accounts: accounts,
+    );
   }
 
   Future<void> _initialize() async {
@@ -162,25 +170,21 @@ class Nekoton {
     subscriptionsController = await SubscriptionsController.getInstance();
 
     _previousKeys = keystoreController.keys;
-    _keysStreamSubscription = keystoreController.keysStream.skip(1).listen(_keysStreamListener);
-
-    _currentKeyStreamSubscription = Rx.combineLatest3<KeyStoreEntry?, List<AssetsList>, Transport,
-        Tuple3<KeyStoreEntry?, List<AssetsList>, Transport>>(
-      keystoreController.currentKeyStream,
-      accountsStorageController.accountsStream,
-      connectionController.transportStream,
-      (a, b, c) => Tuple3(a, b, c),
-    ).listen(_currentKeyStreamListener);
+    _keysStreamSubscription =
+        keystoreController.keysStream.skip(1).listen((e) => _lock.synchronized(() async => _keysStreamListener(e)));
 
     _previousAccounts = accountsStorageController.accounts;
-    _currentAccountStreamSubscription = Rx.combineLatest5<KeyStoreEntry?, List<AssetsList>, Transport, List<TonWallet>,
-        List<TokenWallet>, Tuple5<KeyStoreEntry?, List<AssetsList>, Transport, List<TonWallet>, List<TokenWallet>>>(
+    _accountsStreamSubscription =
+        Rx.combineLatest2<KeyStoreEntry?, List<AssetsList>, Tuple2<KeyStoreEntry?, List<AssetsList>>>(
       keystoreController.currentKeyStream,
       accountsStorageController.accountsStream.skip(1),
+      (a, b) => Tuple2(a, b),
+    ).listen((e) => _lock.synchronized(() async => _accountsStreamListener(e)));
+
+    _subscriptionsUpdateStreamSubscription = Rx.combineLatest2<KeyStoreEntry?, Transport, KeyStoreEntry?>(
+      keystoreController.currentKeyStream,
       connectionController.transportStream,
-      subscriptionsController.tonWalletsStream,
-      subscriptionsController.tokenWalletsStream,
-      (a, b, c, d, e) => Tuple5(a, b, c, d, e),
-    ).listen(_currentAccountStreamListener);
+      (a, b) => a,
+    ).listen((e) => _lock.synchronized(() async => _subscriptionsUpdateStreamListener(e)));
   }
 }

@@ -12,6 +12,7 @@ import 'core/token_wallet/token_wallet.dart';
 import 'core/ton_wallet/ton_wallet.dart';
 import 'models/nekoton_exception.dart';
 import 'transport/gql_transport.dart';
+import 'utils.dart';
 
 class AccountsStorageController {
   static AccountsStorageController? _instance;
@@ -52,7 +53,7 @@ class AccountsStorageController {
 
     accounts
       ..add(account)
-      ..sort();
+      ..sort(sortAccounts);
 
     _accountsSubject.add(accounts);
 
@@ -70,19 +71,19 @@ class AccountsStorageController {
 
     final activeWallets = wallets.where((e) => e.contractState.isDeployed || e.contractState.balance != "0");
 
-    final list = <AssetsList>[];
+    final futures = <Future<AssetsList>>[];
 
     for (final activeWallet in activeWallets) {
-      final account = await addAccount(
+      final future = addAccount(
         name: activeWallet.walletType.describe(),
         publicKey: publicKey,
         walletType: activeWallet.walletType,
         workchain: kDefaultWorkchain,
       );
-      list.add(account);
+      futures.add(future);
     }
 
-    return list;
+    return Future.wait(futures);
   }
 
   Future<AssetsList> renameAccount({
@@ -99,7 +100,7 @@ class AccountsStorageController {
     accounts
       ..removeWhere((e) => e.address == account.address)
       ..add(account)
-      ..sort();
+      ..sort(sortAccounts);
 
     _accountsSubject.add(accounts);
 
@@ -117,7 +118,7 @@ class AccountsStorageController {
 
     accounts
       ..removeWhere((e) => e.address == account.address)
-      ..sort();
+      ..sort(sortAccounts);
 
     _accountsSubject.add(accounts);
 
@@ -155,7 +156,7 @@ class AccountsStorageController {
     accounts
       ..removeWhere((e) => e.address == account.address)
       ..add(account)
-      ..sort();
+      ..sort(sortAccounts);
 
     _accountsSubject.add(accounts);
 
@@ -179,7 +180,7 @@ class AccountsStorageController {
     accounts
       ..removeWhere((e) => e.address == account.address)
       ..add(account)
-      ..sort();
+      ..sort(sortAccounts);
 
     _accountsSubject.add(accounts);
 
@@ -200,7 +201,7 @@ class AccountsStorageController {
 
     _accountsSubject.add([
       ..._accountsSubject.value,
-      ...accounts..sort(),
+      ...accounts..sort(sortAccounts),
     ]);
   }
 }

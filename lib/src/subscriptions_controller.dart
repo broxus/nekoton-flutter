@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:rxdart/rxdart.dart';
 
+import '../nekoton_flutter.dart';
 import 'connection_controller.dart';
 import 'core/accounts_storage/models/assets_list.dart';
 import 'core/accounts_storage/models/token_wallet_asset.dart';
@@ -88,7 +89,7 @@ class SubscriptionsController {
 
     tonWallets
       ..add(tonWallet)
-      ..sort();
+      ..sort(sortTonWallets);
 
     _tonWalletsSubject.add(tonWallets);
 
@@ -113,9 +114,9 @@ class SubscriptionsController {
 
     tokenWallets
       ..add(tokenWallet)
-      ..sort();
+      ..sort(sortTokenWallets);
 
-    _tonWalletsSubject.add(tonWallets);
+    _tokenWalletsSubject.add(tokenWallets);
 
     return tokenWallet;
   }
@@ -148,16 +149,19 @@ class SubscriptionsController {
 
     subscriptions
       ..remove(tonWallet)
-      ..sort();
+      ..sort(sortTonWallets);
 
     _tonWalletsSubject.add(subscriptions);
 
     freeTonWallet(tonWallet);
   }
 
-  void removeTokenWalletSubscription(TokenWalletAsset tokenWalletAsset) {
-    final tokenWallet = _tokenWalletsSubject.value
-        .firstWhereOrNull((e) => e.symbol.rootTokenContract == tokenWalletAsset.rootTokenContract);
+  void removeTokenWalletSubscription({
+    required TonWalletAsset tonWalletAsset,
+    required TokenWalletAsset tokenWalletAsset,
+  }) {
+    final tokenWallet = _tokenWalletsSubject.value.firstWhereOrNull(
+        (e) => e.owner == tonWalletAsset.address && e.symbol.rootTokenContract == tokenWalletAsset.rootTokenContract);
 
     if (tokenWallet == null) {
       return;
@@ -167,7 +171,7 @@ class SubscriptionsController {
 
     subscriptions
       ..remove(tokenWallet)
-      ..sort();
+      ..sort(sortTokenWallets);
 
     _tokenWalletsSubject.add(subscriptions);
 
