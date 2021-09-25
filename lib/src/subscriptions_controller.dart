@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:rxdart/rxdart.dart';
 
-import '../nekoton_flutter.dart';
 import 'connection_controller.dart';
 import 'core/accounts_storage/models/assets_list.dart';
 import 'core/accounts_storage/models/token_wallet_asset.dart';
@@ -89,7 +88,7 @@ class SubscriptionsController {
 
     tonWallets
       ..add(tonWallet)
-      ..sort(sortTonWallets);
+      ..sort();
 
     _tonWalletsSubject.add(tonWallets);
 
@@ -114,7 +113,7 @@ class SubscriptionsController {
 
     tokenWallets
       ..add(tokenWallet)
-      ..sort(sortTokenWallets);
+      ..sort();
 
     _tokenWalletsSubject.add(tokenWallets);
 
@@ -149,7 +148,7 @@ class SubscriptionsController {
 
     subscriptions
       ..remove(tonWallet)
-      ..sort(sortTonWallets);
+      ..sort();
 
     _tonWalletsSubject.add(subscriptions);
 
@@ -171,7 +170,7 @@ class SubscriptionsController {
 
     subscriptions
       ..remove(tokenWallet)
-      ..sort(sortTokenWallets);
+      ..sort();
 
     _tokenWalletsSubject.add(subscriptions);
 

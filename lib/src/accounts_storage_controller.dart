@@ -12,7 +12,6 @@ import 'core/token_wallet/token_wallet.dart';
 import 'core/ton_wallet/ton_wallet.dart';
 import 'models/nekoton_exception.dart';
 import 'transport/gql_transport.dart';
-import 'utils.dart';
 
 class AccountsStorageController {
   static AccountsStorageController? _instance;
@@ -53,7 +52,7 @@ class AccountsStorageController {
 
     accounts
       ..add(account)
-      ..sort(sortAccounts);
+      ..sort();
 
     _accountsSubject.add(accounts);
 
@@ -100,7 +99,7 @@ class AccountsStorageController {
     accounts
       ..removeWhere((e) => e.address == account.address)
       ..add(account)
-      ..sort(sortAccounts);
+      ..sort();
 
     _accountsSubject.add(accounts);
 
@@ -118,7 +117,7 @@ class AccountsStorageController {
 
     accounts
       ..removeWhere((e) => e.address == account.address)
-      ..sort(sortAccounts);
+      ..sort();
 
     _accountsSubject.add(accounts);
 
@@ -156,7 +155,7 @@ class AccountsStorageController {
     accounts
       ..removeWhere((e) => e.address == account.address)
       ..add(account)
-      ..sort(sortAccounts);
+      ..sort();
 
     _accountsSubject.add(accounts);
 
@@ -180,7 +179,7 @@ class AccountsStorageController {
     accounts
       ..removeWhere((e) => e.address == account.address)
       ..add(account)
-      ..sort(sortAccounts);
+      ..sort();
 
     _accountsSubject.add(accounts);
 
@@ -201,7 +200,7 @@ class AccountsStorageController {
 
     _accountsSubject.add([
       ..._accountsSubject.value,
-      ...accounts..sort(sortAccounts),
+      ...accounts..sort(),
     ]);
   }
 }

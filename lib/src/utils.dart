@@ -1,8 +1,6 @@
 import 'dart:math';
 
-import '../nekoton_flutter.dart';
 import 'constants.dart';
-import 'core/keystore/models/key_store_entry.dart';
 
 extension TokensConvert on String {
   String toTokens([int decimals = kTonDecimals]) {
@@ -76,11 +74,3 @@ extension VersionConvert on String {
     return numericVersion;
   }
 }
-
-int sortKeys(KeyStoreEntry a, KeyStoreEntry b) => b.publicKey.compareTo(a.publicKey);
-
-int sortAccounts(AssetsList a, AssetsList b) => b.address.compareTo(a.address);
-
-int sortTonWallets(TonWallet a, TonWallet b) => b.walletType.toInt().compareTo(a.walletType.toInt());
-
-int sortTokenWallets(TokenWallet a, TokenWallet b) => b.symbol.name.compareTo(a.symbol.name);

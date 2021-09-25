@@ -32,7 +32,7 @@ part 'free_token_wallet.dart';
 part 'token_wallet_check_validity.dart';
 part 'token_wallet_subscribe.dart';
 
-class TokenWallet {
+class TokenWallet implements Comparable<TokenWallet> {
   final _receivePort = ReceivePort();
   final _nativeLibrary = NativeLibrary.instance();
   late final GqlTransport _transport;
@@ -281,4 +281,7 @@ class TokenWallet {
 
   @override
   int get hashCode => _nativeTokenWallet.ptr?.address ?? 0;
+
+  @override
+  int compareTo(TokenWallet other) => symbol.name.compareTo(other.symbol.name);
 }

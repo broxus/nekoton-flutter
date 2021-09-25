@@ -42,7 +42,7 @@ part 'ton_wallet_subscribe.dart';
 part 'ton_wallet_subscribe_by_address.dart';
 part 'ton_wallet_subscribe_by_existing.dart';
 
-class TonWallet {
+class TonWallet implements Comparable<TonWallet> {
   final _receivePort = ReceivePort();
   final _nativeLibrary = NativeLibrary.instance();
   late final GqlTransport _transport;
@@ -514,4 +514,7 @@ class TonWallet {
 
   @override
   int get hashCode => nativeTonWallet.ptr?.address ?? 0;
+
+  @override
+  int compareTo(TonWallet other) => walletType.toInt().compareTo(other.walletType.toInt());
 }

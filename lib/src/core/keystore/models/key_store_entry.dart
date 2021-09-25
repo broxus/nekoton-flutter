@@ -8,7 +8,7 @@ part 'key_store_entry.freezed.dart';
 part 'key_store_entry.g.dart';
 
 @freezed
-class KeyStoreEntry with _$KeyStoreEntry {
+class KeyStoreEntry with _$KeyStoreEntry implements Comparable<KeyStoreEntry> {
   @JsonSerializable(fieldRename: FieldRename.snake)
   const factory KeyStoreEntry({
     required KeySigner signerName,
@@ -29,4 +29,7 @@ class KeyStoreEntry with _$KeyStoreEntry {
   bool get isMaster => publicKey == masterKey;
 
   int get nextAccountId => accountId + 1;
+
+  @override
+  int compareTo(KeyStoreEntry other) => publicKey.compareTo(other.publicKey);
 }

@@ -23,16 +23,16 @@ extension ToInt on WalletType {
         multisig: (multisigType) {
           switch (multisigType) {
             case MultisigType.safeMultisigWallet:
-              return 4;
-            case MultisigType.safeMultisigWallet24h:
-              return 3;
-            case MultisigType.setcodeMultisigWallet:
-              return 2;
-            case MultisigType.surfWallet:
               return 1;
+            case MultisigType.safeMultisigWallet24h:
+              return 2;
+            case MultisigType.setcodeMultisigWallet:
+              return 3;
+            case MultisigType.surfWallet:
+              return 4;
           }
         },
-        walletV3: () => 0,
+        walletV3: () => 5,
       );
 }
 
