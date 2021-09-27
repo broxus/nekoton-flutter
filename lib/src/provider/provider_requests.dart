@@ -3,6 +3,7 @@ import 'package:collection/collection.dart';
 import '../constants.dart';
 import '../core/generic_contract/models/transaction_execution_options.dart';
 import '../core/models/expiration.dart';
+import '../core/models/transaction.dart';
 import '../helpers/helpers.dart' as helpers;
 import '../models/nekoton_exception.dart';
 import '../nekoton.dart';
@@ -621,7 +622,7 @@ Future<SendExternalMessageOutput> sendExternalMessage({
     payload: input.payload,
   );
 
-  dynamic transaction;
+  Transaction transaction;
   if (input.local == true) {
     transaction = await genericContract.executeTransactionLocally(
       message: message,
@@ -630,11 +631,16 @@ Future<SendExternalMessageOutput> sendExternalMessage({
       options: const TransactionExecutionOptions(disableSignatureCheck: false),
     );
   } else {
-    transaction = await genericContract.send(
+    final pendingTransaction = await genericContract.send(
       message: message,
       publicKey: selectedPublicKey,
       password: password,
     );
+
+    transaction = await genericContract.onTransactionsFoundStream
+        .expand((e) => e)
+        .firstWhere((e) => e.id.hash == pendingTransaction.bodyHash)
+        .timeout(const Duration(seconds: 60));
   }
 
   dynamic output;
