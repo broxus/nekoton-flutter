@@ -10,8 +10,7 @@ import 'core/accounts_storage/models/ton_wallet_asset.dart';
 import 'core/generic_contract/generic_contract.dart';
 import 'core/token_wallet/token_wallet.dart';
 import 'core/ton_wallet/ton_wallet.dart';
-import 'helpers/helpers.dart';
-import 'models/nekoton_exception.dart';
+import 'provider/models/contract_updates_subscription.dart';
 import 'transport/gql_transport.dart';
 
 class SubscriptionsController {
@@ -19,7 +18,7 @@ class SubscriptionsController {
   late final ConnectionController _connectionController;
   final _tonWalletsSubject = BehaviorSubject<List<TonWallet>>.seeded([]);
   final _tokenWalletsSubject = BehaviorSubject<List<TokenWallet>>.seeded([]);
-  final _genericContractsSubject = BehaviorSubject<List<GenericContract>>.seeded([]);
+  final _genericContractsSubject = BehaviorSubject<Map<String, List<GenericContract>>>.seeded({});
 
   SubscriptionsController._();
 
@@ -37,13 +36,13 @@ class SubscriptionsController {
 
   Stream<List<TokenWallet>> get tokenWalletsStream => _tokenWalletsSubject.stream.distinct();
 
-  Stream<List<GenericContract>> get genericContractsStream => _genericContractsSubject.stream.distinct();
+  Stream<Map<String, List<GenericContract>>> get genericContractsStream => _genericContractsSubject.stream.distinct();
 
   List<TonWallet> get tonWallets => _tonWalletsSubject.value;
 
   List<TokenWallet> get tokenWallets => _tokenWalletsSubject.value;
 
-  List<GenericContract> get genericContracts => _genericContractsSubject.value;
+  Map<String, List<GenericContract>> get genericContracts => _genericContractsSubject.value;
 
   Future<void> updateCurrentSubscriptions({
     required String publicKey,
@@ -120,11 +119,10 @@ class SubscriptionsController {
     return tokenWallet;
   }
 
-  Future<void> subscribeToGenericContract(String address) async {
-    if (!validateAddress(address)) {
-      throw InvalidAddressException();
-    }
-
+  Future<void> subscribeToGenericContract({
+    required String origin,
+    required String address,
+  }) async {
     final transport = _connectionController.transport as GqlTransport;
 
     final genericContract = await genericContractSubscribe(
@@ -132,7 +130,8 @@ class SubscriptionsController {
       address: address,
     );
 
-    final subscriptions = [..._genericContractsSubject.value, genericContract];
+    final subscriptions = {..._genericContractsSubject.value};
+    subscriptions[origin] = [...subscriptions[origin] ?? [], genericContract];
 
     _genericContractsSubject.add(subscriptions);
   }
@@ -177,16 +176,37 @@ class SubscriptionsController {
     freeTokenWallet(tokenWallet);
   }
 
-  void removeGenericContractSubscription(String address) {
-    final genericContract = _genericContractsSubject.value.firstWhereOrNull((e) => e.address == address);
+  void removeOriginGenericContractSubscriptions(String origin) {
+    final subscriptions = {..._genericContractsSubject.value};
+
+    final genericContracts = subscriptions[origin];
+
+    if (genericContracts == null) {
+      return;
+    }
+
+    subscriptions[origin] = [];
+
+    _genericContractsSubject.add(subscriptions);
+
+    for (final genericContract in genericContracts) {
+      freeGenericContract(genericContract);
+    }
+  }
+
+  void removeGenericContractSubscription({
+    required String origin,
+    required String address,
+  }) {
+    final subscriptions = {..._genericContractsSubject.value};
+
+    final genericContract = subscriptions[origin]?.firstWhereOrNull((e) => e.address == address);
 
     if (genericContract == null) {
       return;
     }
 
-    final subscriptions = [..._genericContractsSubject.value];
-
-    subscriptions.remove(genericContract);
+    subscriptions[origin] = [...subscriptions[origin]?.where((e) => e != genericContract) ?? []];
 
     _genericContractsSubject.add(subscriptions);
 
@@ -214,13 +234,25 @@ class SubscriptionsController {
   }
 
   void clearGenericContractsSubscriptions() {
-    final subscriptions = [..._genericContractsSubject.value];
+    final subscriptions = {..._genericContractsSubject.value};
 
-    _genericContractsSubject.add([]);
+    _genericContractsSubject.add({});
 
-    for (final subscription in subscriptions) {
+    for (final subscription in subscriptions.values.expand((e) => e)) {
       freeGenericContract(subscription);
     }
+  }
+
+  Map<String, ContractUpdatesSubscription> getOriginSubscriptions(String origin) {
+    final originSubscriptions = [..._genericContractsSubject.value[origin] ?? []];
+
+    final map = <String, ContractUpdatesSubscription>{};
+
+    for (final subscription in originSubscriptions) {
+      map[subscription.address] = const ContractUpdatesSubscription(state: true, transactions: true);
+    }
+
+    return map;
   }
 
   Future<void> _initialize() async {

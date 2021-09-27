@@ -554,6 +554,20 @@ fn internal_decode_transaction_events(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn parse_known_payload(payload: *mut c_char) -> *mut c_void {
+    let payload = payload.from_ptr();
+
+    let result = internal_parse_known_payload(payload);
+    match_result(result)
+}
+
+fn internal_parse_known_payload(_payload: String) -> Result<u64, NativeError> {
+    let result = String::new();
+
+    Ok(result.to_ptr() as c_ulonglong)
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn create_external_message(
     dst: *mut c_char,
     contract_abi: *mut c_char,

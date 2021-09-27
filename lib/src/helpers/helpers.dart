@@ -291,6 +291,17 @@ String decodeTransactionEvents({
   return string;
 }
 
+String parseKnownPayload(String payload) {
+  final nativeLibrary = NativeLibrary.instance();
+  final result = proceedSync(() => nativeLibrary.bindings.parse_known_payload(
+        payload.toNativeUtf8().cast<Int8>(),
+      ));
+
+  final string = cStringToDart(result);
+
+  return string;
+}
+
 String createExternalMessage({
   required String dst,
   required String contractAbi,

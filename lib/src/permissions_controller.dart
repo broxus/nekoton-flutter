@@ -24,7 +24,10 @@ class PermissionsController {
     required String origin,
     required List<Permission> permissions,
   }) async {
-    final requested = await _approvalController.requestApprovalForPermissions(permissions);
+    final requested = await _approvalController.requestApprovalForPermissions(
+      origin: origin,
+      permissions: permissions,
+    );
 
     await _preferences.setPermissions(
       origin: origin,
@@ -37,6 +40,32 @@ class PermissionsController {
   Future<void> removeOrigin(String origin) => _preferences.deletePermissions(origin);
 
   Future<Permissions?> getPermissions(String origin) async => _preferences.getPermissions(origin);
+
+  Future<void> checkPermissions({
+    required String origin,
+    required List<Permission> requiredPermissions,
+  }) async {
+    final permissions = await getPermissions(origin);
+
+    if (permissions == null) {
+      throw Exception();
+    }
+
+    for (final requiredPermission in requiredPermissions) {
+      switch (requiredPermission) {
+        case Permission.tonClient:
+          if (permissions.tonClient == null || permissions.tonClient == false) {
+            throw Exception();
+          }
+          break;
+        case Permission.accountInteraction:
+          if (permissions.accountInteraction == null) {
+            throw Exception();
+          }
+          break;
+      }
+    }
+  }
 
   Future<void> _initialize() async {
     _preferences = await Preferences.getInstance();

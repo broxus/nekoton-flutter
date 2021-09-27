@@ -1,9 +1,9 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:json_annotation/json_annotation.dart';
-import 'package:nekoton_flutter/nekoton_flutter.dart';
 
 import 'additional_assets.dart';
 import 'ton_wallet_asset.dart';
+import 'wallet_type.dart';
 
 part 'assets_list.freezed.dart';
 part 'assets_list.g.dart';
