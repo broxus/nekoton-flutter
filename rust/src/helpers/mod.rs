@@ -362,10 +362,16 @@ fn internal_get_expected_address(
     public_key: Option<String>,
     init_data: String,
 ) -> Result<u64, NativeError> {
-    let mut state_init = ton_block::StateInit::construct_from_base64(&tvc)
+    let state_init = ton_block::StateInit::construct_from_base64(&tvc)
         .handle_error(NativeStatus::ConversionError)?;
     let contract_abi = parse_contract_abi(&contract_abi)?;
     let public_key = public_key.as_deref().map(parse_public_key).transpose()?;
+
+    let params = contract_abi
+        .data()
+        .iter()
+        .map(|(_, v)| v.value.clone())
+        .collect::<Vec<ton_abi::Param>>();
 
     let init_data = parse_abi_tokens_value(&init_data)?;
     let init_data = nekoton_abi::parse_abi_tokens(&params, init_data)
@@ -583,7 +589,7 @@ fn internal_decode_input(
             let input =
                 nekoton_abi::make_abi_tokens(&input).handle_error(NativeStatus::ConversionError)?;
             let result = JsDecodedInput {
-                method: method.name,
+                method: method.name.clone(),
                 input,
             };
             serde_json::to_string(&result).handle_error(NativeStatus::ConversionError)?
@@ -624,7 +630,7 @@ fn internal_decode_output(
             let output = nekoton_abi::make_abi_tokens(&output)
                 .handle_error(NativeStatus::ConversionError)?;
             let result = JsDecodedOutput {
-                method: method.name,
+                method: method.name.clone(),
                 output,
             };
             serde_json::to_string(&result).handle_error(NativeStatus::ConversionError)?
@@ -665,7 +671,7 @@ fn internal_decode_event(
             let data =
                 nekoton_abi::make_abi_tokens(&data).handle_error(NativeStatus::ConversionError)?;
             let result = JsDecodedEvent {
-                event: event.name,
+                event: event.name.clone(),
                 data,
             };
             serde_json::to_string(&result).handle_error(NativeStatus::ConversionError)?
@@ -721,12 +727,12 @@ fn internal_decode_transaction(
         .out_msgs
         .iter()
         .filter_map(|message| {
-            match message.dst {
-                Some(e) => return None,
+            match message.dst.clone() {
+                Some(_) => return None,
                 _ => {}
             };
 
-            Some(match message.body {
+            Some(match message.body.clone() {
                 Some(body) => Ok(body.data.into()),
                 None => Err("Expected message body").handle_error(NativeStatus::AbiError),
             })
@@ -741,7 +747,7 @@ fn internal_decode_transaction(
         nekoton_abi::make_abi_tokens(&output).handle_error(NativeStatus::ConversionError)?;
 
     let result = JsDecodedTransaction {
-        method: method.name,
+        method: method.name.clone(),
         input,
         output,
     };
@@ -773,12 +779,12 @@ fn internal_decode_transaction_events(
         .out_msgs
         .iter()
         .filter_map(|message| {
-            match message.dst {
-                Some(e) => return None,
+            match message.dst.clone() {
+                Some(_) => return None,
                 _ => {}
             };
 
-            Some(match message.body {
+            Some(match message.body.clone() {
                 Some(body) => Ok(body.data.into()),
                 None => Err("Expected message body").handle_error(NativeStatus::AbiError),
             })
@@ -794,7 +800,7 @@ fn internal_decode_transaction_events(
 
             Some(match nekoton_abi::make_abi_tokens(&tokens) {
                 Ok(data) => Ok(JsDecodedTransactionEvent {
-                    event: event.name,
+                    event: event.name.clone(),
                     data,
                 }),
                 Err(err) => Err(err).handle_error(NativeStatus::AbiError),
@@ -817,7 +823,8 @@ pub unsafe extern "C" fn parse_known_payload(payload: *mut c_char) -> *mut c_voi
 
 fn internal_parse_known_payload(payload: String) -> Result<u64, NativeError> {
     let payload = parse_slice(&payload)?;
-    let result = nekoton::core::parsing::parse_payload(payload);
+    let known_payload = nekoton::core::parsing::parse_payload(payload);
+    let result = known_payload.map(|e| crate::core::ton_wallet::models::KnownPayload::from_core(e));
     let result = serde_json::to_string(&result).handle_error(NativeStatus::ConversionError)?;
 
     Ok(result.to_ptr() as c_ulonglong)

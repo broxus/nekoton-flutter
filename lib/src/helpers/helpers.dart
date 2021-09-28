@@ -2,6 +2,9 @@ import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
+import 'package:nekoton_flutter/src/core/models/native_unsigned_message.dart';
+import 'package:nekoton_flutter/src/core/models/unsigned_message.dart';
+import 'package:nekoton_flutter/src/core/ton_wallet/models/known_payload.dart';
 
 import '../ffi_utils.dart';
 import '../native_library.dart';
@@ -48,9 +51,7 @@ bool validateAddress(String address) {
   return isValid;
 }
 
-String repackAddress({
-  required String address,
-}) {
+String repackAddress(String address) {
   final nativeLibrary = NativeLibrary.instance();
   final result = proceedSync(() => nativeLibrary.bindings.repack_address(address.toNativeUtf8().cast<Int8>()));
 
@@ -101,15 +102,17 @@ String getExpectedAddress({
   required String tvc,
   required String contractAbi,
   required int workchainId,
-  required String publicKey,
+  String? publicKey,
   required String initData,
 }) {
+  final publicKeyStr = jsonEncode(publicKey);
+
   final nativeLibrary = NativeLibrary.instance();
   final result = proceedSync(() => nativeLibrary.bindings.get_expected_address(
         tvc.toNativeUtf8().cast<Int8>(),
         contractAbi.toNativeUtf8().cast<Int8>(),
         workchainId,
-        publicKey.toNativeUtf8().cast<Int8>(),
+        publicKeyStr.toNativeUtf8().cast<Int8>(),
         initData.toNativeUtf8().cast<Int8>(),
       ));
 
@@ -150,9 +153,7 @@ String unpackFromCell({
   return string;
 }
 
-String extractPublicKey({
-  required String boc,
-}) {
+String extractPublicKey(String boc) {
   final nativeLibrary = NativeLibrary.instance();
   final result = proceedSync(() => nativeLibrary.bindings.extract_public_key(
         boc.toNativeUtf8().cast<Int8>(),
@@ -163,9 +164,7 @@ String extractPublicKey({
   return string;
 }
 
-String codeToTvc({
-  required String code,
-}) {
+String codeToTvc(String code) {
   final nativeLibrary = NativeLibrary.instance();
   final result = proceedSync(() => nativeLibrary.bindings.code_to_tvc(
         code.toNativeUtf8().cast<Int8>(),
@@ -176,9 +175,7 @@ String codeToTvc({
   return string;
 }
 
-String splitTvc({
-  required String tvc,
-}) {
+String splitTvc(String tvc) {
   final nativeLibrary = NativeLibrary.instance();
   final result = proceedSync(() => nativeLibrary.bindings.split_tvc(
         tvc.toNativeUtf8().cast<Int8>(),
@@ -291,38 +288,44 @@ String decodeTransactionEvents({
   return string;
 }
 
-String parseKnownPayload(String payload) {
+KnownPayload parseKnownPayload(String payload) {
   final nativeLibrary = NativeLibrary.instance();
   final result = proceedSync(() => nativeLibrary.bindings.parse_known_payload(
         payload.toNativeUtf8().cast<Int8>(),
       ));
 
   final string = cStringToDart(result);
+  final json = jsonDecode(string) as Map<String, dynamic>;
+  final knownPayload = KnownPayload.fromJson(json);
 
-  return string;
+  return knownPayload;
 }
 
-String createExternalMessage({
+UnsignedMessage createExternalMessage({
   required String dst,
   required String contractAbi,
   required String method,
-  required String stateInit,
+  String? stateInit,
   required String input,
   required String publicKey,
   required int timeout,
 }) {
+  final stateInitStr = jsonEncode(stateInit);
+
   final nativeLibrary = NativeLibrary.instance();
   final result = proceedSync(() => nativeLibrary.bindings.create_external_message(
         dst.toNativeUtf8().cast<Int8>(),
         contractAbi.toNativeUtf8().cast<Int8>(),
         method.toNativeUtf8().cast<Int8>(),
-        stateInit.toNativeUtf8().cast<Int8>(),
+        stateInitStr.toNativeUtf8().cast<Int8>(),
         input.toNativeUtf8().cast<Int8>(),
         publicKey.toNativeUtf8().cast<Int8>(),
         timeout,
       ));
 
-  final string = cStringToDart(result);
+  final ptr = Pointer.fromAddress(result).cast<Void>();
+  final nativeUnsignedMessage = NativeUnsignedMessage(ptr);
+  final unsignedMessage = UnsignedMessage(nativeUnsignedMessage);
 
-  return string;
+  return unsignedMessage;
 }

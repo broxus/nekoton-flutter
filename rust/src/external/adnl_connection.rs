@@ -105,7 +105,7 @@ impl TryFrom<&AdnlConfig> for AdnlTcpClientConfig {
         Ok(AdnlTcpClientConfig {
             server_address: c.server_address,
             server_key: parse_public_key(&c.server_key)
-                .map_err(|e| anyhow!("Invalid server key"))?,
+                .map_err(|_| anyhow!("Invalid server key"))?,
             socket_read_timeout: c.socket_read_timeout,
             socket_send_timeout: c.socket_send_timeout,
         })
