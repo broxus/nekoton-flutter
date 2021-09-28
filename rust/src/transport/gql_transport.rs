@@ -1,5 +1,6 @@
 use crate::{
     external::gql_connection::MutexGqlConnection,
+    helpers::parse_address,
     match_result,
     models::{HandleError, NativeError, NativeStatus},
     runtime, send_to_result_port, FromPtr, ToPtr, RUNTIME,
@@ -8,13 +9,11 @@ use nekoton::transport::gql::GqlTransport;
 use std::{
     ffi::c_void,
     os::raw::{c_char, c_longlong, c_ulonglong},
-    str::FromStr,
     sync::Arc,
     time::Duration,
     u64,
 };
 use tokio::sync::Mutex;
-use ton_block::MsgAddressInt;
 
 pub type MutexGqlTransport = Mutex<Arc<GqlTransport>>;
 
@@ -77,7 +76,7 @@ async fn internal_get_latest_block_id(
 ) -> Result<u64, NativeError> {
     let transport = transport.lock().await;
 
-    let address = MsgAddressInt::from_str(&address).handle_error(NativeStatus::ConversionError)?;
+    let address = parse_address(&address)?;
 
     let latest_block = transport
         .get_latest_block(&address)
@@ -116,7 +115,7 @@ async fn internal_wait_for_next_block_id(
 ) -> Result<u64, NativeError> {
     let transport = transport.lock().await;
 
-    let address = MsgAddressInt::from_str(&address).handle_error(NativeStatus::ConversionError)?;
+    let address = parse_address(&address)?;
     let timeout = Duration::from_secs(30);
 
     let next_block_id = transport

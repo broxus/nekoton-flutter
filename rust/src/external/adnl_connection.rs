@@ -1,4 +1,5 @@
 use crate::{
+    helpers::parse_public_key,
     match_result,
     models::{FromPtr, HandleError, NativeError, NativeStatus},
     runtime, send_to_result_port, RUNTIME,
@@ -101,11 +102,10 @@ impl TryFrom<&AdnlConfig> for AdnlTcpClientConfig {
     type Error = anyhow::Error;
 
     fn try_from(c: &AdnlConfig) -> Result<Self> {
-        let server_key = base64::decode(&c.server_key)?;
-
         Ok(AdnlTcpClientConfig {
             server_address: c.server_address,
-            server_key: ed25519_dalek::PublicKey::from_bytes(&server_key)?,
+            server_key: parse_public_key(&c.server_key)
+                .map_err(|e| anyhow!("Invalid server key"))?,
             socket_read_timeout: c.socket_read_timeout,
             socket_send_timeout: c.socket_send_timeout,
         })

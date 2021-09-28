@@ -12,7 +12,7 @@ use nekoton::{
     },
     crypto::UnsignedMessage,
 };
-use nekoton_utils::{serde_u64, serde_uint256};
+use nekoton_utils::{serde_string, serde_uint256};
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use ton_types::UInt256;
@@ -38,7 +38,7 @@ pub struct OnTransactionsFoundPayload<T> {
 
 #[derive(Serialize, Deserialize)]
 pub struct ContractState {
-    #[serde(with = "serde_u64")]
+    #[serde(with = "serde_string")]
     pub balance: u64,
     pub gen_timings: GenTimings,
     pub last_transaction_id: Option<LastTransactionId>,
@@ -74,7 +74,7 @@ impl ContractState {
 pub enum GenTimings {
     Unknown,
     Known {
-        #[serde(with = "serde_u64")]
+        #[serde(with = "serde_string")]
         gen_lt: u64,
         gen_utime: u32,
     },
@@ -107,7 +107,7 @@ pub enum LastTransactionId {
         transaction_id: TransactionId,
     },
     Inexact {
-        #[serde(with = "serde_u64")]
+        #[serde(with = "serde_string")]
         latest_lt: u64,
     },
 }
@@ -136,7 +136,7 @@ impl LastTransactionId {
 
 #[derive(Serialize, Deserialize)]
 pub struct TransactionId {
-    #[serde(with = "serde_u64")]
+    #[serde(with = "serde_string")]
     pub lt: u64,
     #[serde(with = "serde_uint256")]
     pub hash: UInt256,

@@ -6,6 +6,7 @@ use crate::{
         ton_wallet::models::WalletType,
     },
     external::storage::{MutexStorage, StorageImpl},
+    helpers::{parse_address, parse_public_key},
     match_result,
     models::{HandleError, NativeError, NativeStatus},
     runtime, send_to_result_port, FromPtr, ToPtr, RUNTIME,
@@ -14,11 +15,9 @@ use nekoton::core::accounts_storage::AccountsStorage;
 use std::{
     ffi::c_void,
     os::raw::{c_char, c_longlong, c_schar, c_ulonglong},
-    str::FromStr,
     sync::Arc,
 };
 use tokio::sync::Mutex;
-use ton_block::MsgAddressInt;
 
 const ACCOUNTS_STORAGE_NOT_FOUND: &str = "Accounts storage not found";
 
@@ -153,9 +152,7 @@ async fn internal_add_account(
         .handle_error(NativeStatus::ConversionError)?;
     let contract = contract.to_core();
 
-    let public_key = hex::decode(public_key).handle_error(NativeStatus::ConversionError)?;
-    let public_key = ed25519_dalek::PublicKey::from_bytes(&public_key)
-        .handle_error(NativeStatus::ConversionError)?;
+    let public_key = parse_public_key(&public_key)?;
 
     let assets = accounts_storage
         .add_account(&name, public_key, contract, workchain)
@@ -324,8 +321,7 @@ async fn internal_add_token_wallet(
     network_group: String,
     root_token_contract: String,
 ) -> Result<u64, NativeError> {
-    let root_token_contract = MsgAddressInt::from_str(&root_token_contract)
-        .handle_error(NativeStatus::ConversionError)?;
+    let root_token_contract = parse_address(&root_token_contract)?;
 
     let assets = accounts_storage
         .add_token_wallet(&address, &network_group, root_token_contract)
@@ -390,8 +386,7 @@ async fn internal_remove_token_wallet(
     network_group: String,
     root_token_contract: String,
 ) -> Result<u64, NativeError> {
-    let root_token_contract = MsgAddressInt::from_str(&root_token_contract)
-        .handle_error(NativeStatus::ConversionError)?;
+    let root_token_contract = parse_address(&root_token_contract)?;
 
     let assets = accounts_storage
         .remove_token_wallet(&address, &network_group, &root_token_contract)

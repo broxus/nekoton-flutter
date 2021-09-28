@@ -13,6 +13,7 @@ use crate::{
         ContractState, Expiration, MutexUnsignedMessage,
     },
     crypto::{derived_key::DerivedKeySignParams, encrypted_key::EncryptedKeyPassword},
+    helpers::{parse_address, parse_public_key},
     match_result,
     models::{HandleError, NativeError, NativeStatus},
     runtime, send_to_result_port,
@@ -31,7 +32,6 @@ use nekoton_abi::{create_comment_payload, TransactionId};
 use std::{
     ffi::c_void,
     os::raw::{c_char, c_longlong, c_schar, c_uchar, c_ulonglong},
-    str::FromStr,
     sync::Arc,
 };
 use tokio::sync::Mutex;
@@ -76,9 +76,7 @@ async fn internal_ton_wallet_subscribe(
     public_key: String,
     contract: String,
 ) -> Result<u64, NativeError> {
-    let public_key = hex::decode(public_key).handle_error(NativeStatus::ConversionError)?;
-    let public_key = ed25519_dalek::PublicKey::from_bytes(&public_key)
-        .handle_error(NativeStatus::ConversionError)?;
+    let public_key = parse_public_key(&public_key)?;
 
     let contract = serde_json::from_str::<WalletType>(&contract)
         .handle_error(NativeStatus::ConversionError)?;
@@ -127,7 +125,7 @@ async fn internal_ton_wallet_subscribe_by_address(
     transport: Arc<GqlTransport>,
     address: String,
 ) -> Result<u64, NativeError> {
-    let address = MsgAddressInt::from_str(&address).handle_error(NativeStatus::ConversionError)?;
+    let address = parse_address(&address)?;
 
     let handler = TonWalletSubscriptionHandlerImpl { port };
     let handler = Arc::new(handler);
@@ -220,9 +218,7 @@ async fn internal_find_existing_wallets(
     public_key: String,
     workchain_id: i8,
 ) -> Result<u64, NativeError> {
-    let public_key = hex::decode(public_key).handle_error(NativeStatus::ConversionError)?;
-    let public_key = ed25519_dalek::PublicKey::from_bytes(&public_key)
-        .handle_error(NativeStatus::ConversionError)?;
+    let public_key = parse_public_key(&public_key)?;
 
     let existing_wallets = nekoton::core::ton_wallet::find_existing_wallets(
         transport.as_ref(),
@@ -740,13 +736,7 @@ async fn internal_ton_wallet_prepare_deploy_with_multiple_owners(
         .handle_error(NativeStatus::ConversionError)?;
     let custodians = custodians
         .into_iter()
-        .map(|e| -> Result<ed25519_dalek::PublicKey, NativeError> {
-            let public_key = hex::decode(e).handle_error(NativeStatus::ConversionError)?;
-            let public_key = ed25519_dalek::PublicKey::from_bytes(&public_key)
-                .handle_error(NativeStatus::ConversionError)?;
-
-            Ok(public_key)
-        })
+        .map(|e| parse_public_key(&e))
         .collect::<Result<Vec<ed25519_dalek::PublicKey>, NativeError>>()?;
 
     let message = ton_wallet
@@ -848,8 +838,7 @@ pub async fn internal_ton_wallet_prepare_transfer_params(
     let expiration = serde_json::from_str::<Expiration>(&expiration)
         .handle_error(NativeStatus::ConversionError)?;
     let expiration = expiration.to_core();
-    let destination =
-        MsgAddressInt::from_str(&destination).handle_error(NativeStatus::ConversionError)?;
+    let destination = parse_address(&destination)?;
     let body = match body {
         Some(comment) => {
             let body = create_comment_payload(&comment).handle_error(NativeStatus::AbiError)?;
@@ -1073,7 +1062,7 @@ async fn internal_prepare_add_ordinary_stake(
     let expiration = serde_json::from_str::<Expiration>(&expiration)
         .handle_error(NativeStatus::ConversionError)?;
     let expiration = expiration.to_core();
-    let depool = MsgAddressInt::from_str(&depool).handle_error(NativeStatus::ConversionError)?;
+    let depool = parse_address(&depool)?;
 
     let internal_message = nekoton_depool::prepare_add_ordinary_stake(depool, depool_fee, stake)
         .handle_error(NativeStatus::AbiError)?;
@@ -1157,7 +1146,7 @@ async fn internal_prepare_withdraw_part(
     let expiration = serde_json::from_str::<Expiration>(&expiration)
         .handle_error(NativeStatus::ConversionError)?;
     let expiration = expiration.to_core();
-    let depool = MsgAddressInt::from_str(&depool).handle_error(NativeStatus::ConversionError)?;
+    let depool = parse_address(&depool)?;
 
     let internal_message =
         nekoton_depool::prepare_withdraw_part(depool, depool_fee, withdraw_value)

@@ -7,6 +7,7 @@ use crate::{
         encrypted_key::{EncryptedKeyPassword, EncryptedKeyUpdateParams},
     },
     external::storage::StorageImpl,
+    helpers::parse_public_key,
     match_result,
     models::{NativeError, NativeStatus},
     runtime, send_to_result_port, FromPtr, ToPtr, RUNTIME,
@@ -414,9 +415,7 @@ pub unsafe extern "C" fn remove_key(
 }
 
 async fn internal_remove_key(keystore: &KeyStore, public_key: String) -> Result<u64, NativeError> {
-    let public_key = hex::decode(public_key).handle_error(NativeStatus::ConversionError)?;
-    let public_key = ed25519_dalek::PublicKey::from_bytes(&public_key)
-        .handle_error(NativeStatus::ConversionError)?;
+    let public_key = parse_public_key(&public_key)?;
 
     let entry = keystore
         .remove_key(&public_key)

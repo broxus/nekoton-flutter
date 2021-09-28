@@ -10,6 +10,7 @@ use crate::{
         ContractState, MutexUnsignedMessage,
     },
     crypto::{derived_key::DerivedKeySignParams, encrypted_key::EncryptedKeyPassword},
+    helpers::parse_address,
     match_result,
     models::{HandleError, NativeError, NativeStatus},
     runtime, send_to_result_port,
@@ -25,11 +26,9 @@ use nekoton_abi::TransactionId;
 use std::{
     ffi::c_void,
     os::raw::{c_char, c_longlong, c_ulonglong},
-    str::FromStr,
     sync::Arc,
 };
 use tokio::sync::Mutex;
-use ton_block::MsgAddressInt;
 
 pub const GENERIC_CONTRACT_NOT_FOUND: &str = "Generic contract not found";
 
@@ -61,7 +60,7 @@ async fn internal_generic_contract_subscribe(
     transport: Arc<GqlTransport>,
     address: String,
 ) -> Result<u64, NativeError> {
-    let address = MsgAddressInt::from_str(&address).handle_error(NativeStatus::ConversionError)?;
+    let address = parse_address(&address)?;
 
     let handler = GenericContractSubscriptionHandlerImpl { port };
     let handler = Arc::new(handler);

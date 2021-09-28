@@ -9,6 +9,7 @@ use crate::{
         },
         ContractState, Expiration,
     },
+    helpers::parse_address,
     match_result,
     models::{HandleError, NativeError, NativeStatus},
     runtime, send_to_result_port,
@@ -27,7 +28,6 @@ use std::{
     sync::Arc,
 };
 use tokio::sync::Mutex;
-use ton_block::MsgAddressInt;
 
 const TOKEN_WALLET_NOT_FOUND: &str = "Token wallet not found";
 
@@ -63,9 +63,8 @@ async fn internal_token_wallet_subscribe(
     owner: String,
     root_token_contract: String,
 ) -> Result<u64, NativeError> {
-    let owner = MsgAddressInt::from_str(&owner).handle_error(NativeStatus::ConversionError)?;
-    let root_token_contract = MsgAddressInt::from_str(&root_token_contract)
-        .handle_error(NativeStatus::ConversionError)?;
+    let owner = parse_address(&owner)?;
+    let root_token_contract = parse_address(&root_token_contract)?;
 
     let handler = TokenWalletSubscriptionHandlerImpl { port };
     let handler = Arc::new(handler);
@@ -525,8 +524,7 @@ async fn internal_token_wallet_prepare_transfer(
         .handle_error(NativeStatus::ConversionError)?;
     let expiration = expiration.to_core();
 
-    let destination =
-        MsgAddressInt::from_str(&destination).handle_error(NativeStatus::ConversionError)?;
+    let destination = parse_address(&destination)?;
 
     let tokens = BigUint::from_str(&tokens).handle_error(NativeStatus::ConversionError)?;
 

@@ -10,8 +10,8 @@ use nekoton::core::{
     ton_wallet::{self, MultisigType, TonWallet},
 };
 use nekoton_utils::{
-    serde_address, serde_cell, serde_optional_address, serde_public_key, serde_u64, serde_uint256,
-    serde_vec_uint256,
+    serde_address, serde_cell, serde_optional_address, serde_public_key, serde_string,
+    serde_uint256, serde_vec_uint256,
 };
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
@@ -211,7 +211,7 @@ pub struct MultisigSubmitTransaction {
     pub all_balance: bool,
     #[serde(with = "serde_cell")]
     pub payload: ton_types::Cell,
-    #[serde(with = "serde_u64")]
+    #[serde(with = "serde_string")]
     pub trans_id: u64,
 }
 
@@ -254,7 +254,7 @@ impl MultisigSendTransaction {
 
 #[derive(Serialize)]
 pub struct MultisigPendingTransaction {
-    #[serde(with = "serde_u64")]
+    #[serde(with = "serde_string")]
     pub id: u64,
     #[serde(with = "serde_vec_uint256")]
     pub confirmations: Vec<UInt256>,

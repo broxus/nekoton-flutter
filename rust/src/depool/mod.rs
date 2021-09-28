@@ -1,4 +1,5 @@
 use crate::{
+    helpers::parse_address,
     match_result,
     models::{FromPtr, HandleError, NativeError, NativeStatus, ToPtr},
     runtime, send_to_result_port,
@@ -9,10 +10,8 @@ use nekoton::transport::gql::GqlTransport;
 use std::{
     ffi::c_void,
     os::raw::{c_char, c_longlong, c_ulonglong},
-    str::FromStr,
     sync::Arc,
 };
-use ton_block::MsgAddressInt;
 
 #[no_mangle]
 pub unsafe extern "C" fn get_participant_info(
@@ -43,9 +42,8 @@ async fn internal_get_participant_info(
     address: String,
     wallet_address: String,
 ) -> Result<u64, NativeError> {
-    let address = MsgAddressInt::from_str(&address).handle_error(NativeStatus::ConversionError)?;
-    let wallet_address =
-        MsgAddressInt::from_str(&wallet_address).handle_error(NativeStatus::ConversionError)?;
+    let address = parse_address(&address)?;
+    let wallet_address = parse_address(&wallet_address)?;
 
     let result = nekoton_depool::get_participant_info(transport, address, wallet_address)
         .await
@@ -83,7 +81,7 @@ async fn internal_get_depool_info(
     transport: Arc<GqlTransport>,
     address: String,
 ) -> Result<u64, NativeError> {
-    let address = MsgAddressInt::from_str(&address).handle_error(NativeStatus::ConversionError)?;
+    let address = parse_address(&address)?;
 
     let result = nekoton_depool::get_depool_info(transport, address)
         .await
