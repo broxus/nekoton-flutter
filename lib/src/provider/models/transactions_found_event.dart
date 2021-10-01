@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+
 import '../../core/models/transaction.dart';
 import '../../core/models/transactions_batch_info.dart';
 

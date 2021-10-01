@@ -1,11 +1,10 @@
 import 'package:collection/collection.dart';
-import 'package:nekoton_flutter/src/core/ton_wallet/models/known_payload.dart';
-import 'package:nekoton_flutter/src/provider/models/event.dart';
 
 import '../constants.dart';
 import '../core/generic_contract/models/transaction_execution_options.dart';
 import '../core/models/expiration.dart';
 import '../core/models/transaction.dart';
+import '../core/ton_wallet/models/known_payload.dart';
 import '../helpers/helpers.dart' as helpers;
 import '../models/nekoton_exception.dart';
 import '../nekoton.dart';
@@ -27,6 +26,7 @@ import 'models/encode_internal_input_input.dart';
 import 'models/encode_internal_input_output.dart';
 import 'models/estimate_fees_input.dart';
 import 'models/estimate_fees_output.dart';
+import 'models/event.dart';
 import 'models/extract_public_key_input.dart';
 import 'models/extract_public_key_output.dart';
 import 'models/full_contract_state.dart';
@@ -52,6 +52,7 @@ import 'models/split_tvc_input.dart';
 import 'models/split_tvc_output.dart';
 import 'models/subscribe_input.dart';
 import 'models/subscribe_output.dart';
+import 'models/tokens_object.dart';
 import 'models/unpack_from_cell_input.dart';
 import 'models/unpack_from_cell_output.dart';
 import 'models/unsubscribe_input.dart';
@@ -151,7 +152,7 @@ Future<GetFullContractStateOutput> getFullContractState({
     requiredPermissions: [Permission.tonClient],
   );
 
-  final state = await instance.connectionController.transport.getFullAccountState(address: input.address);
+  final state = await instance.connectionController.getFullAccountState(address: input.address);
 
   return GetFullContractStateOutput(
     state: state,
@@ -168,7 +169,7 @@ Future<GetTransactionsOutput> getTransactions({
     requiredPermissions: [Permission.tonClient],
   );
 
-  final getTransactionsOutput = await instance.connectionController.transport.getTransactions(
+  final getTransactionsOutput = await instance.connectionController.getTransactions(
     address: input.address,
     continuation: input.continuation,
     limit: input.limit,
@@ -661,7 +662,7 @@ Future<SendExternalMessageOutput> sendExternalMessage({
         .timeout(const Duration(seconds: 60));
   }
 
-  dynamic output;
+  TokensObject output;
   try {
     final decoded = helpers.decodeTransaction(
       transaction: transaction,

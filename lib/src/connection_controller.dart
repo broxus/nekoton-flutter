@@ -1,6 +1,13 @@
+import 'dart:async';
+
 import 'package:rxdart/rxdart.dart';
 
+import 'core/models/transaction_id.dart';
 import 'external/models/connection_data.dart';
+import 'provider/models/full_contract_state.dart';
+import 'provider/models/network_changed_event.dart';
+import 'provider/models/transactions_list.dart';
+import 'provider/provider_events.dart';
 import 'transport/gql_transport.dart';
 import 'transport/transport.dart';
 
@@ -67,20 +74,33 @@ class ConnectionController {
     _transportSubject.add(transport);
   }
 
-  // Future<FullContractState> getFullContractState(String address) async => transport.getContractState(address: address);
+  Future<FullContractState?> getFullAccountState({
+    required String address,
+  }) =>
+      transport.getFullAccountState(address: address);
 
-  // Future<GetTransactionsOutput> getTransactions({
-  //   required String address,
-  //   required TransactionId continuation,
-  //   int? limit = 50,
-  // }) async =>
-  //     transport.getTransactions(
-  //       address: address,
-  //       from: continuation,
-  //       count: limit,
-  //     );
+  Future<TransactionsList> getTransactions({
+    required String address,
+    TransactionId? continuation,
+    int? limit,
+  }) =>
+      transport.getTransactions(
+        address: address,
+        continuation: continuation,
+        limit: limit,
+      );
 
   Future<void> _initialize() async {
     await updateTransport(networkPresets.first);
+
+    transportStream
+        .transform<String>(
+      StreamTransformer.fromHandlers(
+        handleData: (data, sink) => sink.add(data.connectionData.name),
+      ),
+    )
+        .listen((event) {
+      providerNetworkChangedSubject.add(NetworkChangedEvent(selectedConnection: event));
+    });
   }
 }

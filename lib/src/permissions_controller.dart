@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'approval_controller.dart';
 import 'preferences.dart';
 import 'provider/models/permission.dart';
 import 'provider/models/permissions.dart';
+import 'provider/models/permissions_changed_event.dart';
+import 'provider/provider_events.dart';
 
 class PermissionsController {
   static PermissionsController? _instance;
@@ -34,10 +38,16 @@ class PermissionsController {
       permissions: requested,
     );
 
+    providerPermissionsChangedSubject.add(PermissionsChangedEvent(permissions: requested));
+
     return requested;
   }
 
-  Future<void> removeOrigin(String origin) => _preferences.deletePermissions(origin);
+  Future<void> removeOrigin(String origin) async {
+    await _preferences.deletePermissions(origin);
+
+    providerPermissionsChangedSubject.add(const PermissionsChangedEvent(permissions: Permissions()));
+  }
 
   Future<Permissions> getPermissions(String origin) async => _preferences.getPermissions(origin);
 

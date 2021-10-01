@@ -11,6 +11,7 @@ import 'crypto/models/export_key_output.dart';
 import 'crypto/models/sign_input.dart';
 import 'crypto/models/update_key_input.dart';
 import 'preferences.dart';
+import 'provider/provider_events.dart';
 
 class KeystoreController {
   static KeystoreController? _instance;
@@ -135,5 +136,18 @@ class KeystoreController {
     final key = keys.firstWhereOrNull((e) => e.publicKey == currentPublicKey);
 
     currentKey = key ?? keys.firstOrNull;
+
+    keysStream
+        .transform<bool>(
+          StreamTransformer.fromHandlers(
+            handleData: (data, sink) => sink.add(data.isNotEmpty),
+          ),
+        )
+        .distinct()
+        .listen((event) {
+      if (!event) {
+        providerLoggedOutSubject.add(Object());
+      }
+    });
   }
 }

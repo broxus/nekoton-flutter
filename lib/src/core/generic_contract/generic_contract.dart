@@ -8,6 +8,7 @@ import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:recase/recase.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:tuple/tuple.dart';
 
 import '../../core/keystore/keystore.dart';
 import '../../ffi_utils.dart';
@@ -25,6 +26,7 @@ import '../models/polling_method.dart';
 import '../models/subscription_handler_message.dart';
 import '../models/transaction.dart';
 import '../models/transaction_id.dart';
+import '../models/transactions_batch_info.dart';
 import '../models/transactions_batch_type.dart';
 import '../models/unsigned_message.dart';
 import 'models/native_generic_contract.dart';
@@ -46,6 +48,7 @@ class GenericContract {
   final _onMessageExpiredSubject = BehaviorSubject<List<Transaction>>.seeded([]);
   final _onStateChangedSubject = BehaviorSubject<ContractState>();
   final _onTransactionsFoundSubject = BehaviorSubject<List<Transaction>>.seeded([]);
+  final _onTransactionsFoundRawSubject = BehaviorSubject<Tuple2<List<Transaction>, TransactionsBatchInfo>>();
 
   GenericContract._();
 
@@ -62,6 +65,9 @@ class GenericContract {
   Stream<ContractState> get onStateChangedStream => _onStateChangedSubject.stream;
 
   Stream<List<Transaction>> get onTransactionsFoundStream => _onTransactionsFoundSubject.stream;
+
+  Stream<Tuple2<List<Transaction>, TransactionsBatchInfo>> get onTransactionsFoundRawStream =>
+      _onTransactionsFoundRawSubject.stream;
 
   Future<String> get _address async {
     final result = await proceedAsync((port) => _nativeLibrary.bindings.get_generic_contract_address(
@@ -298,6 +304,8 @@ class GenericContract {
         case "on_transactions_found":
           final json = jsonDecode(message.payload) as Map<String, dynamic>;
           final payload = OnTransactionsFoundPayload.fromJson(json);
+
+          _onTransactionsFoundRawSubject.add(Tuple2(payload.transactions, payload.batchInfo));
 
           if (payload.batchInfo.batchType == TransactionsBatchType.newTransactions) {
             final sent = {..._onMessageSentSubject.value};

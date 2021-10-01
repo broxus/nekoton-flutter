@@ -2,16 +2,16 @@ import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
-import 'package:nekoton_flutter/src/core/models/gen_timings.dart';
-import 'package:nekoton_flutter/src/core/models/last_transaction_id.dart';
-import 'package:nekoton_flutter/src/core/models/transaction.dart';
-import 'package:nekoton_flutter/src/provider/models/abi_param.dart';
 
+import '../core/models/gen_timings.dart';
+import '../core/models/last_transaction_id.dart';
 import '../core/models/native_unsigned_message.dart';
+import '../core/models/transaction.dart';
 import '../core/models/unsigned_message.dart';
 import '../core/ton_wallet/models/known_payload.dart';
 import '../ffi_utils.dart';
 import '../native_library.dart';
+import '../provider/models/abi_param.dart';
 import '../provider/models/method_name.dart';
 import '../provider/models/tokens_object.dart';
 import 'models/decoded_event.dart';

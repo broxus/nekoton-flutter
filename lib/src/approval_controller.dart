@@ -1,8 +1,8 @@
 import 'dart:async';
 
-import 'package:nekoton_flutter/nekoton_flutter.dart';
 import 'package:rxdart/rxdart.dart';
 
+import 'core/ton_wallet/models/known_payload.dart';
 import 'models/approval_request.dart';
 import 'provider/models/function_call.dart';
 import 'provider/models/permission.dart';

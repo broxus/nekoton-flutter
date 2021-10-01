@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+
 import '../../core/models/contract_state.dart';
 
 part 'contract_state_changed_event.freezed.dart';
