@@ -89,17 +89,20 @@ pub unsafe extern "C" fn get_transactions(
     result_port: c_longlong,
     transport: *mut c_void,
     address: *mut c_char,
-    from: *mut c_char,
-    count: c_uchar,
+    continuation: *mut c_char,
+    limit: c_uchar,
 ) {
     let transport = transport as *mut MutexGqlTransport;
     let transport = &(*transport);
     let address = address.from_ptr();
-    let from = from.from_ptr();
+    let continuation = match !continuation.is_null() {
+        true => Some(continuation.from_ptr()),
+        false => None,
+    };
 
     let rt = runtime!();
     rt.spawn(async move {
-        let result = internal_get_transactions(transport, address, from, count).await;
+        let result = internal_get_transactions(transport, address, continuation, limit).await;
         let result = match_result(result);
         send_to_result_port(result_port, result);
     });
@@ -108,13 +111,15 @@ pub unsafe extern "C" fn get_transactions(
 async fn internal_get_transactions(
     transport: &MutexGqlTransport,
     address: String,
-    continuation: String,
+    continuation: Option<String>,
     limit: u8,
 ) -> Result<u64, NativeError> {
     let transport = transport.lock().await;
 
     let address = parse_address(&address)?;
-    let continuation = serde_json::from_str::<Option<TransactionId>>(&continuation)
+    let continuation = continuation
+        .map(|e| serde_json::from_str::<TransactionId>(&e))
+        .transpose()
         .handle_error(NativeStatus::ConversionError)?;
     let before_lt = continuation.map(|id| id.lt);
 

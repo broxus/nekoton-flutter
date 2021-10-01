@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:nekoton_flutter/nekoton_flutter.dart';
 import 'package:rxdart/rxdart.dart';
 
 import 'models/approval_request.dart';
+import 'provider/models/function_call.dart';
 import 'provider/models/permission.dart';
 import 'provider/models/permissions.dart';
 
@@ -38,8 +40,8 @@ class ApprovalController {
     required String recipient,
     required String amount,
     required bool bounce,
-    required String payload,
-    required String knownPayload,
+    required FunctionCall? payload,
+    required KnownPayload? knownPayload,
   }) async {
     final completer = Completer<String>();
 
@@ -62,7 +64,7 @@ class ApprovalController {
     required String origin,
     required String selectedPublicKey,
     required String repackedRecipient,
-    required String payload,
+    required FunctionCall payload,
   }) async {
     final completer = Completer<String>();
 

@@ -31,11 +31,11 @@ class Preferences {
         currentPublicKey,
       );
 
-  Future<Permissions?> getPermissions(String origin) async {
+  Future<Permissions> getPermissions(String origin) async {
     final string = _permissionsBox.get(origin);
 
     if (string == null) {
-      return null;
+      return const Permissions();
     }
 
     final permissions = Permissions.fromJson(jsonDecode(string) as Map<String, dynamic>);
@@ -47,7 +47,7 @@ class Preferences {
     required String origin,
     required Permissions permissions,
   }) async {
-    final string = jsonEncode(permissions.toJson());
+    final string = jsonEncode(permissions);
 
     await _permissionsBox.put(origin, string);
   }

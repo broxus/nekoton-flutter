@@ -191,7 +191,7 @@ class TonWallet implements Comparable<TonWallet> {
   }
 
   Future<UnsignedMessage> prepareDeploy(Expiration expiration) async {
-    final expirationStr = jsonEncode(expiration.toJson());
+    final expirationStr = jsonEncode(expiration);
 
     final result = await proceedAsync((port) => _nativeLibrary.bindings.ton_wallet_prepare_deploy(
           port,
@@ -211,7 +211,7 @@ class TonWallet implements Comparable<TonWallet> {
     required List<String> custodians,
     required int reqConfirms,
   }) async {
-    final expirationStr = jsonEncode(expiration.toJson());
+    final expirationStr = jsonEncode(expiration);
     final custodiansStr = jsonEncode(custodians);
 
     final result = await proceedAsync((port) => _nativeLibrary.bindings.ton_wallet_prepare_deploy_with_multiple_owners(
@@ -235,7 +235,7 @@ class TonWallet implements Comparable<TonWallet> {
     required int amount,
     String? body,
   }) async {
-    final expirationStr = jsonEncode(expiration.toJson());
+    final expirationStr = jsonEncode(expiration);
 
     final result = await proceedAsync((port) => _nativeLibrary.bindings.ton_wallet_prepare_transfer(
           port,
@@ -258,7 +258,7 @@ class TonWallet implements Comparable<TonWallet> {
     required int transactionId,
     required Expiration expiration,
   }) async {
-    final expirationStr = jsonEncode(expiration.toJson());
+    final expirationStr = jsonEncode(expiration);
 
     final result = await proceedAsync((port) => _nativeLibrary.bindings.ton_wallet_prepare_confirm_transaction(
           port,
@@ -281,7 +281,7 @@ class TonWallet implements Comparable<TonWallet> {
     required int depoolFee,
     required int stake,
   }) async {
-    final expirationStr = jsonEncode(expiration.toJson());
+    final expirationStr = jsonEncode(expiration);
 
     final result = await proceedAsync((port) => _nativeLibrary.bindings.prepare_add_ordinary_stake(
           port,
@@ -306,7 +306,7 @@ class TonWallet implements Comparable<TonWallet> {
     required int depoolFee,
     required int withdrawValue,
   }) async {
-    final expirationStr = jsonEncode(expiration.toJson());
+    final expirationStr = jsonEncode(expiration);
 
     final result = await proceedAsync((port) => _nativeLibrary.bindings.prepare_withdraw_part(
           port,
@@ -348,7 +348,7 @@ class TonWallet implements Comparable<TonWallet> {
       entry: entry,
       password: password,
     );
-    final signInputStr = jsonEncode(signInput.toJson());
+    final signInputStr = jsonEncode(signInput);
 
     final result = await proceedAsync((port) => _nativeLibrary.bindings.ton_wallet_send(
           port,
@@ -374,7 +374,7 @@ class TonWallet implements Comparable<TonWallet> {
       ));
 
   Future<void> preloadTransactions(TransactionId from) async {
-    final fromStr = jsonEncode(from.toJson());
+    final fromStr = jsonEncode(from);
 
     await proceedAsync((port) => _nativeLibrary.bindings.ton_wallet_preload_transactions(
           port,

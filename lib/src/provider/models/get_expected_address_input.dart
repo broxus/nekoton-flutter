@@ -1,5 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'tokens_object.dart';
+
 part 'get_expected_address_input.freezed.dart';
 part 'get_expected_address_input.g.dart';
 
@@ -11,7 +13,7 @@ class GetExpectedAddressInput with _$GetExpectedAddressInput {
     required String abi,
     int? workchain,
     String? publicKey,
-    required Map<String, dynamic> initParams,
+    required TokensObject initParams,
   }) = _GetExpectedAddressInput;
 
   factory GetExpectedAddressInput.fromJson(Map<String, dynamic> json) => _$GetExpectedAddressInputFromJson(json);

@@ -5,7 +5,7 @@ part 'split_tvc_output.g.dart';
 
 @freezed
 class SplitTvcOutput with _$SplitTvcOutput {
-  @JsonSerializable()
+  @JsonSerializable(includeIfNull: false)
   const factory SplitTvcOutput({
     String? data,
     String? code,

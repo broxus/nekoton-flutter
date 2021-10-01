@@ -11,7 +11,7 @@ Future<TonWallet> tonWalletSubscribeByExisting({
   tonWallet._keystore = await Keystore.getInstance();
   tonWallet._subscription = tonWallet._receivePort.listen(tonWallet._subscriptionListener);
 
-  final existingWalletInfoStr = jsonEncode(existingWalletInfo.toJson());
+  final existingWalletInfoStr = jsonEncode(existingWalletInfo);
   final result = await proceedAsync((port) => tonWallet._nativeLibrary.bindings.ton_wallet_subscribe_by_existing(
         port,
         tonWallet._receivePort.sendPort.nativePort,

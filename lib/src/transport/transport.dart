@@ -12,7 +12,7 @@ abstract class Transport {
 
   Future<TransactionsList> getTransactions({
     required String address,
-    required TransactionId from,
-    required int count,
+    TransactionId? continuation,
+    int? limit,
   });
 }

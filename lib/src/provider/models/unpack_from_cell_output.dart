@@ -1,5 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'tokens_object.dart';
+
 part 'unpack_from_cell_output.freezed.dart';
 part 'unpack_from_cell_output.g.dart';
 
@@ -7,7 +9,7 @@ part 'unpack_from_cell_output.g.dart';
 class UnpackFromCellOutput with _$UnpackFromCellOutput {
   @JsonSerializable()
   const factory UnpackFromCellOutput({
-    required Map<String, dynamic> data,
+    required TokensObject data,
   }) = _UnpackFromCellOutput;
 
   factory UnpackFromCellOutput.fromJson(Map<String, dynamic> json) => _$UnpackFromCellOutputFromJson(json);

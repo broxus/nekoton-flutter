@@ -10,7 +10,7 @@ import 'models/keypair.dart';
 import 'models/mnemonic_type.dart';
 
 GeneratedKey generateKey(MnemonicType mnemonicType) {
-  final mnemonicTypeStr = jsonEncode(mnemonicType.toJson());
+  final mnemonicTypeStr = jsonEncode(mnemonicType);
 
   final nativeLibrary = NativeLibrary.instance();
   final result = proceedSync(() => nativeLibrary.bindings.generate_key(mnemonicTypeStr.toNativeUtf8().cast<Int8>()));
@@ -37,7 +37,7 @@ Keypair deriveFromPhrase({
   required MnemonicType mnemonicType,
 }) {
   final phraseStr = phrase.join(" ");
-  final mnemonicTypeStr = jsonEncode(mnemonicType.toJson());
+  final mnemonicTypeStr = jsonEncode(mnemonicType);
 
   final nativeLibrary = NativeLibrary.instance();
   final result = proceedSync(() => nativeLibrary.bindings.derive_from_phrase(

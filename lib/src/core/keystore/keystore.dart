@@ -56,7 +56,7 @@ class Keystore {
   }
 
   Future<KeyStoreEntry> addKey(CreateKeyInput createKeyInput) async {
-    final createKeyInputStr = jsonEncode(createKeyInput.toJson());
+    final createKeyInputStr = jsonEncode(createKeyInput);
 
     final result = await proceedAsync((port) => _nativeLibrary.bindings.add_key(
           port,
@@ -72,7 +72,7 @@ class Keystore {
   }
 
   Future<KeyStoreEntry> updateKey(UpdateKeyInput updateKeyInput) async {
-    final updateKeyInputStr = jsonEncode(updateKeyInput.toJson());
+    final updateKeyInputStr = jsonEncode(updateKeyInput);
 
     final result = await proceedAsync((port) => _nativeLibrary.bindings.update_key(
           port,
@@ -88,7 +88,7 @@ class Keystore {
   }
 
   Future<ExportKeyOutput> exportKey(ExportKeyInput exportKeyInput) async {
-    final exportKeyInputStr = jsonEncode(exportKeyInput.toJson());
+    final exportKeyInputStr = jsonEncode(exportKeyInput);
 
     final result = await proceedAsync((port) => _nativeLibrary.bindings.export_key(
           port,
@@ -109,7 +109,7 @@ class Keystore {
   }
 
   Future<bool> checkKeyPassword(SignInput signInput) async {
-    final signInputStr = jsonEncode(signInput.toJson());
+    final signInputStr = jsonEncode(signInput);
 
     final result = await proceedAsync((port) => _nativeLibrary.bindings.check_key_password(
           port,

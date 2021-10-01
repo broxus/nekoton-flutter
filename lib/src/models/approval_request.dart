@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:nekoton_flutter/src/core/ton_wallet/models/known_payload.dart';
+import 'package:nekoton_flutter/src/provider/models/function_call.dart';
 
 import '../provider/models/permission.dart';
 import '../provider/models/permissions.dart';
@@ -21,8 +23,8 @@ class ApprovalRequest with _$ApprovalRequest {
     required String recipient,
     required String amount,
     required bool bounce,
-    required String payload,
-    required String knownPayload,
+    required FunctionCall? payload,
+    required KnownPayload? knownPayload,
     required Completer<String> completer,
   }) = _SendMessage;
 
@@ -30,7 +32,7 @@ class ApprovalRequest with _$ApprovalRequest {
     required String origin,
     required String selectedPublicKey,
     required String repackedRecipient,
-    required String payload,
+    required FunctionCall payload,
     required Completer<String> completer,
   }) = _CallContractMethod;
 }

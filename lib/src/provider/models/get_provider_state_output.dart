@@ -13,7 +13,7 @@ class GetProviderStateOutput with _$GetProviderStateOutput {
     required String version,
     required int numericVersion,
     required String selectedConnection,
-    Permissions? permissions,
+    required Permissions permissions,
     required Map<String, ContractUpdatesSubscription> subscriptions,
   }) = _GetProviderStateOutput;
 

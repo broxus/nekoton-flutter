@@ -1,4 +1,6 @@
 import 'package:collection/collection.dart';
+import 'package:nekoton_flutter/src/core/ton_wallet/models/known_payload.dart';
+import 'package:nekoton_flutter/src/provider/models/event.dart';
 
 import '../constants.dart';
 import '../core/generic_contract/models/transaction_execution_options.dart';
@@ -11,6 +13,7 @@ import '../utils.dart';
 import 'models/code_to_tvc_input.dart';
 import 'models/code_to_tvc_output.dart';
 import 'models/contract_updates_subscription.dart';
+import 'models/decode_event_input.dart';
 import 'models/decode_event_output.dart';
 import 'models/decode_input_input.dart';
 import 'models/decode_input_output.dart';
@@ -148,7 +151,7 @@ Future<GetFullContractStateOutput> getFullContractState({
     requiredPermissions: [Permission.tonClient],
   );
 
-  final state = instance.connectionController.transport.getContractState(address: input.address);
+  final state = await instance.connectionController.transport.getFullAccountState(address: input.address);
 
   return GetFullContractStateOutput(
     state: state,
@@ -165,17 +168,13 @@ Future<GetTransactionsOutput> getTransactions({
     requiredPermissions: [Permission.tonClient],
   );
 
-  final transactions = await instance.connectionController.transport.getTransactions(
+  final getTransactionsOutput = await instance.connectionController.transport.getTransactions(
     address: input.address,
-    from: input.continuation,
-    count: input.limit ?? 50,
+    continuation: input.continuation,
+    limit: input.limit,
   );
 
-  return GetTransactionsOutput(
-    transactions: transactions,
-    continuation: transactions.continuation,
-    info: transactions.info,
-  );
+  return getTransactionsOutput;
 }
 
 Future<RunLocalOutput> runLocal({
@@ -191,16 +190,24 @@ Future<RunLocalOutput> runLocal({
   FullContractState? contractState = input.cachedState;
 
   if (input.cachedState == null) {
-    contractState = await instance.connectionController.transport.getContractState(address: input.address);
+    contractState = await instance.connectionController.transport.getFullAccountState(address: input.address);
+  }
+
+  if (contractState == null) {
+    throw Exception("Account not found");
+  }
+
+  if (!contractState.isDeployed || contractState.lastTransactionId == null) {
+    throw Exception("Account is not deployed");
   }
 
   final result = helpers.runLocal(
     genTimings: contractState.genTimings,
-    lastTransactionId: contractState.lastTransactionId,
-    accountStuffBoc: contractState.accountStuffBoc,
-    contractAbi: functionCall.abi,
-    method: functionCall.method,
-    input: functionCall.params,
+    lastTransactionId: contractState.lastTransactionId!,
+    accountStuffBoc: contractState.boc,
+    contractAbi: input.functionCall.abi,
+    method: input.functionCall.method,
+    input: input.functionCall.params,
   );
 
   return RunLocalOutput(
@@ -222,7 +229,7 @@ Future<GetExpectedAddressOutput> getExpectedAddress({
   final address = helpers.getExpectedAddress(
     tvc: input.tvc,
     contractAbi: input.abi,
-    workchainId: input.workchain ?? 0,
+    workchainId: input.workchain,
     publicKey: input.publicKey,
     initData: input.initParams,
   );
@@ -283,7 +290,7 @@ Future<ExtractPublicKeyOutput> extractPublicKey({
     requiredPermissions: [Permission.tonClient],
   );
 
-  final publicKey = helpers.extractPublicKey(boc: input.boc);
+  final publicKey = helpers.extractPublicKey(input.boc);
 
   return ExtractPublicKeyOutput(
     publicKey: publicKey,
@@ -300,7 +307,7 @@ Future<CodeToTvcOutput> codeToTvc({
     requiredPermissions: [Permission.tonClient],
   );
 
-  final tvc = helpers.codeToTvc(code: input.code);
+  final tvc = helpers.codeToTvc(input.code);
 
   return CodeToTvcOutput(
     tvc: tvc,
@@ -317,7 +324,7 @@ Future<SplitTvcOutput> splitTvc({
     requiredPermissions: [Permission.tonClient],
   );
 
-  final result = helpers.splitTvc(tvc: input.tvc);
+  final result = helpers.splitTvc(input.tvc);
 
   return SplitTvcOutput(
     data: result.data,
@@ -346,7 +353,7 @@ Future<EncodeInternalInputOutput> encodeInternalInput({
   );
 }
 
-Future<DecodeInputOutput> decodeInput({
+Future<DecodeInputOutput?> decodeInput({
   required Nekoton instance,
   required String origin,
   required DecodeInputInput input,
@@ -363,37 +370,15 @@ Future<DecodeInputOutput> decodeInput({
     internal: input.internal,
   );
 
-  return DecodeInputOutput(
-    method: result.method,
-    input: result.input,
-  );
+  return result != null
+      ? DecodeInputOutput(
+          method: result.method,
+          input: result.input,
+        )
+      : null;
 }
 
-Future<DecodeEventOutput> decodeEvent({
-  required Nekoton instance,
-  required String origin,
-  required String messageBody,
-  required String contractAbi,
-  required String event,
-}) async {
-  await instance.permissionsController.checkPermissions(
-    origin: origin,
-    requiredPermissions: [Permission.tonClient],
-  );
-
-  final data = helpers.decodeEvent(
-    messageBody: messageBody,
-    contractAbi: contractAbi,
-    event: event,
-  );
-
-  return DecodeEventOutput(
-    event: event,
-    data: data,
-  );
-}
-
-Future<DecodeOutputOutput> decodeOutput({
+Future<DecodeOutputOutput?> decodeOutput({
   required Nekoton instance,
   required String origin,
   required DecodeOutputInput input,
@@ -409,13 +394,39 @@ Future<DecodeOutputOutput> decodeOutput({
     method: input.method,
   );
 
-  return DecodeOutputOutput(
-    method: result.method,
-    output: result.output,
-  );
+  return result != null
+      ? DecodeOutputOutput(
+          method: result.method,
+          output: result.output,
+        )
+      : null;
 }
 
-Future<DecodeTransactionOutput> decodeTransaction({
+Future<DecodeEventOutput?> decodeEvent({
+  required Nekoton instance,
+  required String origin,
+  required DecodeEventInput input,
+}) async {
+  await instance.permissionsController.checkPermissions(
+    origin: origin,
+    requiredPermissions: [Permission.tonClient],
+  );
+
+  final result = helpers.decodeEvent(
+    messageBody: input.body,
+    contractAbi: input.abi,
+    event: input.event,
+  );
+
+  return result != null
+      ? DecodeEventOutput(
+          event: result.event,
+          data: result.data,
+        )
+      : null;
+}
+
+Future<DecodeTransactionOutput?> decodeTransaction({
   required Nekoton instance,
   required String origin,
   required DecodeTransactionInput input,
@@ -431,11 +442,13 @@ Future<DecodeTransactionOutput> decodeTransaction({
     method: input.method,
   );
 
-  return DecodeTransactionOutput(
-    method: result.method,
-    input: result.input,
-    output: result.output,
-  );
+  return result != null
+      ? DecodeTransactionOutput(
+          method: result.method,
+          input: result.input,
+          output: result.output,
+        )
+      : null;
 }
 
 Future<DecodeTransactionEventsOutput> decodeTransactionEvents({
@@ -454,7 +467,12 @@ Future<DecodeTransactionEventsOutput> decodeTransactionEvents({
   );
 
   return DecodeTransactionEventsOutput(
-    events: events,
+    events: events
+        .map((e) => Event(
+              event: e.event,
+              data: e.data,
+            ))
+        .toList(),
   );
 }
 
@@ -469,14 +487,14 @@ Future<EstimateFeesOutput> estimateFees({
   );
 
   final permissions = await instance.permissionsController.getPermissions(origin);
-  final allowedAccount = permissions?.accountInteraction;
+  final allowedAccount = permissions.accountInteraction;
 
   if (allowedAccount?.address != input.sender) {
     throw Exception();
   }
 
   final selectedAddress = allowedAccount!.address;
-  final repackedRecipient = helpers.repackAddress(address: input.recipient);
+  final repackedRecipient = helpers.repackAddress(input.recipient);
 
   String body = '';
   if (input.payload != null) {
@@ -518,17 +536,17 @@ Future<SendMessageOutput> sendMessage({
   );
 
   final permissions = await instance.permissionsController.getPermissions(origin);
-  final allowedAccount = permissions?.accountInteraction;
+  final allowedAccount = permissions.accountInteraction;
 
   if (allowedAccount?.address != input.sender) {
     throw Exception();
   }
 
   final selectedAddress = allowedAccount!.address;
-  final repackedRecipient = helpers.repackAddress(address: input.recipient);
+  final repackedRecipient = helpers.repackAddress(input.recipient);
 
   String body = '';
-  String? knownPayload;
+  KnownPayload? knownPayload;
   if (input.payload != null) {
     body = helpers.encodeInternalInput(
       contractAbi: input.payload!.abi,
@@ -588,7 +606,7 @@ Future<SendExternalMessageOutput> sendExternalMessage({
   );
 
   final permissions = await instance.permissionsController.getPermissions(origin);
-  final allowedAccount = permissions?.accountInteraction;
+  final allowedAccount = permissions.accountInteraction;
 
   if (allowedAccount?.publicKey != input.publicKey) {
     throw Exception();
@@ -596,7 +614,7 @@ Future<SendExternalMessageOutput> sendExternalMessage({
 
   final selectedPublicKey = allowedAccount!.publicKey;
   final selectedAddress = allowedAccount.address;
-  final repackedRecipient = helpers.repackAddress(address: input.recipient);
+  final repackedRecipient = helpers.repackAddress(input.recipient);
 
   final genericContract =
       instance.subscriptionsController.genericContracts[origin]?.firstWhereOrNull((e) => e.address == selectedAddress);
@@ -650,7 +668,7 @@ Future<SendExternalMessageOutput> sendExternalMessage({
       contractAbi: input.payload.abi,
       method: input.payload.method,
     );
-    output = decoded.output;
+    output = decoded?.output;
   } catch (_) {}
 
   return SendExternalMessageOutput(

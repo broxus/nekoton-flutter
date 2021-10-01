@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+
 import '../../core/models/transaction.dart';
 
 part 'send_message_output.freezed.dart';

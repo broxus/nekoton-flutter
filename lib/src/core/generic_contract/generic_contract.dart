@@ -117,7 +117,7 @@ class GenericContract {
       entry: entry,
       password: password,
     );
-    final signInputStr = jsonEncode(signInput.toJson());
+    final signInputStr = jsonEncode(signInput);
 
     final result = await proceedAsync((port) => _nativeLibrary.bindings.generic_contract_send(
           port,
@@ -143,7 +143,7 @@ class GenericContract {
       ));
 
   Future<void> preloadTransactions(TransactionId from) async {
-    final fromStr = jsonEncode(from.toJson());
+    final fromStr = jsonEncode(from);
 
     await proceedAsync((port) => _nativeLibrary.bindings.generic_contract_preload_transactions(
           port,
@@ -176,8 +176,8 @@ class GenericContract {
       entry: entry,
       password: password,
     );
-    final signInputStr = jsonEncode(signInput.toJson());
-    final optionsStr = jsonEncode(options.toJson());
+    final signInputStr = jsonEncode(signInput);
+    final optionsStr = jsonEncode(options);
 
     final result = await proceedAsync((port) => _nativeLibrary.bindings.generic_contract_execute_transaction_locally(
           port,

@@ -59,17 +59,17 @@ class GqlTransport implements Transport {
   @override
   Future<TransactionsList> getTransactions({
     required String address,
-    required TransactionId from,
-    required int count,
+    TransactionId? continuation,
+    int? limit,
   }) async {
-    final fromStr = jsonEncode(from.toJson());
+    final fromPtr = continuation != null ? jsonEncode(continuation).toNativeUtf8().cast<Int8>() : nullptr;
 
     final result = await proceedAsync((port) => _nativeLibrary.bindings.get_transactions(
           port,
           nativeGqlTransport.ptr!,
           address.toNativeUtf8().cast<Int8>(),
-          fromStr.toNativeUtf8().cast<Int8>(),
-          count,
+          fromPtr,
+          limit ?? 50,
         ));
 
     final string = cStringToDart(result);

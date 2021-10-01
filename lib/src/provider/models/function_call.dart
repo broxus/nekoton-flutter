@@ -1,5 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../models/tokens_object.dart';
+
 part 'function_call.freezed.dart';
 part 'function_call.g.dart';
 
@@ -9,7 +11,7 @@ class FunctionCall with _$FunctionCall {
   const factory FunctionCall({
     required String abi,
     required String method,
-    required Map<String, dynamic> params,
+    required TokensObject params,
   }) = _FunctionCall;
 
   factory FunctionCall.fromJson(Map<String, dynamic> json) => _$FunctionCallFromJson(json);

@@ -49,7 +49,7 @@ class AccountsStorage {
     required WalletType walletType,
     required int workchain,
   }) async {
-    final walletTypeStr = jsonEncode(walletType.toJson());
+    final walletTypeStr = jsonEncode(walletType);
 
     final result = await proceedAsync((port) => _nativeLibrary.bindings.add_account(
           port,

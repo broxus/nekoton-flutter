@@ -7,7 +7,10 @@ part 'get_full_contract_state_output.g.dart';
 
 @freezed
 class GetFullContractStateOutput with _$GetFullContractStateOutput {
-  @JsonSerializable(explicitToJson: true)
+  @JsonSerializable(
+    explicitToJson: true,
+    includeIfNull: false,
+  )
   const factory GetFullContractStateOutput({
     FullContractState? state,
   }) = _GetFullContractStateOutput;

@@ -126,7 +126,7 @@ class TokenWallet implements Comparable<TokenWallet> {
   Future<ContractState> get ownerContractState async => _tonWallet.contractState;
 
   Future<UnsignedMessage> prepareDeploy(Expiration expiration) async {
-    final expirationStr = jsonEncode(expiration.toJson());
+    final expirationStr = jsonEncode(expiration);
 
     final result = await proceedAsync((port) => _nativeLibrary.bindings.token_wallet_prepare_deploy(
           port,
@@ -149,7 +149,7 @@ class TokenWallet implements Comparable<TokenWallet> {
     required String tokens,
     required bool notifyReceiver,
   }) async {
-    final expirationStr = jsonEncode(expiration.toJson());
+    final expirationStr = jsonEncode(expiration);
 
     final result = await proceedAsync((port) => _nativeLibrary.bindings.token_wallet_prepare_transfer(
           port,
@@ -193,7 +193,7 @@ class TokenWallet implements Comparable<TokenWallet> {
       ));
 
   Future<void> preloadTransactions(TransactionId from) async {
-    final fromStr = jsonEncode(from.toJson());
+    final fromStr = jsonEncode(from);
 
     await proceedAsync((port) => _nativeLibrary.bindings.token_wallet_preload_transactions(
           port,
