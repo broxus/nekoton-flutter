@@ -25,6 +25,7 @@ import '../models/polling_method.dart';
 import '../models/subscription_handler_message.dart';
 import '../models/transaction.dart';
 import '../models/transaction_id.dart';
+import '../models/transactions_batch_type.dart';
 import '../models/unsigned_message.dart';
 import 'models/native_generic_contract.dart';
 import 'models/transaction_execution_options.dart';
@@ -298,7 +299,7 @@ class GenericContract {
           final json = jsonDecode(message.payload) as Map<String, dynamic>;
           final payload = OnTransactionsFoundPayload.fromJson(json);
 
-          if (!payload.batchInfo.old) {
+          if (payload.batchInfo.batchType == TransactionsBatchType.newTransactions) {
             final sent = {..._onMessageSentSubject.value};
 
             final list = <Transaction>[];

@@ -1,7 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'transaction.dart';
-
-import 'transactions_batch_info.dart';
+import '../../core/models/transaction.dart';
+import '../../core/models/transactions_batch_info.dart';
 
 part 'transactions_found_event.freezed.dart';
 part 'transactions_found_event.g.dart';

@@ -1,11 +1,13 @@
+pub mod models;
+
+use self::models::{
+    DecodedEvent, DecodedInput, DecodedOutput, DecodedTransaction, DecodedTransactionEvent,
+    ExecutionOutput, SplittedTvc,
+};
 use crate::{
     match_result,
     models::{HandleError, NativeError, NativeStatus},
-    transport::models::{
-        JsDecodedEvent, JsDecodedInput, JsDecodedOutput, JsDecodedTransaction,
-        JsDecodedTransactionEvent, JsExecutionOutput, JsSplittedTvc,
-    },
-    FromPtr, ToPtr,
+    parse_address, parse_public_key, FromPtr, ToPtr,
 };
 use nekoton::core::models::Transaction;
 use nekoton_abi::{
@@ -18,7 +20,6 @@ use std::{
     collections::HashMap,
     ffi::c_void,
     os::raw::{c_char, c_schar, c_uint, c_ulonglong},
-    str::FromStr,
     sync::Arc,
     u64,
 };
@@ -324,14 +325,14 @@ fn internal_run_local(
         .map(|e| nekoton_abi::make_abi_tokens(&e).handle_error(NativeStatus::AbiError))
         .transpose()?;
 
-    let js_execution_output = JsExecutionOutput {
+    let execution_output = ExecutionOutput {
         output: tokens,
         code: output.result_code,
     };
-    let js_execution_output =
-        serde_json::to_string(&js_execution_output).handle_error(NativeStatus::ConversionError)?;
+    let execution_output =
+        serde_json::to_string(&execution_output).handle_error(NativeStatus::ConversionError)?;
 
-    Ok(js_execution_output.to_ptr() as c_ulonglong)
+    Ok(execution_output.to_ptr() as c_ulonglong)
 }
 
 #[no_mangle]
@@ -513,7 +514,7 @@ fn internal_split_tvc(tvc: String) -> Result<u64, NativeError> {
         None => None,
     };
 
-    let result = JsSplittedTvc { data, code };
+    let result = SplittedTvc { data, code };
     let result = serde_json::to_string(&result).handle_error(NativeStatus::ConversionError)?;
 
     Ok(result.to_ptr() as c_ulonglong)
@@ -588,7 +589,7 @@ fn internal_decode_input(
         Some((method, input)) => {
             let input =
                 nekoton_abi::make_abi_tokens(&input).handle_error(NativeStatus::ConversionError)?;
-            let result = JsDecodedInput {
+            let result = DecodedInput {
                 method: method.name.clone(),
                 input,
             };
@@ -629,7 +630,7 @@ fn internal_decode_output(
         Some((method, output)) => {
             let output = nekoton_abi::make_abi_tokens(&output)
                 .handle_error(NativeStatus::ConversionError)?;
-            let result = JsDecodedOutput {
+            let result = DecodedOutput {
                 method: method.name.clone(),
                 output,
             };
@@ -670,7 +671,7 @@ fn internal_decode_event(
         Some((event, data)) => {
             let data =
                 nekoton_abi::make_abi_tokens(&data).handle_error(NativeStatus::ConversionError)?;
-            let result = JsDecodedEvent {
+            let result = DecodedEvent {
                 event: event.name.clone(),
                 data,
             };
@@ -746,7 +747,7 @@ fn internal_decode_transaction(
     let output =
         nekoton_abi::make_abi_tokens(&output).handle_error(NativeStatus::ConversionError)?;
 
-    let result = JsDecodedTransaction {
+    let result = DecodedTransaction {
         method: method.name.clone(),
         input,
         output,
@@ -799,7 +800,7 @@ fn internal_decode_transaction_events(
             let tokens = event.decode_input(body).ok()?;
 
             Some(match nekoton_abi::make_abi_tokens(&tokens) {
-                Ok(data) => Ok(JsDecodedTransactionEvent {
+                Ok(data) => Ok(DecodedTransactionEvent {
                     event: event.name.clone(),
                     data,
                 }),
@@ -913,7 +914,7 @@ fn internal_create_external_message(
     Ok(message)
 }
 
-pub fn parse_account_stuff(boc: &str) -> Result<ton_block::AccountStuff, NativeError> {
+fn parse_account_stuff(boc: &str) -> Result<ton_block::AccountStuff, NativeError> {
     ton_block::AccountStuff::construct_from_base64(boc).handle_error(NativeStatus::ConversionError)
 }
 
@@ -922,23 +923,12 @@ fn parse_contract_abi(contract_abi: &str) -> Result<ton_abi::Contract, NativeErr
         .handle_error(NativeStatus::ConversionError)
 }
 
-pub fn parse_last_transaction_id(data: &str) -> Result<LastTransactionId, NativeError> {
+fn parse_last_transaction_id(data: &str) -> Result<LastTransactionId, NativeError> {
     serde_json::from_str::<LastTransactionId>(&data).handle_error(NativeStatus::ConversionError)
 }
 
-pub fn parse_gen_timings(data: &str) -> Result<GenTimings, NativeError> {
+fn parse_gen_timings(data: &str) -> Result<GenTimings, NativeError> {
     serde_json::from_str::<GenTimings>(&data).handle_error(NativeStatus::ConversionError)
-}
-
-pub fn parse_public_key(public_key: &str) -> Result<ed25519_dalek::PublicKey, NativeError> {
-    ed25519_dalek::PublicKey::from_bytes(
-        &hex::decode(&public_key).handle_error(NativeStatus::ConversionError)?,
-    )
-    .handle_error(NativeStatus::ConversionError)
-}
-
-pub fn parse_address(address: &str) -> Result<MsgAddressInt, NativeError> {
-    MsgAddressInt::from_str(address).handle_error(NativeStatus::ConversionError)
 }
 
 fn parse_params_list(data: &str) -> Result<Vec<ton_abi::Param>, NativeError> {
@@ -949,14 +939,14 @@ fn parse_abi_tokens_value(data: &str) -> Result<serde_json::Value, NativeError> 
     serde_json::from_str::<serde_json::Value>(&data).handle_error(NativeStatus::ConversionError)
 }
 
-pub fn parse_slice(boc: &str) -> Result<ton_types::SliceData, NativeError> {
+fn parse_slice(boc: &str) -> Result<ton_types::SliceData, NativeError> {
     let body = base64::decode(boc).handle_error(NativeStatus::ConversionError)?;
     let cell = ton_types::deserialize_tree_of_cells(&mut std::io::Cursor::new(&body))
         .handle_error(NativeStatus::ConversionError)?;
     Ok(cell.into())
 }
 
-pub fn parse_method_name(value: &str) -> Result<MethodName, NativeError> {
+fn parse_method_name(value: &str) -> Result<MethodName, NativeError> {
     if let Ok(value) = serde_json::from_str::<String>(&value) {
         Ok(MethodName::Known(value))
     } else if let Ok(value) = serde_json::from_str::<Vec<String>>(&value) {

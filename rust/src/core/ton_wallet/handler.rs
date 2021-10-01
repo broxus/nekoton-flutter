@@ -1,9 +1,7 @@
 use super::models::{
     OnMessageExpiredPayload, OnMessageSentPayload, OnStateChangedPayload, TransactionAdditionalInfo,
 };
-use crate::core::{
-    post_subscription_data, ContractState, OnTransactionsFoundPayload, SubscriptionHandlerMessage,
-};
+use crate::core::{post_subscription_data, OnTransactionsFoundPayload, SubscriptionHandlerMessage};
 use async_trait::async_trait;
 use nekoton::core::{
     models::{self, PendingTransaction, Transaction, TransactionWithData, TransactionsBatchInfo},
@@ -56,7 +54,6 @@ impl TonWalletSubscriptionHandler for TonWalletSubscriptionHandlerImpl {
     }
 
     fn on_state_changed(&self, new_state: models::ContractState) {
-        let new_state = ContractState::from_core(new_state);
         let payload = OnStateChangedPayload { new_state };
 
         if let Ok(payload) = serde_json::to_string(&payload) {

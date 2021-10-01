@@ -6,7 +6,7 @@ part 'token_incoming_transfer.g.dart';
 
 @freezed
 class TokenIncomingTransfer with _$TokenIncomingTransfer {
-  @JsonSerializable(fieldRename: FieldRename.snake)
+  @JsonSerializable()
   const factory TokenIncomingTransfer({
     required String tokens,
     required String senderAddress,

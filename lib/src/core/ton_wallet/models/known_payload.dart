@@ -8,9 +8,7 @@ part 'known_payload.g.dart';
 
 @Freezed(unionValueCase: FreezedUnionCase.pascal)
 class KnownPayload with _$KnownPayload {
-  @JsonSerializable(
-    fieldRename: FieldRename.snake,
-  )
+  @JsonSerializable()
   const factory KnownPayload.comment({
     required String value,
   }) = _Comment;

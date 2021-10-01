@@ -9,6 +9,8 @@ import '../external/gql_connection.dart';
 import '../external/models/connection_data.dart';
 import '../ffi_utils.dart';
 import '../native_library.dart';
+import '../provider/models/full_contract_state.dart';
+import '../provider/models/transactions_list.dart';
 import 'models/native_gql_transport.dart';
 import 'transport.dart';
 
@@ -33,23 +35,29 @@ class GqlTransport implements Transport {
   }
 
   @override
-  Future<Map<String, dynamic>> getContractState({
+  Future<FullContractState?> getFullAccountState({
     required String address,
   }) async {
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.get_contract_state(
+    final result = await proceedAsync((port) => _nativeLibrary.bindings.get_full_account_state(
           port,
           nativeGqlTransport.ptr!,
           address.toNativeUtf8().cast<Int8>(),
         ));
 
     final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>;
+    final json = jsonDecode(string) as Map<String, dynamic>?;
 
-    return json;
+    if (json == null) {
+      return null;
+    }
+
+    final fullContractState = FullContractState.fromJson(json);
+
+    return fullContractState;
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getTransactions({
+  Future<TransactionsList> getTransactions({
     required String address,
     required TransactionId from,
     required int count,
@@ -65,9 +73,10 @@ class GqlTransport implements Transport {
         ));
 
     final string = cStringToDart(result);
-    final json = jsonDecode(string) as List<Map<String, dynamic>>;
+    final json = jsonDecode(string) as Map<String, dynamic>;
+    final transactionsList = TransactionsList.fromJson(json);
 
-    return json;
+    return transactionsList;
   }
 
   Future<String> getLatestBlockId(String address) async {

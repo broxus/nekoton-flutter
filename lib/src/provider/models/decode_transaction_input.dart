@@ -1,6 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-
-import 'transaction.dart';
+import '../../core/models/transaction.dart';
 
 part 'decode_transaction_input.freezed.dart';
 part 'decode_transaction_input.g.dart';

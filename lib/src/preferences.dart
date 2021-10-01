@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+
 import 'provider/models/permissions.dart';
 
 class Preferences {

@@ -1,6 +1,4 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:json_annotation/json_annotation.dart';
-
 import 'gen_timings.dart';
 import 'last_transaction_id.dart';
 
@@ -9,10 +7,7 @@ part 'contract_state.g.dart';
 
 @freezed
 class ContractState with _$ContractState {
-  @JsonSerializable(
-    fieldRename: FieldRename.snake,
-    explicitToJson: true,
-  )
+  @JsonSerializable(explicitToJson: true)
   const factory ContractState({
     required String balance,
     required GenTimings genTimings,

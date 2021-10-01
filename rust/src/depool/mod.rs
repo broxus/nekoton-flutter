@@ -1,8 +1,7 @@
 use crate::{
-    helpers::parse_address,
     match_result,
     models::{FromPtr, HandleError, NativeError, NativeStatus, ToPtr},
-    runtime, send_to_result_port,
+    parse_address, runtime, send_to_result_port,
     transport::gql_transport::MutexGqlTransport,
     RUNTIME,
 };

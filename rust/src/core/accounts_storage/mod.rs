@@ -6,10 +6,9 @@ use crate::{
         ton_wallet::models::WalletType,
     },
     external::storage::{MutexStorage, StorageImpl},
-    helpers::{parse_address, parse_public_key},
     match_result,
     models::{HandleError, NativeError, NativeStatus},
-    runtime, send_to_result_port, FromPtr, ToPtr, RUNTIME,
+    parse_address, parse_public_key, runtime, send_to_result_port, FromPtr, ToPtr, RUNTIME,
 };
 use nekoton::core::accounts_storage::AccountsStorage;
 use std::{

@@ -1,22 +1,16 @@
-use crate::core::{
-    token_wallet::models::{TokenOutgoingTransfer, TokenSwapBack},
-    ContractState,
-};
+use crate::core::token_wallet::models::TokenOutgoingTransfer;
 use nekoton::core::{
     models::{
-        self, DePoolOnRoundCompleteNotification, DePoolReceiveAnswerNotification, EthEventStatus,
-        PendingTransaction, TokenWalletDeployedNotification, TonEventStatus, Transaction,
+        self, ContractState, DePoolOnRoundCompleteNotification, DePoolReceiveAnswerNotification,
+        EthEventStatus, PendingTransaction, TokenWalletDeployedNotification, TonEventStatus,
+        Transaction,
     },
     ton_wallet::{self, MultisigType, TonWallet},
 };
-use nekoton_utils::{
-    serde_address, serde_cell, serde_optional_address, serde_public_key, serde_string,
-    serde_uint256, serde_vec_uint256,
-};
+use nekoton_utils::{serde_address, serde_optional_address, serde_public_key};
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use ton_block::MsgAddressInt;
-use ton_types::UInt256;
 
 pub type MutexTonWallet = Mutex<Option<TonWallet>>;
 
@@ -121,7 +115,7 @@ pub enum KnownPayload {
         token_outgoing_transfer: TokenOutgoingTransfer,
     },
     TokenSwapBack {
-        token_swap_back: TokenSwapBack,
+        token_swap_back: models::TokenSwapBack,
     },
 }
 
@@ -136,9 +130,9 @@ impl KnownPayload {
                     ),
                 }
             }
-            models::KnownPayload::TokenSwapBack(token_swap_back) => Self::TokenSwapBack {
-                token_swap_back: TokenSwapBack::from_core(token_swap_back),
-            },
+            models::KnownPayload::TokenSwapBack(token_swap_back) => {
+                Self::TokenSwapBack { token_swap_back }
+            }
             _ => Self::Comment {
                 value: String::new(),
             },
@@ -170,10 +164,10 @@ impl WalletInteractionMethod {
 #[serde(tag = "runtimeType")]
 pub enum MultisigTransaction {
     Send {
-        multisig_send_transaction: MultisigSendTransaction,
+        multisig_send_transaction: models::MultisigSendTransaction,
     },
     Submit {
-        multisig_submit_transaction: MultisigSubmitTransaction,
+        multisig_submit_transaction: models::MultisigSubmitTransaction,
     },
     Confirm {
         multisig_confirm_transaction: models::MultisigConfirmTransaction,
@@ -184,108 +178,14 @@ impl MultisigTransaction {
     pub fn from_core(multisig_transaction: models::MultisigTransaction) -> Self {
         match multisig_transaction {
             models::MultisigTransaction::Send(multisig_send_transaction) => Self::Send {
-                multisig_send_transaction: MultisigSendTransaction::from_core(
-                    multisig_send_transaction,
-                ),
+                multisig_send_transaction,
             },
             models::MultisigTransaction::Submit(multisig_submit_transaction) => Self::Submit {
-                multisig_submit_transaction: MultisigSubmitTransaction::from_core(
-                    multisig_submit_transaction,
-                ),
+                multisig_submit_transaction,
             },
             models::MultisigTransaction::Confirm(multisig_confirm_transaction) => Self::Confirm {
                 multisig_confirm_transaction,
             },
-        }
-    }
-}
-
-#[derive(Serialize)]
-pub struct MultisigSubmitTransaction {
-    #[serde(with = "serde_uint256")]
-    pub custodian: UInt256,
-    #[serde(with = "serde_address")]
-    pub dest: MsgAddressInt,
-    pub value: String,
-    pub bounce: bool,
-    pub all_balance: bool,
-    #[serde(with = "serde_cell")]
-    pub payload: ton_types::Cell,
-    #[serde(with = "serde_string")]
-    pub trans_id: u64,
-}
-
-impl MultisigSubmitTransaction {
-    pub fn from_core(multisig_submit_transaction: models::MultisigSubmitTransaction) -> Self {
-        Self {
-            custodian: multisig_submit_transaction.custodian,
-            dest: multisig_submit_transaction.dest,
-            value: multisig_submit_transaction.value.to_string(),
-            bounce: multisig_submit_transaction.bounce,
-            all_balance: multisig_submit_transaction.all_balance,
-            payload: multisig_submit_transaction.payload,
-            trans_id: multisig_submit_transaction.trans_id,
-        }
-    }
-}
-
-#[derive(Serialize)]
-pub struct MultisigSendTransaction {
-    #[serde(with = "serde_address")]
-    pub dest: MsgAddressInt,
-    pub value: String,
-    pub bounce: bool,
-    pub flags: u8,
-    #[serde(with = "serde_cell")]
-    pub payload: ton_types::Cell,
-}
-
-impl MultisigSendTransaction {
-    pub fn from_core(multisig_send_transaction: models::MultisigSendTransaction) -> Self {
-        Self {
-            dest: multisig_send_transaction.dest,
-            value: multisig_send_transaction.value.to_string(),
-            bounce: multisig_send_transaction.bounce,
-            flags: multisig_send_transaction.flags,
-            payload: multisig_send_transaction.payload,
-        }
-    }
-}
-
-#[derive(Serialize)]
-pub struct MultisigPendingTransaction {
-    #[serde(with = "serde_string")]
-    pub id: u64,
-    #[serde(with = "serde_vec_uint256")]
-    pub confirmations: Vec<UInt256>,
-    pub signs_required: u8,
-    pub signs_received: u8,
-    #[serde(with = "serde_uint256")]
-    pub creator: UInt256,
-    pub index: u8,
-    #[serde(with = "serde_address")]
-    pub dest: MsgAddressInt,
-    pub value: String,
-    pub send_flags: u16,
-    #[serde(with = "serde_cell")]
-    pub payload: ton_types::Cell,
-    pub bounce: bool,
-}
-
-impl MultisigPendingTransaction {
-    pub fn from_core(multisig_pending_transaction: models::MultisigPendingTransaction) -> Self {
-        Self {
-            id: multisig_pending_transaction.id,
-            confirmations: multisig_pending_transaction.confirmations,
-            signs_required: multisig_pending_transaction.signs_required,
-            signs_received: multisig_pending_transaction.signs_received,
-            creator: multisig_pending_transaction.creator,
-            index: multisig_pending_transaction.index,
-            dest: multisig_pending_transaction.dest,
-            value: multisig_pending_transaction.value.to_string(),
-            send_flags: multisig_pending_transaction.send_flags,
-            payload: multisig_pending_transaction.payload,
-            bounce: multisig_pending_transaction.bounce,
         }
     }
 }
@@ -331,7 +231,7 @@ impl ExistingWalletInfo {
             address: existing_wallet_info.address,
             public_key: existing_wallet_info.public_key,
             wallet_type: WalletType::from_core(existing_wallet_info.wallet_type),
-            contract_state: ContractState::from_core(existing_wallet_info.contract_state),
+            contract_state: existing_wallet_info.contract_state,
         }
     }
 
@@ -340,7 +240,7 @@ impl ExistingWalletInfo {
             address: self.address,
             public_key: self.public_key,
             wallet_type: self.wallet_type.to_core(),
-            contract_state: self.contract_state.to_core(),
+            contract_state: self.contract_state,
         }
     }
 }

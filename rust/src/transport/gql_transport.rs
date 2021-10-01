@@ -1,9 +1,8 @@
 use crate::{
     external::gql_connection::MutexGqlConnection,
-    helpers::parse_address,
     match_result,
     models::{HandleError, NativeError, NativeStatus},
-    runtime, send_to_result_port, FromPtr, ToPtr, RUNTIME,
+    parse_address, runtime, send_to_result_port, FromPtr, ToPtr, RUNTIME,
 };
 use nekoton::transport::gql::GqlTransport;
 use std::{

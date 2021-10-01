@@ -1,7 +1,7 @@
 pub mod handler;
 pub mod models;
 
-use self::models::{ExistingWalletInfo, MultisigPendingTransaction};
+use self::models::ExistingWalletInfo;
 use super::keystore::UNKNOWN_SIGNER;
 use crate::{
     core::{
@@ -10,13 +10,12 @@ use crate::{
             handler::TonWalletSubscriptionHandlerImpl,
             models::{MutexTonWallet, WalletType},
         },
-        ContractState, Expiration, MutexUnsignedMessage,
+        Expiration, MutexUnsignedMessage,
     },
     crypto::{derived_key::DerivedKeySignParams, encrypted_key::EncryptedKeyPassword},
-    helpers::{parse_address, parse_public_key},
     match_result,
     models::{HandleError, NativeError, NativeStatus},
-    runtime, send_to_result_port,
+    parse_address, parse_public_key, runtime, send_to_result_port,
     transport::gql_transport::MutexGqlTransport,
     FromPtr, ToPtr, RUNTIME,
 };
@@ -398,7 +397,6 @@ async fn internal_get_ton_wallet_contract_state(
     ton_wallet: &mut TonWallet,
 ) -> Result<u64, NativeError> {
     let contract_state = ton_wallet.contract_state();
-    let contract_state = ContractState::from_core(contract_state.clone());
     let contract_state =
         serde_json::to_string(&contract_state).handle_error(NativeStatus::ConversionError)?;
 
@@ -565,10 +563,6 @@ async fn internal_get_ton_wallet_unconfirmed_transactions(
     ton_wallet: &mut TonWallet,
 ) -> Result<u64, NativeError> {
     let unconfirmed_transactions = ton_wallet.get_unconfirmed_transactions();
-    let unconfirmed_transactions = unconfirmed_transactions
-        .into_iter()
-        .map(|e| MultisigPendingTransaction::from_core(e.clone()))
-        .collect::<Vec<MultisigPendingTransaction>>();
     let unconfirmed_transactions = serde_json::to_string(&unconfirmed_transactions)
         .handle_error(NativeStatus::ConversionError)?;
 

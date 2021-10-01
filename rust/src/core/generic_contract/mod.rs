@@ -7,13 +7,12 @@ use crate::{
     core::{
         generic_contract::models::MutexGenericContract,
         keystore::{models::MutexKeyStore, KEY_STORE_NOT_FOUND},
-        ContractState, MutexUnsignedMessage,
+        MutexUnsignedMessage,
     },
     crypto::{derived_key::DerivedKeySignParams, encrypted_key::EncryptedKeyPassword},
-    helpers::parse_address,
     match_result,
     models::{HandleError, NativeError, NativeStatus},
-    runtime, send_to_result_port,
+    parse_address, runtime, send_to_result_port,
     transport::gql_transport::MutexGqlTransport,
     FromPtr, ToPtr, RUNTIME,
 };
@@ -156,7 +155,6 @@ async fn internal_get_generic_contract_contract_state(
     generic_contract: &mut GenericContract,
 ) -> Result<u64, NativeError> {
     let contract_state = generic_contract.contract_state();
-    let contract_state = ContractState::from_core(contract_state.clone());
     let contract_state =
         serde_json::to_string(&contract_state).handle_error(NativeStatus::ConversionError)?;
 

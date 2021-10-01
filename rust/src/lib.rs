@@ -11,15 +11,17 @@ use allo_isolate::{
     Isolate,
 };
 use lazy_static::lazy_static;
-use models::{FromPtr, NativeError, NativeResult, NativeStatus, ToPtr};
+use models::{FromPtr, HandleError, NativeError, NativeResult, NativeStatus, ToPtr};
 use std::{
     ffi::c_void,
     intrinsics::transmute,
     io,
     os::raw::{c_char, c_longlong, c_uint, c_ulonglong},
+    str::FromStr,
     u64,
 };
 use tokio::runtime::{Builder, Runtime};
+use ton_block::MsgAddressInt;
 
 lazy_static! {
     static ref RUNTIME: io::Result<Runtime> = Builder::new_multi_thread()
@@ -79,4 +81,15 @@ pub unsafe extern "C" fn free_cstring(str: *mut c_char) {
 pub unsafe extern "C" fn free_native_result(ptr: *mut c_void) {
     let result = ptr as *mut NativeResult;
     Box::from_raw(result);
+}
+
+pub fn parse_public_key(public_key: &str) -> Result<ed25519_dalek::PublicKey, NativeError> {
+    ed25519_dalek::PublicKey::from_bytes(
+        &hex::decode(&public_key).handle_error(NativeStatus::ConversionError)?,
+    )
+    .handle_error(NativeStatus::ConversionError)
+}
+
+pub fn parse_address(address: &str) -> Result<MsgAddressInt, NativeError> {
+    MsgAddressInt::from_str(address).handle_error(NativeStatus::ConversionError)
 }

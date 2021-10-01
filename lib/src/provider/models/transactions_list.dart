@@ -4,17 +4,17 @@ import '../../core/models/transaction.dart';
 import '../../core/models/transaction_id.dart';
 import '../../core/models/transactions_batch_info.dart';
 
-part 'get_transactions_output.freezed.dart';
-part 'get_transactions_output.g.dart';
+part 'transactions_list.freezed.dart';
+part 'transactions_list.g.dart';
 
 @freezed
-class GetTransactionsOutput with _$GetTransactionsOutput {
+class TransactionsList with _$TransactionsList {
   @JsonSerializable(explicitToJson: true)
-  const factory GetTransactionsOutput({
+  const factory TransactionsList({
     required List<Transaction> transactions,
     TransactionId? continuation,
     TransactionsBatchInfo? info,
-  }) = _GetTransactionsOutput;
+  }) = _TransactionsList;
 
-  factory GetTransactionsOutput.fromJson(Map<String, dynamic> json) => _$GetTransactionsOutputFromJson(json);
+  factory TransactionsList.fromJson(Map<String, dynamic> json) => _$TransactionsListFromJson(json);
 }

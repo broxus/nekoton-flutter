@@ -28,6 +28,7 @@ import '../models/polling_method.dart';
 import '../models/subscription_handler_message.dart';
 import '../models/transaction.dart';
 import '../models/transaction_id.dart';
+import '../models/transactions_batch_type.dart';
 import '../models/unsigned_message.dart';
 import 'models/existing_wallet_info.dart';
 import 'models/multisig_pending_transaction.dart';
@@ -471,7 +472,7 @@ class TonWallet implements Comparable<TonWallet> {
           final json = jsonDecode(message.payload) as Map<String, dynamic>;
           final payload = OnTonWalletTransactionsFoundPayload.fromJson(json);
 
-          if (!payload.batchInfo.old) {
+          if (payload.batchInfo.batchType == TransactionsBatchType.newTransactions) {
             final sent = {..._onMessageSentSubject.value};
 
             final list = <Transaction>[];

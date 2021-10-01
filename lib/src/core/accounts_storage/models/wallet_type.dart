@@ -28,11 +28,13 @@ extension ToInt on WalletType {
               return 2;
             case MultisigType.setcodeMultisigWallet:
               return 3;
-            case MultisigType.surfWallet:
+            case MultisigType.bridgeMultisigWallet:
               return 4;
+            case MultisigType.surfWallet:
+              return 5;
           }
         },
-        walletV3: () => 5,
+        walletV3: () => 6,
       );
 }
 
@@ -46,6 +48,8 @@ extension Describe on WalletType {
               return "SafeMultisig24";
             case MultisigType.setcodeMultisigWallet:
               return "SetcodeMultisig";
+            case MultisigType.bridgeMultisigWallet:
+              return "BridgeMultisig";
             case MultisigType.surfWallet:
               return "Surf";
           }

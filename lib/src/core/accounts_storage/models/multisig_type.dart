@@ -7,6 +7,8 @@ enum MultisigType {
   safeMultisigWallet24h,
   @JsonValue('SetcodeMultisigWallet')
   setcodeMultisigWallet,
+  @JsonValue('BridgeMultisigWallet')
+  bridgeMultisigWallet,
   @JsonValue('SurfWallet')
   surfWallet,
 }

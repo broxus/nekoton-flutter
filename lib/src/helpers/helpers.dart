@@ -2,13 +2,21 @@ import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
-import 'package:nekoton_flutter/src/core/models/native_unsigned_message.dart';
-import 'package:nekoton_flutter/src/core/models/unsigned_message.dart';
-import 'package:nekoton_flutter/src/core/ton_wallet/models/known_payload.dart';
 
+import '../core/models/native_unsigned_message.dart';
+import '../core/models/unsigned_message.dart';
+import '../core/ton_wallet/models/known_payload.dart';
 import '../ffi_utils.dart';
 import '../native_library.dart';
+import '../provider/models/tokens_object.dart';
+import 'models/decoded_event.dart';
+import 'models/decoded_input.dart';
+import 'models/decoded_output.dart';
+import 'models/decoded_transaction.dart';
+import 'models/decoded_transaction_event.dart';
+import 'models/execution_output.dart';
 import 'models/message_body_data.dart';
+import 'models/splitted_tvc.dart';
 
 String packStdSmcAddr({
   required bool base64Url,
@@ -75,7 +83,7 @@ MessageBodyData? parseMessageBodyData(String data) {
   }
 }
 
-String runLocal({
+ExecutionOutput runLocal({
   required String genTimings,
   required String lastTransactionId,
   required String accountStuffBoc,
@@ -94,8 +102,10 @@ String runLocal({
       ));
 
   final string = cStringToDart(result);
+  final json = jsonDecode(string) as Map<String, dynamic>;
+  final executionOutput = ExecutionOutput.fromJson(json);
 
-  return string;
+  return executionOutput;
 }
 
 String getExpectedAddress({
@@ -105,14 +115,14 @@ String getExpectedAddress({
   String? publicKey,
   required String initData,
 }) {
-  final publicKeyStr = jsonEncode(publicKey);
+  final publicKeyPtr = publicKey?.toNativeUtf8().cast<Int8>() ?? nullptr;
 
   final nativeLibrary = NativeLibrary.instance();
   final result = proceedSync(() => nativeLibrary.bindings.get_expected_address(
         tvc.toNativeUtf8().cast<Int8>(),
         contractAbi.toNativeUtf8().cast<Int8>(),
         workchainId,
-        publicKeyStr.toNativeUtf8().cast<Int8>(),
+        publicKeyPtr,
         initData.toNativeUtf8().cast<Int8>(),
       ));
 
@@ -136,7 +146,7 @@ String packIntoCell({
   return string;
 }
 
-String unpackFromCell({
+TokensObject unpackFromCell({
   required String params,
   required String boc,
   required bool allowPartial,
@@ -149,8 +159,10 @@ String unpackFromCell({
       ));
 
   final string = cStringToDart(result);
+  final json = jsonDecode(string) as dynamic;
+  final tokensObject = json as TokensObject;
 
-  return string;
+  return tokensObject;
 }
 
 String extractPublicKey(String boc) {
@@ -175,15 +187,17 @@ String codeToTvc(String code) {
   return string;
 }
 
-String splitTvc(String tvc) {
+SplittedTvc splitTvc(String tvc) {
   final nativeLibrary = NativeLibrary.instance();
   final result = proceedSync(() => nativeLibrary.bindings.split_tvc(
         tvc.toNativeUtf8().cast<Int8>(),
       ));
 
   final string = cStringToDart(result);
+  final json = jsonDecode(string) as Map<String, dynamic>;
+  final splittedTvc = SplittedTvc.fromJson(json);
 
-  return string;
+  return splittedTvc;
 }
 
 String encodeInternalInput({
@@ -203,7 +217,7 @@ String encodeInternalInput({
   return string;
 }
 
-String decodeInput({
+DecodedInput? decodeInput({
   required String messageBody,
   required String contractAbi,
   required String method,
@@ -218,11 +232,18 @@ String decodeInput({
       ));
 
   final string = cStringToDart(result);
+  final json = jsonDecode(string) as Map<String, dynamic>?;
 
-  return string;
+  if (json == null) {
+    return null;
+  }
+
+  final decodedInput = DecodedInput.fromJson(json);
+
+  return decodedInput;
 }
 
-String decodeOutput({
+DecodedOutput? decodeOutput({
   required String messageBody,
   required String contractAbi,
   required String method,
@@ -235,11 +256,18 @@ String decodeOutput({
       ));
 
   final string = cStringToDart(result);
+  final json = jsonDecode(string) as Map<String, dynamic>?;
 
-  return string;
+  if (json == null) {
+    return null;
+  }
+
+  final decodedOutput = DecodedOutput.fromJson(json);
+
+  return decodedOutput;
 }
 
-String decodeEvent({
+DecodedEvent? decodeEvent({
   required String messageBody,
   required String contractAbi,
   required String event,
@@ -252,11 +280,18 @@ String decodeEvent({
       ));
 
   final string = cStringToDart(result);
+  final json = jsonDecode(string) as Map<String, dynamic>?;
 
-  return string;
+  if (json == null) {
+    return null;
+  }
+
+  final decodedEvent = DecodedEvent.fromJson(json);
+
+  return decodedEvent;
 }
 
-String decodeTransaction({
+DecodedTransaction? decodeTransaction({
   required String transaction,
   required String contractAbi,
   required String method,
@@ -269,11 +304,18 @@ String decodeTransaction({
       ));
 
   final string = cStringToDart(result);
+  final json = jsonDecode(string) as Map<String, dynamic>?;
 
-  return string;
+  if (json == null) {
+    return null;
+  }
+
+  final decodedTransaction = DecodedTransaction.fromJson(json);
+
+  return decodedTransaction;
 }
 
-String decodeTransactionEvents({
+List<DecodedTransactionEvent> decodeTransactionEvents({
   required String transaction,
   required String contractAbi,
 }) {
@@ -284,8 +326,11 @@ String decodeTransactionEvents({
       ));
 
   final string = cStringToDart(result);
+  final list = jsonDecode(string) as List<dynamic>;
+  final json = list.cast<Map<String, dynamic>>();
+  final decodedTransactionEvents = json.map((e) => DecodedTransactionEvent.fromJson(e)).toList();
 
-  return string;
+  return decodedTransactionEvents;
 }
 
 KnownPayload parseKnownPayload(String payload) {
@@ -310,14 +355,14 @@ UnsignedMessage createExternalMessage({
   required String publicKey,
   required int timeout,
 }) {
-  final stateInitStr = jsonEncode(stateInit);
+  final stateInitPtr = stateInit?.toNativeUtf8().cast<Int8>() ?? nullptr;
 
   final nativeLibrary = NativeLibrary.instance();
   final result = proceedSync(() => nativeLibrary.bindings.create_external_message(
         dst.toNativeUtf8().cast<Int8>(),
         contractAbi.toNativeUtf8().cast<Int8>(),
         method.toNativeUtf8().cast<Int8>(),
-        stateInitStr.toNativeUtf8().cast<Int8>(),
+        stateInitPtr,
         input.toNativeUtf8().cast<Int8>(),
         publicKey.toNativeUtf8().cast<Int8>(),
         timeout,

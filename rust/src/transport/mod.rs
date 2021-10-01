@@ -3,13 +3,12 @@ pub mod gql_transport;
 pub mod models;
 
 use crate::{
-    helpers::parse_address,
     match_result,
     models::{FromPtr, HandleError, NativeError, NativeStatus, ToPtr},
-    runtime, send_to_result_port,
+    parse_address, runtime, send_to_result_port,
     transport::{
         gql_transport::MutexGqlTransport,
-        models::{JsFullContractState, JsTransactionsList},
+        models::{FullContractState, TransactionsList},
     },
     RUNTIME,
 };
@@ -25,7 +24,7 @@ use std::{
 };
 
 #[no_mangle]
-pub unsafe extern "C" fn get_js_full_account_state(
+pub unsafe extern "C" fn get_full_account_state(
     result_port: c_longlong,
     transport: *mut c_void,
     address: *mut c_char,
@@ -36,13 +35,13 @@ pub unsafe extern "C" fn get_js_full_account_state(
 
     let rt = runtime!();
     rt.spawn(async move {
-        let result = internal_get_js_full_account_state(transport, address).await;
+        let result = internal_get_full_account_state(transport, address).await;
         let result = match_result(result);
         send_to_result_port(result_port, result);
     });
 }
 
-async fn internal_get_js_full_account_state(
+async fn internal_get_full_account_state(
     transport: &MutexGqlTransport,
     address: String,
 ) -> Result<u64, NativeError> {
@@ -55,7 +54,7 @@ async fn internal_get_js_full_account_state(
         .await
         .handle_error(NativeStatus::TransportError)?;
 
-    let js_full_contract_state = match raw_contract_state {
+    let full_contract_state = match raw_contract_state {
         RawContractState::Exists(state) => {
             let account_cell = ton_block::Serializable::serialize(&state.account)
                 .handle_error(NativeStatus::ConversionError)?;
@@ -63,7 +62,7 @@ async fn internal_get_js_full_account_state(
                 .map(base64::encode)
                 .handle_error(NativeStatus::ConversionError)?;
 
-            let js_full_contract_state = JsFullContractState {
+            let full_contract_state = FullContractState {
                 balance: state.account.storage.balance.grams.0.to_string(),
                 gen_timings: state.timings,
                 last_transaction_id: Some(state.last_transaction_id),
@@ -74,19 +73,19 @@ async fn internal_get_js_full_account_state(
                 boc,
             };
 
-            Some(js_full_contract_state)
+            Some(full_contract_state)
         }
         RawContractState::NotExists => None,
     };
 
-    let js_full_contract_state = serde_json::to_string(&js_full_contract_state)
-        .handle_error(NativeStatus::ConversionError)?;
+    let full_contract_state =
+        serde_json::to_string(&full_contract_state).handle_error(NativeStatus::ConversionError)?;
 
-    Ok(js_full_contract_state.to_ptr() as c_ulonglong)
+    Ok(full_contract_state.to_ptr() as c_ulonglong)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn get_js_transactions(
+pub unsafe extern "C" fn get_transactions(
     result_port: c_longlong,
     transport: *mut c_void,
     address: *mut c_char,
@@ -100,13 +99,13 @@ pub unsafe extern "C" fn get_js_transactions(
 
     let rt = runtime!();
     rt.spawn(async move {
-        let result = internal_get_js_transactions(transport, address, from, count).await;
+        let result = internal_get_transactions(transport, address, from, count).await;
         let result = match_result(result);
         send_to_result_port(result_port, result);
     });
 }
 
-async fn internal_get_js_transactions(
+async fn internal_get_transactions(
     transport: &MutexGqlTransport,
     address: String,
     continuation: String,
@@ -153,92 +152,13 @@ async fn internal_get_js_transactions(
         _ => None,
     };
 
-    let js_transactions_list = JsTransactionsList {
+    let transactions_list = TransactionsList {
         transactions,
         continuation,
         info: batch_info,
     };
-    let js_transactions_list =
-        serde_json::to_string(&js_transactions_list).handle_error(NativeStatus::ConversionError)?;
+    let transactions_list =
+        serde_json::to_string(&transactions_list).handle_error(NativeStatus::ConversionError)?;
 
-    Ok(js_transactions_list.to_ptr() as c_ulonglong)
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn get_contract_state(
-    result_port: c_longlong,
-    transport: *mut c_void,
-    address: *mut c_char,
-) {
-    let transport = transport as *mut MutexGqlTransport;
-    let transport = &(*transport);
-    let address = address.from_ptr();
-
-    let rt = runtime!();
-    rt.spawn(async move {
-        let result = internal_get_contract_state(transport, address).await;
-        let result = match_result(result);
-        send_to_result_port(result_port, result);
-    });
-}
-
-async fn internal_get_contract_state(
-    transport: &MutexGqlTransport,
-    address: String,
-) -> Result<u64, NativeError> {
-    let transport = transport.lock().await;
-
-    let address = parse_address(&address)?;
-
-    let raw_contract_state = transport
-        .get_contract_state(&address)
-        .await
-        .handle_error(NativeStatus::TransportError)?;
-    let raw_contract_state =
-        serde_json::to_string(&raw_contract_state).handle_error(NativeStatus::ConversionError)?;
-
-    Ok(raw_contract_state.to_ptr() as c_ulonglong)
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn get_transactions(
-    result_port: c_longlong,
-    transport: *mut c_void,
-    address: *mut c_char,
-    from: *mut c_char,
-    count: c_uchar,
-) {
-    let transport = transport as *mut MutexGqlTransport;
-    let transport = &(*transport);
-    let address = address.from_ptr();
-    let from = from.from_ptr();
-
-    let rt = runtime!();
-    rt.spawn(async move {
-        let result = internal_get_transactions(transport, address, from, count).await;
-        let result = match_result(result);
-        send_to_result_port(result_port, result);
-    });
-}
-
-async fn internal_get_transactions(
-    transport: &MutexGqlTransport,
-    address: String,
-    from: String,
-    count: u8,
-) -> Result<u64, NativeError> {
-    let transport = transport.lock().await;
-
-    let address = parse_address(&address)?;
-    let from =
-        serde_json::from_str::<TransactionId>(&from).handle_error(NativeStatus::ConversionError)?;
-
-    let _raw_transactions = transport
-        .get_transactions(address, from, count)
-        .await
-        .handle_error(NativeStatus::TransportError)?;
-    let raw_transactions =
-        serde_json::to_string(&Vec::<String>::new()).handle_error(NativeStatus::ConversionError)?;
-
-    Ok(raw_transactions.to_ptr() as c_ulonglong)
+    Ok(transactions_list.to_ptr() as c_ulonglong)
 }

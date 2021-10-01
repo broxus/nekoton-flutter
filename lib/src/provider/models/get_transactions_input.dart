@@ -1,6 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import 'transaction_id.dart';
+import '../../core/models/transaction_id.dart';
 
 part 'get_transactions_input.freezed.dart';
 part 'get_transactions_input.g.dart';

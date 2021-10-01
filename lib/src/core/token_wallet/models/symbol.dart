@@ -6,10 +6,10 @@ part 'symbol.g.dart';
 
 @freezed
 class Symbol with _$Symbol {
-  @JsonSerializable(fieldRename: FieldRename.snake)
+  @JsonSerializable()
   const factory Symbol({
     required String name,
-    required String symbol,
+    required String fullName,
     required int decimals,
     required String rootTokenContract,
   }) = _Symbol;

@@ -7,12 +7,11 @@ use crate::{
         ton_wallet::{
             internal_ton_wallet_prepare_transfer, models::MutexTonWallet, TON_WALLET_NOT_FOUND,
         },
-        ContractState, Expiration,
+        Expiration,
     },
-    helpers::parse_address,
     match_result,
     models::{HandleError, NativeError, NativeStatus},
-    runtime, send_to_result_port,
+    parse_address, runtime, send_to_result_port,
     transport::gql_transport::MutexGqlTransport,
     FromPtr, ToPtr, RUNTIME,
 };
@@ -328,7 +327,6 @@ async fn internal_get_token_wallet_contract_state(
     token_wallet: &mut TokenWallet,
 ) -> Result<u64, NativeError> {
     let contract_state = token_wallet.contract_state();
-    let contract_state = ContractState::from_core(contract_state.clone());
     let contract_state =
         serde_json::to_string(&contract_state).handle_error(NativeStatus::ConversionError)?;
 

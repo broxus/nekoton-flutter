@@ -1,8 +1,7 @@
 use crate::{
-    helpers::parse_public_key,
     match_result,
     models::{FromPtr, HandleError, NativeError, NativeStatus},
-    runtime, send_to_result_port, RUNTIME,
+    parse_public_key, runtime, send_to_result_port, RUNTIME,
 };
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;

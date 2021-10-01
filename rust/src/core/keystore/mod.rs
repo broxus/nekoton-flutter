@@ -7,10 +7,9 @@ use crate::{
         encrypted_key::{EncryptedKeyPassword, EncryptedKeyUpdateParams},
     },
     external::storage::StorageImpl,
-    helpers::parse_public_key,
     match_result,
     models::{NativeError, NativeStatus},
-    runtime, send_to_result_port, FromPtr, ToPtr, RUNTIME,
+    parse_public_key, runtime, send_to_result_port, FromPtr, ToPtr, RUNTIME,
 };
 use crate::{
     crypto::{

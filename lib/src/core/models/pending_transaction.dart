@@ -8,8 +8,9 @@ part 'pending_transaction.g.dart';
 class PendingTransaction with _$PendingTransaction {
   @JsonSerializable(fieldRename: FieldRename.snake)
   const factory PendingTransaction({
-    String? src,
+    required String messageHash,
     required String bodyHash,
+    String? src,
     required int expireAt,
   }) = _PendingTransaction;
 
