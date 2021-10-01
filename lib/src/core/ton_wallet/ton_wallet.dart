@@ -6,7 +6,6 @@ import 'dart:isolate';
 import 'package:collection/collection.dart';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
-import 'package:recase/recase.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../../core/keystore/keystore.dart';
@@ -145,7 +144,7 @@ class TonWallet implements Comparable<TonWallet> {
 
     final string = cStringToDart(result);
     final json = jsonDecode(string);
-    final pollingMethod = PollingMethod.values.firstWhere((e) => describeEnum(e).pascalCase == json);
+    final pollingMethod = PollingMethod.values.firstWhere((e) => describeEnum(e) == json);
 
     return pollingMethod;
   }

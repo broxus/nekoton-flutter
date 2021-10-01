@@ -15,7 +15,7 @@ class Transaction with _$Transaction {
     TransactionId? prevTransactionId,
     required int createdAt,
     required bool aborted,
-    required int exitCode,
+    int? exitCode,
     required AccountStatus origStatus,
     required AccountStatus endStatus,
     required String totalFees,
