@@ -47,3 +47,7 @@ ffigen:
   headers:
     entry-points:
       - 'rust/target/bindings.h'
+
+  assets:
+    - assets/
+    - assets/js/
