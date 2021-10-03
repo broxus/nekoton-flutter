@@ -155,6 +155,8 @@ export 'src/provider/models/request_permissions_input.dart';
 export 'src/provider/models/request_permissions_output.dart';
 export 'src/provider/models/run_local_input.dart';
 export 'src/provider/models/run_local_output.dart';
+export 'src/provider/models/send_external_message_input.dart';
+export 'src/provider/models/send_external_message_output.dart';
 export 'src/provider/models/send_message_input.dart';
 export 'src/provider/models/send_message_output.dart';
 export 'src/provider/models/send_message_output.dart';
@@ -169,7 +171,14 @@ export 'src/provider/models/unpack_from_cell_input.dart';
 export 'src/provider/models/unpack_from_cell_output.dart';
 export 'src/provider/models/unsubscribe_input.dart';
 export 'src/provider/models/wallet_contract_type.dart';
-export 'src/provider/provider_events.dart';
+export 'src/provider/provider_events.dart'
+    show
+        disconnectedStream,
+        transactionsFoundStream,
+        contractStateChangedStream,
+        networkChangedStream,
+        permissionsChangedStream,
+        loggedOutStream;
 export 'src/provider/provider_requests.dart';
 export 'src/provider/provider_scripts.dart';
 export 'src/subscriptions_controller.dart';

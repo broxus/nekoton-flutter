@@ -40,6 +40,10 @@ flutter:
       ios:
         pluginClass: NekotonFlutterPlugin
 
+  assets:
+    - assets/
+    - assets/js/
+
 ffigen:
   name: 'Bindings'
   description: 'Generated bindings'
@@ -47,7 +51,3 @@ ffigen:
   headers:
     entry-points:
       - 'rust/target/bindings.h'
-
-  assets:
-    - assets/
-    - assets/js/

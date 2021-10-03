@@ -139,14 +139,14 @@ class SubscriptionsController {
     _genericContractsSubject.add(subscriptions);
 
     genericContract.onStateChangedStream.listen((event) {
-      providerContractStateChangedSubject.add(ContractStateChangedEvent(
+      contractStateChangedSubject.add(ContractStateChangedEvent(
         address: genericContract.address,
         state: event,
       ));
     });
 
     genericContract.onTransactionsFoundRawStream.listen((event) {
-      providerTransactionsFoundSubject.add(TransactionsFoundEvent(
+      transactionsFoundSubject.add(TransactionsFoundEvent(
         address: genericContract.address,
         transactions: event.item1,
         info: event.item2,

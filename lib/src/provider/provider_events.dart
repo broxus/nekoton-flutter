@@ -6,26 +6,26 @@ import 'models/network_changed_event.dart';
 import 'models/permissions_changed_event.dart';
 import 'models/transactions_found_event.dart';
 
-final providerDisconnectedSubject = PublishSubject<provider_error.Error>();
+final disconnectedSubject = PublishSubject<provider_error.Error>();
 
-final providerDisconnectedStream = providerDisconnectedSubject.stream;
+final disconnectedStream = disconnectedSubject.stream;
 
-final providerTransactionsFoundSubject = PublishSubject<TransactionsFoundEvent>();
+final transactionsFoundSubject = PublishSubject<TransactionsFoundEvent>();
 
-final providerTransactionsFoundStream = providerTransactionsFoundSubject.stream;
+final transactionsFoundStream = transactionsFoundSubject.stream;
 
-final providerContractStateChangedSubject = PublishSubject<ContractStateChangedEvent>();
+final contractStateChangedSubject = PublishSubject<ContractStateChangedEvent>();
 
-final providerContractStateChangedStream = providerContractStateChangedSubject.stream;
+final contractStateChangedStream = contractStateChangedSubject.stream;
 
-final providerNetworkChangedSubject = PublishSubject<NetworkChangedEvent>();
+final networkChangedSubject = PublishSubject<NetworkChangedEvent>();
 
-final providerNetworkChangedStream = providerNetworkChangedSubject.stream;
+final networkChangedStream = networkChangedSubject.stream;
 
-final providerPermissionsChangedSubject = PublishSubject<PermissionsChangedEvent>();
+final permissionsChangedSubject = PublishSubject<PermissionsChangedEvent>();
 
-final providerPermissionsChangedStream = providerPermissionsChangedSubject.stream;
+final permissionsChangedStream = permissionsChangedSubject.stream;
 
-final providerLoggedOutSubject = PublishSubject<Object>();
+final loggedOutSubject = PublishSubject<Object>();
 
-final providerLoggedOutStream = providerLoggedOutSubject.stream;
+final loggedOutStream = loggedOutSubject.stream;

@@ -38,7 +38,7 @@ class PermissionsController {
       permissions: requested,
     );
 
-    providerPermissionsChangedSubject.add(PermissionsChangedEvent(permissions: requested));
+    permissionsChangedSubject.add(PermissionsChangedEvent(permissions: requested));
 
     return requested;
   }
@@ -46,7 +46,7 @@ class PermissionsController {
   Future<void> removeOrigin(String origin) async {
     await _preferences.deletePermissions(origin);
 
-    providerPermissionsChangedSubject.add(const PermissionsChangedEvent(permissions: Permissions()));
+    permissionsChangedSubject.add(const PermissionsChangedEvent(permissions: Permissions()));
   }
 
   Future<Permissions> getPermissions(String origin) async => _preferences.getPermissions(origin);

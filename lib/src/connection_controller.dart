@@ -100,7 +100,7 @@ class ConnectionController {
       ),
     )
         .listen((event) {
-      providerNetworkChangedSubject.add(NetworkChangedEvent(selectedConnection: event));
+      networkChangedSubject.add(NetworkChangedEvent(selectedConnection: event));
     });
   }
 }

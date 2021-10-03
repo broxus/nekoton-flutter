@@ -146,7 +146,7 @@ class KeystoreController {
         .distinct()
         .listen((event) {
       if (!event) {
-        providerLoggedOutSubject.add(Object());
+        loggedOutSubject.add(Object());
       }
     });
   }
