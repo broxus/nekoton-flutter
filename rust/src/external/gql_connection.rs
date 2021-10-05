@@ -50,6 +50,10 @@ pub struct GqlConnectionImpl {
 
 #[async_trait]
 impl GqlConnection for GqlConnectionImpl {
+    fn is_local(&self) -> bool {
+        false
+    }
+
     async fn post(&self, data: &str) -> Result<String> {
         let data = data.to_owned();
 
