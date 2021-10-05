@@ -17,9 +17,9 @@ export const notificationEmitter = new NotificationEmitter()
  * Provider Events
  */
 
-const disconnected = async (event: any) => notificationEmitter.emit('disconnected', event);
-const transactionsFound = async (event: any) => notificationEmitter.emit('transactionsFound', event);
-const contractStateChanged = async (event: any) => notificationEmitter.emit('contractStateChanged', event);
-const networkChanged = async (event: any) => notificationEmitter.emit('networkChanged', event);
-const permissionsChanged = async (event: any) => notificationEmitter.emit('permissionsChanged', event);
-const loggedOut = async () => notificationEmitter.emit('loggedOut', undefined);
+const disconnected = async (event: any) => notificationEmitter.emit('disconnected', JSON.parse(event));
+const transactionsFound = async (event: any) => notificationEmitter.emit('transactionsFound', JSON.parse(event));
+const contractStateChanged = async (event: any) => notificationEmitter.emit('contractStateChanged', JSON.parse(event));
+const networkChanged = async (event: any) => notificationEmitter.emit('networkChanged', JSON.parse(event));
+const permissionsChanged = async (event: any) => notificationEmitter.emit('permissionsChanged', JSON.parse(event));
+const loggedOut = async () => notificationEmitter.emit('loggedOut', {});
