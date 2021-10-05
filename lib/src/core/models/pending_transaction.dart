@@ -6,7 +6,7 @@ part 'pending_transaction.g.dart';
 
 @freezed
 class PendingTransaction with _$PendingTransaction {
-  @JsonSerializable(fieldRename: FieldRename.snake)
+  @JsonSerializable()
   const factory PendingTransaction({
     required String messageHash,
     required String bodyHash,
