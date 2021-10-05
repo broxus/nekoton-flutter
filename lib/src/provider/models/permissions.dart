@@ -9,7 +9,9 @@ part 'permissions.g.dart';
 class Permissions with _$Permissions {
   @JsonSerializable(explicitToJson: true)
   const factory Permissions({
+    @JsonKey(includeIfNull: false)
     bool? tonClient,
+    @JsonKey(includeIfNull: false)
     AccountInteraction? accountInteraction,
   }) = _Permissions;
 

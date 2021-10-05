@@ -159,8 +159,8 @@ class NekotonInpageProvider extends SafeEventEmitter {
         payload: UnvalidatedJsonRpcRequest,
         callback: (...args: any[]) => void
     ) => {
-        requestDart(payload.method, payload.params).then((result: unknown) => {
-            callback(null, { result } as JsonRpcSuccess<unknown>)
+        requestDart(payload.method, payload.params).then((result: string) => {
+            callback(null, { result: JSON.parse(result) } as JsonRpcSuccess<unknown>)
         }).catch((e: Error) => {
             callback(e)
         });
