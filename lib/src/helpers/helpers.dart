@@ -361,14 +361,19 @@ List<DecodedTransactionEvent> decodeTransactionEvents({
   return decodedTransactionEvents;
 }
 
-KnownPayload parseKnownPayload(String payload) {
+KnownPayload? parseKnownPayload(String payload) {
   final nativeLibrary = NativeLibrary.instance();
   final result = proceedSync(() => nativeLibrary.bindings.parse_known_payload(
         payload.toNativeUtf8().cast<Int8>(),
       ));
 
   final string = cStringToDart(result);
-  final json = jsonDecode(string) as Map<String, dynamic>;
+  final json = jsonDecode(string) as Map<String, dynamic>?;
+
+  if (json == null) {
+    return null;
+  }
+
   final knownPayload = KnownPayload.fromJson(json);
 
   return knownPayload;

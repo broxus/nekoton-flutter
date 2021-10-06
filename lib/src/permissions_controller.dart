@@ -28,15 +28,24 @@ class PermissionsController {
     required String origin,
     required List<Permission> permissions,
   }) async {
-    final requested = await _approvalController.requestApprovalForPermissions(
-      origin: origin,
-      permissions: permissions,
-    );
+    late Permissions requested;
 
-    await _preferences.setPermissions(
-      origin: origin,
-      permissions: requested,
-    );
+    try {
+      requested = await checkPermissions(
+        origin: origin,
+        requiredPermissions: permissions,
+      );
+    } catch (_) {
+      requested = await _approvalController.requestApprovalForPermissions(
+        origin: origin,
+        permissions: permissions,
+      );
+
+      await _preferences.setPermissions(
+        origin: origin,
+        permissions: requested,
+      );
+    }
 
     permissionsChangedSubject.add(PermissionsChangedEvent(permissions: requested));
 
@@ -51,7 +60,7 @@ class PermissionsController {
 
   Future<Permissions> getPermissions(String origin) async => _preferences.getPermissions(origin);
 
-  Future<void> checkPermissions({
+  Future<Permissions> checkPermissions({
     required String origin,
     required List<Permission> requiredPermissions,
   }) async {
@@ -71,6 +80,8 @@ class PermissionsController {
           break;
       }
     }
+
+    return permissions;
   }
 
   Future<void> _initialize() async {
