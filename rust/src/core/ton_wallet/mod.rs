@@ -27,10 +27,10 @@ use nekoton::{
     crypto::{DerivedKeySigner, EncryptedKeySigner},
     transport::{gql::GqlTransport, models::RawContractState, Transport},
 };
-use nekoton_abi::{create_comment_payload, TransactionId};
+use nekoton_abi::{create_boc_payload, create_comment_payload, TransactionId};
 use std::{
     ffi::c_void,
-    os::raw::{c_char, c_longlong, c_schar, c_uchar, c_ulonglong},
+    os::raw::{c_char, c_longlong, c_schar, c_uchar, c_uint, c_ulonglong},
     sync::Arc,
 };
 use tokio::sync::Mutex;
@@ -754,6 +754,7 @@ pub unsafe extern "C" fn ton_wallet_prepare_transfer(
     destination: *mut c_char,
     amount: c_ulonglong,
     body: *mut c_char,
+    is_comment: c_uint,
 ) {
     let ton_wallet = ton_wallet as *mut MutexTonWallet;
     let ton_wallet = &(*ton_wallet);
@@ -761,6 +762,7 @@ pub unsafe extern "C" fn ton_wallet_prepare_transfer(
     let transport = transport as *mut MutexGqlTransport;
     let transport = &(*transport);
 
+    let is_comment = is_comment != 0;
     let expiration = expiration.from_ptr();
     let destination = destination.from_ptr();
     let body = if !body.is_null() {
@@ -789,7 +791,8 @@ pub unsafe extern "C" fn ton_wallet_prepare_transfer(
         let transport = transport.clone();
 
         let result =
-            internal_ton_wallet_prepare_transfer_params(expiration, destination, body).await;
+            internal_ton_wallet_prepare_transfer_params(expiration, destination, body, is_comment)
+                .await;
         let (expiration, destination, body) = match result {
             Ok((expiration, destination, body)) => (expiration, destination, body),
             Err(error) => {
@@ -821,6 +824,7 @@ pub async fn internal_ton_wallet_prepare_transfer_params(
     expiration: String,
     destination: String,
     body: Option<String>,
+    is_comment: bool,
 ) -> Result<
     (
         nekoton::core::models::Expiration,
@@ -834,8 +838,12 @@ pub async fn internal_ton_wallet_prepare_transfer_params(
     let expiration = expiration.to_core();
     let destination = parse_address(&destination)?;
     let body = match body {
-        Some(comment) => {
-            let body = create_comment_payload(&comment).handle_error(NativeStatus::AbiError)?;
+        Some(body) => {
+            let body = if is_comment {
+                create_comment_payload(&body).handle_error(NativeStatus::AbiError)?
+            } else {
+                create_boc_payload(&body).handle_error(NativeStatus::AbiError)?
+            };
             Some(body)
         }
         None => None,

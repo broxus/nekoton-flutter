@@ -7,6 +7,7 @@ import 'package:collection/collection.dart';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:tuple/tuple.dart';
 
 import '../../core/keystore/keystore.dart';
 import '../../ffi_utils.dart';
@@ -233,6 +234,7 @@ class TonWallet implements Comparable<TonWallet> {
     required String destination,
     required int amount,
     String? body,
+    bool isComment = true,
   }) async {
     final expirationStr = jsonEncode(expiration);
 
@@ -244,6 +246,7 @@ class TonWallet implements Comparable<TonWallet> {
           destination.toNativeUtf8().cast<Int8>(),
           amount,
           body?.toNativeUtf8().cast<Int8>() ?? Pointer.fromAddress(0).cast<Int8>(),
+          isComment ? 1 : 0,
         ));
 
     final ptr = Pointer.fromAddress(result).cast<Void>();
@@ -380,6 +383,40 @@ class TonWallet implements Comparable<TonWallet> {
           nativeTonWallet.ptr!,
           fromStr.toNativeUtf8().cast<Int8>(),
         ));
+  }
+
+  Future<Transaction> waitForTransaction(PendingTransaction pendingTransaction) async {
+    final completer = Completer<Transaction>();
+
+    _onMessageSentSubject.firstWhere((e) => e.keys.contains(pendingTransaction)).then((value) async {
+      final transaction = value[pendingTransaction]!;
+
+      final tuple =
+          await Rx.combineLatest2<List<Transaction>, List<Transaction>, Tuple2<List<Transaction>, List<Transaction>>>(
+        _onTransactionsFoundSubject.map((e) => e.map((e) => e.transaction).toList()),
+        _onMessageExpiredSubject,
+        (a, b) => Tuple2(a, b),
+      ).firstWhere((e) => e.item1.contains(transaction) || e.item2.contains(transaction)).timeout(
+        const Duration(seconds: 60),
+        onTimeout: () {
+          completer.completeError(Exception('Transaction timeout'));
+          throw Exception();
+        },
+      );
+
+      if (tuple.item1.contains(transaction)) {
+        completer.complete(transaction);
+      } else {
+        completer.completeError(Exception('Transaction not found'));
+      }
+    }).timeout(
+      const Duration(seconds: 60),
+      onTimeout: () {
+        completer.completeError(Exception('Transaction timeout'));
+      },
+    );
+
+    return completer.future;
   }
 
   Future<void> _handleBlock(String id) async => proceedAsync((port) => _nativeLibrary.bindings.ton_wallet_handle_block(

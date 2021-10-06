@@ -517,6 +517,7 @@ Future<EstimateFeesOutput> estimateFees({
     destination: repackedRecipient,
     amount: int.parse(input.amount),
     body: body,
+    isComment: false,
   );
 
   final fees = await tonWallet.estimateFees(unsignedMessage);
@@ -578,6 +579,7 @@ Future<SendMessageOutput> sendMessage({
     destination: repackedRecipient,
     amount: int.parse(input.amount),
     body: body,
+    isComment: false,
   );
 
   final pendingTransaction = await tonWallet.send(
@@ -585,11 +587,7 @@ Future<SendMessageOutput> sendMessage({
     password: password,
   );
 
-  final transaction = await tonWallet.onTransactionsFoundStream
-      .expand((e) => e)
-      .map((e) => e.transaction)
-      .firstWhere((e) => e.id.hash == pendingTransaction.bodyHash)
-      .timeout(const Duration(seconds: 60));
+  final transaction = await tonWallet.waitForTransaction(pendingTransaction);
 
   return SendMessageOutput(
     transaction: transaction,
@@ -656,10 +654,7 @@ Future<SendExternalMessageOutput> sendExternalMessage({
       password: password,
     );
 
-    transaction = await genericContract.onTransactionsFoundStream
-        .expand((e) => e)
-        .firstWhere((e) => e.id.hash == pendingTransaction.bodyHash)
-        .timeout(const Duration(seconds: 60));
+    transaction = await genericContract.waitForTransaction(pendingTransaction);
   }
 
   TokensObject output;

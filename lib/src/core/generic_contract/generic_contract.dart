@@ -214,6 +214,40 @@ class GenericContract {
     return pollingMethod;
   }
 
+  Future<Transaction> waitForTransaction(PendingTransaction pendingTransaction) async {
+    final completer = Completer<Transaction>();
+
+    _onMessageSentSubject.firstWhere((e) => e.keys.contains(pendingTransaction)).then((value) async {
+      final transaction = value[pendingTransaction]!;
+
+      final tuple =
+          await Rx.combineLatest2<List<Transaction>, List<Transaction>, Tuple2<List<Transaction>, List<Transaction>>>(
+        _onTransactionsFoundSubject,
+        _onMessageExpiredSubject,
+        (a, b) => Tuple2(a, b),
+      ).firstWhere((e) => e.item1.contains(transaction) || e.item2.contains(transaction)).timeout(
+        const Duration(seconds: 60),
+        onTimeout: () {
+          completer.completeError(Exception('Transaction timeout'));
+          throw Exception();
+        },
+      );
+
+      if (tuple.item1.contains(transaction)) {
+        completer.complete(transaction);
+      } else {
+        completer.completeError(Exception('Transaction not found'));
+      }
+    }).timeout(
+      const Duration(seconds: 60),
+      onTimeout: () {
+        completer.completeError(Exception('Transaction timeout'));
+      },
+    );
+
+    return completer.future;
+  }
+
   Future<void> _handleBlock(String id) async =>
       proceedAsync((port) => _nativeLibrary.bindings.generic_contract_handle_block(
             port,
