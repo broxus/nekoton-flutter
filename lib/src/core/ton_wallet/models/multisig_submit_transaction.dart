@@ -6,7 +6,7 @@ part 'multisig_submit_transaction.g.dart';
 
 @freezed
 class MultisigSubmitTransaction with _$MultisigSubmitTransaction {
-  @JsonSerializable(fieldRename: FieldRename.snake)
+  @JsonSerializable()
   const factory MultisigSubmitTransaction({
     required String custodian,
     required String dest,

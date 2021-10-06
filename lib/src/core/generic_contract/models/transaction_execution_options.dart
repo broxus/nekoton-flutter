@@ -6,7 +6,7 @@ part 'transaction_execution_options.g.dart';
 
 @freezed
 class TransactionExecutionOptions with _$TransactionExecutionOptions {
-  @JsonSerializable(fieldRename: FieldRename.snake)
+  @JsonSerializable()
   const factory TransactionExecutionOptions({
     required bool disableSignatureCheck,
   }) = _TransactionExecutionOptions;
