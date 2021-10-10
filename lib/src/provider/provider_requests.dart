@@ -58,28 +58,32 @@ import 'models/unpack_from_cell_output.dart';
 import 'models/unsubscribe_input.dart';
 
 Future<RequestPermissionsOutput> requestPermissions({
-  required Nekoton instance,
   required String origin,
   required RequestPermissionsInput input,
-}) async =>
-    instance.permissionsController.requestPermissions(
-      origin: origin,
-      permissions: input.permissions,
-    );
+}) async {
+  final instance = await Nekoton.getInstance();
+
+  return instance.permissionsController.requestPermissions(
+    origin: origin,
+    permissions: input.permissions,
+  );
+}
 
 Future<void> disconnect({
-  required Nekoton instance,
   required String origin,
 }) async {
+  final instance = await Nekoton.getInstance();
+
   await instance.permissionsController.removeOrigin(origin);
   instance.subscriptionsController.removeOriginGenericContractSubscriptions(origin);
 }
 
 Future<SubscribeOutput> subscribe({
-  required Nekoton instance,
   required String origin,
   required SubscribeInput input,
 }) async {
+  final instance = await Nekoton.getInstance();
+
   await instance.permissionsController.checkPermissions(
     origin: origin,
     requiredPermissions: [Permission.tonClient],
@@ -100,11 +104,12 @@ Future<SubscribeOutput> subscribe({
   );
 }
 
-void unsubscribe({
-  required Nekoton instance,
+Future<void> unsubscribe({
   required String origin,
   required UnsubscribeInput input,
-}) {
+}) async {
+  final instance = await Nekoton.getInstance();
+
   if (!helpers.validateAddress(input.address)) {
     throw InvalidAddressException();
   }
@@ -115,16 +120,19 @@ void unsubscribe({
   );
 }
 
-void unsubscribeAll({
-  required Nekoton instance,
-  required String origin,
-}) =>
-    instance.subscriptionsController.clearGenericContractsSubscriptions();
-
-Future<GetProviderStateOutput> getProviderState({
-  required Nekoton instance,
+Future<void> unsubscribeAll({
   required String origin,
 }) async {
+  final instance = await Nekoton.getInstance();
+
+  return instance.subscriptionsController.clearGenericContractsSubscriptions();
+}
+
+Future<GetProviderStateOutput> getProviderState({
+  required String origin,
+}) async {
+  final instance = await Nekoton.getInstance();
+
   instance.subscriptionsController.clearGenericContractsSubscriptions();
 
   const version = kProviderVersion;
@@ -143,10 +151,11 @@ Future<GetProviderStateOutput> getProviderState({
 }
 
 Future<GetFullContractStateOutput> getFullContractState({
-  required Nekoton instance,
   required String origin,
   required GetFullContractStateInput input,
 }) async {
+  final instance = await Nekoton.getInstance();
+
   await instance.permissionsController.checkPermissions(
     origin: origin,
     requiredPermissions: [Permission.tonClient],
@@ -160,10 +169,11 @@ Future<GetFullContractStateOutput> getFullContractState({
 }
 
 Future<GetTransactionsOutput> getTransactions({
-  required Nekoton instance,
   required String origin,
   required GetTransactionsInput input,
 }) async {
+  final instance = await Nekoton.getInstance();
+
   await instance.permissionsController.checkPermissions(
     origin: origin,
     requiredPermissions: [Permission.tonClient],
@@ -179,10 +189,11 @@ Future<GetTransactionsOutput> getTransactions({
 }
 
 Future<RunLocalOutput> runLocal({
-  required Nekoton instance,
   required String origin,
   required RunLocalInput input,
 }) async {
+  final instance = await Nekoton.getInstance();
+
   await instance.permissionsController.checkPermissions(
     origin: origin,
     requiredPermissions: [Permission.tonClient],
@@ -218,10 +229,11 @@ Future<RunLocalOutput> runLocal({
 }
 
 Future<GetExpectedAddressOutput> getExpectedAddress({
-  required Nekoton instance,
   required String origin,
   required GetExpectedAddressInput input,
 }) async {
+  final instance = await Nekoton.getInstance();
+
   await instance.permissionsController.checkPermissions(
     origin: origin,
     requiredPermissions: [Permission.tonClient],
@@ -241,10 +253,11 @@ Future<GetExpectedAddressOutput> getExpectedAddress({
 }
 
 Future<PackIntoCellOutput> packIntoCell({
-  required Nekoton instance,
   required String origin,
   required PackIntoCellInput input,
 }) async {
+  final instance = await Nekoton.getInstance();
+
   await instance.permissionsController.checkPermissions(
     origin: origin,
     requiredPermissions: [Permission.tonClient],
@@ -261,10 +274,11 @@ Future<PackIntoCellOutput> packIntoCell({
 }
 
 Future<UnpackFromCellOutput> unpackFromCell({
-  required Nekoton instance,
   required String origin,
   required UnpackFromCellInput input,
 }) async {
+  final instance = await Nekoton.getInstance();
+
   await instance.permissionsController.checkPermissions(
     origin: origin,
     requiredPermissions: [Permission.tonClient],
@@ -282,10 +296,11 @@ Future<UnpackFromCellOutput> unpackFromCell({
 }
 
 Future<ExtractPublicKeyOutput> extractPublicKey({
-  required Nekoton instance,
   required String origin,
   required ExtractPublicKeyInput input,
 }) async {
+  final instance = await Nekoton.getInstance();
+
   await instance.permissionsController.checkPermissions(
     origin: origin,
     requiredPermissions: [Permission.tonClient],
@@ -299,10 +314,11 @@ Future<ExtractPublicKeyOutput> extractPublicKey({
 }
 
 Future<CodeToTvcOutput> codeToTvc({
-  required Nekoton instance,
   required String origin,
   required CodeToTvcInput input,
 }) async {
+  final instance = await Nekoton.getInstance();
+
   await instance.permissionsController.checkPermissions(
     origin: origin,
     requiredPermissions: [Permission.tonClient],
@@ -316,10 +332,11 @@ Future<CodeToTvcOutput> codeToTvc({
 }
 
 Future<SplitTvcOutput> splitTvc({
-  required Nekoton instance,
   required String origin,
   required SplitTvcInput input,
 }) async {
+  final instance = await Nekoton.getInstance();
+
   await instance.permissionsController.checkPermissions(
     origin: origin,
     requiredPermissions: [Permission.tonClient],
@@ -334,10 +351,11 @@ Future<SplitTvcOutput> splitTvc({
 }
 
 Future<EncodeInternalInputOutput> encodeInternalInput({
-  required Nekoton instance,
   required String origin,
   required EncodeInternalInputInput input,
 }) async {
+  final instance = await Nekoton.getInstance();
+
   await instance.permissionsController.checkPermissions(
     origin: origin,
     requiredPermissions: [Permission.tonClient],
@@ -355,10 +373,11 @@ Future<EncodeInternalInputOutput> encodeInternalInput({
 }
 
 Future<DecodeInputOutput?> decodeInput({
-  required Nekoton instance,
   required String origin,
   required DecodeInputInput input,
 }) async {
+  final instance = await Nekoton.getInstance();
+
   await instance.permissionsController.checkPermissions(
     origin: origin,
     requiredPermissions: [Permission.tonClient],
@@ -380,10 +399,11 @@ Future<DecodeInputOutput?> decodeInput({
 }
 
 Future<DecodeOutputOutput?> decodeOutput({
-  required Nekoton instance,
   required String origin,
   required DecodeOutputInput input,
 }) async {
+  final instance = await Nekoton.getInstance();
+
   await instance.permissionsController.checkPermissions(
     origin: origin,
     requiredPermissions: [Permission.tonClient],
@@ -404,10 +424,11 @@ Future<DecodeOutputOutput?> decodeOutput({
 }
 
 Future<DecodeEventOutput?> decodeEvent({
-  required Nekoton instance,
   required String origin,
   required DecodeEventInput input,
 }) async {
+  final instance = await Nekoton.getInstance();
+
   await instance.permissionsController.checkPermissions(
     origin: origin,
     requiredPermissions: [Permission.tonClient],
@@ -428,10 +449,11 @@ Future<DecodeEventOutput?> decodeEvent({
 }
 
 Future<DecodeTransactionOutput?> decodeTransaction({
-  required Nekoton instance,
   required String origin,
   required DecodeTransactionInput input,
 }) async {
+  final instance = await Nekoton.getInstance();
+
   await instance.permissionsController.checkPermissions(
     origin: origin,
     requiredPermissions: [Permission.tonClient],
@@ -453,10 +475,11 @@ Future<DecodeTransactionOutput?> decodeTransaction({
 }
 
 Future<DecodeTransactionEventsOutput> decodeTransactionEvents({
-  required Nekoton instance,
   required String origin,
   required DecodeTransactionEventsInput input,
 }) async {
+  final instance = await Nekoton.getInstance();
+
   await instance.permissionsController.checkPermissions(
     origin: origin,
     requiredPermissions: [Permission.tonClient],
@@ -478,10 +501,11 @@ Future<DecodeTransactionEventsOutput> decodeTransactionEvents({
 }
 
 Future<EstimateFeesOutput> estimateFees({
-  required Nekoton instance,
   required String origin,
   required EstimateFeesInput input,
 }) async {
+  final instance = await Nekoton.getInstance();
+
   await instance.permissionsController.checkPermissions(
     origin: origin,
     requiredPermissions: [Permission.accountInteraction],
@@ -528,10 +552,11 @@ Future<EstimateFeesOutput> estimateFees({
 }
 
 Future<SendMessageOutput> sendMessage({
-  required Nekoton instance,
   required String origin,
   required SendMessageInput input,
 }) async {
+  final instance = await Nekoton.getInstance();
+
   await instance.permissionsController.checkPermissions(
     origin: origin,
     requiredPermissions: [Permission.accountInteraction],
@@ -595,10 +620,11 @@ Future<SendMessageOutput> sendMessage({
 }
 
 Future<SendExternalMessageOutput> sendExternalMessage({
-  required Nekoton instance,
   required String origin,
   required SendExternalMessageInput input,
 }) async {
+  final instance = await Nekoton.getInstance();
+
   await instance.permissionsController.checkPermissions(
     origin: origin,
     requiredPermissions: [Permission.accountInteraction],
