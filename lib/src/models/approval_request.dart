@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:freezed_annotation/freezed_annotation.dart';
+
 import '../core/ton_wallet/models/known_payload.dart';
 import '../provider/models/function_call.dart';
-
 import '../provider/models/permission.dart';
 import '../provider/models/permissions.dart';
 

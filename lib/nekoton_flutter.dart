@@ -132,7 +132,6 @@ export 'src/provider/models/encode_internal_input_output.dart';
 export 'src/provider/models/error.dart';
 export 'src/provider/models/estimate_fees_input.dart';
 export 'src/provider/models/estimate_fees_output.dart';
-export 'src/provider/models/event.dart';
 export 'src/provider/models/extract_public_key_input.dart';
 export 'src/provider/models/extract_public_key_output.dart';
 export 'src/provider/models/full_contract_state.dart';

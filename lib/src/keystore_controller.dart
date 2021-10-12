@@ -131,7 +131,7 @@ class KeystoreController {
       ...entries..sort(),
     ]);
 
-    final currentPublicKey = await _preferences.currentPublicKey;
+    final currentPublicKey = _preferences.getCurrentPublicKey();
 
     final key = keys.firstWhereOrNull((e) => e.publicKey == currentPublicKey);
 

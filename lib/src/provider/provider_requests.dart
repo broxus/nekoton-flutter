@@ -26,7 +26,6 @@ import 'models/encode_internal_input_input.dart';
 import 'models/encode_internal_input_output.dart';
 import 'models/estimate_fees_input.dart';
 import 'models/estimate_fees_output.dart';
-import 'models/event.dart';
 import 'models/extract_public_key_input.dart';
 import 'models/extract_public_key_output.dart';
 import 'models/full_contract_state.dart';
@@ -138,7 +137,7 @@ Future<GetProviderStateOutput> getProviderState({
   const version = kProviderVersion;
   final numericVersion = kProviderVersion.toInt();
   final selectedConnection = instance.connectionController.transport.connectionData.name;
-  final permissions = await instance.permissionsController.getPermissions(origin);
+  final permissions = instance.permissionsController.getPermissions(origin);
   final subscriptions = instance.subscriptionsController.getOriginSubscriptions(origin);
 
   return GetProviderStateOutput(
@@ -213,18 +212,13 @@ Future<RunLocalOutput> runLocal({
     throw Exception("Account is not deployed");
   }
 
-  final result = helpers.runLocal(
+  return helpers.runLocal(
     genTimings: contractState.genTimings,
     lastTransactionId: contractState.lastTransactionId!,
     accountStuffBoc: contractState.boc,
     contractAbi: input.functionCall.abi,
     method: input.functionCall.method,
     input: input.functionCall.params,
-  );
-
-  return RunLocalOutput(
-    output: result.output,
-    code: result.code,
   );
 }
 
@@ -342,12 +336,7 @@ Future<SplitTvcOutput> splitTvc({
     requiredPermissions: [Permission.tonClient],
   );
 
-  final result = helpers.splitTvc(input.tvc);
-
-  return SplitTvcOutput(
-    data: result.data,
-    code: result.code,
-  );
+  return helpers.splitTvc(input.tvc);
 }
 
 Future<EncodeInternalInputOutput> encodeInternalInput({
@@ -383,19 +372,12 @@ Future<DecodeInputOutput?> decodeInput({
     requiredPermissions: [Permission.tonClient],
   );
 
-  final result = helpers.decodeInput(
+  return helpers.decodeInput(
     messageBody: input.body,
     contractAbi: input.abi,
     method: input.method,
     internal: input.internal,
   );
-
-  return result != null
-      ? DecodeInputOutput(
-          method: result.method,
-          input: result.input,
-        )
-      : null;
 }
 
 Future<DecodeOutputOutput?> decodeOutput({
@@ -409,18 +391,11 @@ Future<DecodeOutputOutput?> decodeOutput({
     requiredPermissions: [Permission.tonClient],
   );
 
-  final result = helpers.decodeOutput(
+  return helpers.decodeOutput(
     messageBody: input.body,
     contractAbi: input.abi,
     method: input.method,
   );
-
-  return result != null
-      ? DecodeOutputOutput(
-          method: result.method,
-          output: result.output,
-        )
-      : null;
 }
 
 Future<DecodeEventOutput?> decodeEvent({
@@ -434,18 +409,11 @@ Future<DecodeEventOutput?> decodeEvent({
     requiredPermissions: [Permission.tonClient],
   );
 
-  final result = helpers.decodeEvent(
+  return helpers.decodeEvent(
     messageBody: input.body,
     contractAbi: input.abi,
     event: input.event,
   );
-
-  return result != null
-      ? DecodeEventOutput(
-          event: result.event,
-          data: result.data,
-        )
-      : null;
 }
 
 Future<DecodeTransactionOutput?> decodeTransaction({
@@ -459,19 +427,11 @@ Future<DecodeTransactionOutput?> decodeTransaction({
     requiredPermissions: [Permission.tonClient],
   );
 
-  final result = helpers.decodeTransaction(
+  return helpers.decodeTransaction(
     transaction: input.transaction,
     contractAbi: input.abi,
     method: input.method,
   );
-
-  return result != null
-      ? DecodeTransactionOutput(
-          method: result.method,
-          input: result.input,
-          output: result.output,
-        )
-      : null;
 }
 
 Future<DecodeTransactionEventsOutput> decodeTransactionEvents({
@@ -491,12 +451,7 @@ Future<DecodeTransactionEventsOutput> decodeTransactionEvents({
   );
 
   return DecodeTransactionEventsOutput(
-    events: events
-        .map((e) => Event(
-              event: e.event,
-              data: e.data,
-            ))
-        .toList(),
+    events: events,
   );
 }
 
@@ -511,7 +466,7 @@ Future<EstimateFeesOutput> estimateFees({
     requiredPermissions: [Permission.accountInteraction],
   );
 
-  final permissions = await instance.permissionsController.getPermissions(origin);
+  final permissions = instance.permissionsController.getPermissions(origin);
   final allowedAccount = permissions.accountInteraction;
 
   if (allowedAccount?.address != input.sender) {
@@ -562,7 +517,7 @@ Future<SendMessageOutput> sendMessage({
     requiredPermissions: [Permission.accountInteraction],
   );
 
-  final permissions = await instance.permissionsController.getPermissions(origin);
+  final permissions = instance.permissionsController.getPermissions(origin);
   final allowedAccount = permissions.accountInteraction;
 
   if (allowedAccount?.address != input.sender) {
@@ -630,7 +585,7 @@ Future<SendExternalMessageOutput> sendExternalMessage({
     requiredPermissions: [Permission.accountInteraction],
   );
 
-  final permissions = await instance.permissionsController.getPermissions(origin);
+  final permissions = instance.permissionsController.getPermissions(origin);
   final allowedAccount = permissions.accountInteraction;
 
   if (allowedAccount?.publicKey != input.publicKey) {

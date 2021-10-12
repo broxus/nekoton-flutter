@@ -58,13 +58,13 @@ class PermissionsController {
     permissionsChangedSubject.add(const PermissionsChangedEvent(permissions: Permissions()));
   }
 
-  Future<Permissions> getPermissions(String origin) async => _preferences.getPermissions(origin);
+  Permissions getPermissions(String origin) => _preferences.getPermissions(origin);
 
   Future<Permissions> checkPermissions({
     required String origin,
     required List<Permission> requiredPermissions,
   }) async {
-    final permissions = await getPermissions(origin);
+    final permissions = getPermissions(origin);
 
     for (final requiredPermission in requiredPermissions) {
       switch (requiredPermission) {
