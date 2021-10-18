@@ -10,7 +10,9 @@ Flutter plugin for TON wallets core
 2. Install LLVM by running  
    `brew install llvm`
 
-3. Add package to `pubspec.yaml` and run `flutter pub get` to load dependencies
+3. Install NodeJS from official website or by running `brew install node`
 
-4. Run build on package with following command  
+4. Add package to `pubspec.yaml` and run `flutter pub get` to load dependencies
+
+5. Run build on package with following command  
    `flutter pub run nekoton_flutter:build /Your/Path/To/Android/NDK`
