@@ -35,6 +35,30 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         free_accounts_storage(nil);
 
+        generic_contract_subscribe(0, 0, nil, nil);
+
+        get_generic_contract_address(0, nil);
+
+        get_generic_contract_contract_state(0, nil);
+
+        get_generic_contract_pending_transactions(0, nil);
+
+        get_generic_contract_polling_method(0, nil);
+
+        generic_contract_send(0, nil, nil, nil, nil);
+
+        generic_contract_refresh(0, nil);
+
+        generic_contract_handle_block(0, nil, nil, nil);
+
+        generic_contract_preload_transactions(0, nil, nil);
+
+        generic_contract_estimate_fees(0, nil, nil);
+
+        generic_contract_execute_transaction_locally(0, nil, nil, nil, nil, nil);
+
+        free_generic_contract(nil);
+
         get_keystore(0, nil);
 
         get_entries(0, nil);
@@ -109,7 +133,7 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         ton_wallet_prepare_deploy_with_multiple_owners(0, nil, nil, nil, 0);
 
-        ton_wallet_prepare_transfer(0, nil, nil, nil, nil, 0, nil);
+        ton_wallet_prepare_transfer(0, nil, nil, nil, nil, 0, nil, 0);
 
         ton_wallet_prepare_confirm_transaction(0, nil, nil, 0, nil);
 
@@ -139,6 +163,10 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         get_depool_info(0, nil, nil);
 
+        get_adnl_connection(0, nil);
+
+        free_adnl_connection(nil);
+
         get_gql_connection(0);
 
         free_gql_connection(nil);
@@ -160,6 +188,44 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
         repack_address(nil);
 
         parse_message_body_data(nil);
+
+        run_local(nil, nil, nil, nil, nil, nil);
+
+        get_expected_address(nil, nil, 0, nil, nil);
+
+        pack_into_cell(nil, nil);
+
+        unpack_from_cell(nil, nil, 0);
+
+        extract_public_key(nil);
+
+        code_to_tvc(nil);
+
+        split_tvc(nil);
+
+        encode_internal_input(nil, nil, nil);
+
+        decode_input(nil, nil, nil, 0);
+
+        decode_output(nil, nil, nil);
+
+        decode_event(nil, nil, nil);
+
+        decode_transaction(nil, nil, nil);
+
+        decode_transaction_events(nil, nil);
+
+        parse_known_payload(nil);
+
+        create_external_message(nil, nil, nil, nil, nil, nil, 0);
+
+        get_full_account_state(0, nil, nil);
+
+        get_transactions(0, nil, nil, nil, 0);
+
+        get_adnl_transport(0, nil);
+
+        free_adnl_transport(nil);
 
         get_gql_transport(0, nil);
 

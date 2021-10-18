@@ -1,3 +1,7 @@
 ## 0.1.0
 
-* Initial release
+- Initial release
+
+## 0.2.0
+
+- TON Inpage Provider functionality added

@@ -2,7 +2,7 @@
 authors = ["Vadim Ledyaev <vl@pmobi.tech>"]
 edition = "2018"
 name = "nekoton-flutter"
-version = "0.1.0"
+version = "0.2.0"
 
 [lib]
 crate-type = ["staticlib", "cdylib"]
@@ -18,7 +18,6 @@ dyn-clone = "1.0"
 ed25519-dalek = {git = "https://github.com/broxus/ed25519-dalek.git"}
 futures = "0.3"
 hex = "0.4"
-js-sys = "0.3"
 lazy_static = "1.4"
 log = "0.4"
 nekoton = {git = "https://github.com/broxus/nekoton.git", features = ["gql_transport", "adnl_transport"]}
@@ -39,6 +38,3 @@ ton_abi = {git = "https://github.com/broxus/ton-labs-abi.git"}
 ton_api = {git = "https://github.com/broxus/ton-labs-tl.git", package = "ton_api"}
 ton_block = {git = "https://github.com/broxus/ton-labs-block.git"}
 ton_types = {git = "https://github.com/broxus/ton-labs-types.git"}
-wasm-bindgen = {version = "=0.2.74", features = ["serde-serialize"]}
-wasm-bindgen-futures = "0.4"
-wasm-logger = "0.2"

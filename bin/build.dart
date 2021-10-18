@@ -49,6 +49,24 @@ Future<void> main(List<String> arguments) async {
   }
 
   exitCode = await execute(
+    executable: 'npm',
+    arguments: ['install'],
+    workingDirectory: jsProjectDirectory,
+  );
+  if (exitCode != 0) {
+    exit(exitCode);
+  }
+
+  exitCode = await execute(
+    executable: 'npm',
+    arguments: ['run', 'build'],
+    workingDirectory: jsProjectDirectory,
+  );
+  if (exitCode != 0) {
+    exit(exitCode);
+  }
+
+  exitCode = await execute(
     executable: 'flutter',
     arguments: ['pub', 'run', 'ffigen'],
     workingDirectory: flutterProjectDirectory,
@@ -67,24 +85,6 @@ Future<void> main(List<String> arguments) async {
     executable: 'flutter',
     arguments: ['pub', 'run', 'build_runner', 'build', '--delete-conflicting-outputs'],
     workingDirectory: flutterProjectDirectory,
-  );
-  if (exitCode != 0) {
-    exit(exitCode);
-  }
-
-  exitCode = await execute(
-    executable: 'npm',
-    arguments: ['install'],
-    workingDirectory: jsProjectDirectory,
-  );
-  if (exitCode != 0) {
-    exit(exitCode);
-  }
-
-  exitCode = await execute(
-    executable: 'npm',
-    arguments: ['run', 'build'],
-    workingDirectory: jsProjectDirectory,
   );
   if (exitCode != 0) {
     exit(exitCode);

@@ -40,6 +40,47 @@ void clear_accounts_storage(long long result_port, void *accounts_storage);
 
 void free_accounts_storage(void *accounts_storage);
 
+void generic_contract_subscribe(long long result_port,
+                                long long port,
+                                void *transport,
+                                char *address);
+
+void get_generic_contract_address(long long result_port, void *generic_contract);
+
+void get_generic_contract_contract_state(long long result_port, void *generic_contract);
+
+void get_generic_contract_pending_transactions(long long result_port, void *generic_contract);
+
+void get_generic_contract_polling_method(long long result_port, void *generic_contract);
+
+void generic_contract_send(long long result_port,
+                           void *generic_contract,
+                           void *keystore,
+                           void *message,
+                           char *sign_input);
+
+void generic_contract_refresh(long long result_port, void *generic_contract);
+
+void generic_contract_handle_block(long long result_port,
+                                   void *generic_contract,
+                                   void *transport,
+                                   char *id);
+
+void generic_contract_preload_transactions(long long result_port,
+                                           void *generic_contract,
+                                           char *from);
+
+void generic_contract_estimate_fees(long long result_port, void *generic_contract, void *message);
+
+void generic_contract_execute_transaction_locally(long long result_port,
+                                                  void *generic_contract,
+                                                  void *keystore,
+                                                  void *message,
+                                                  char *sign_input,
+                                                  char *options);
+
+void free_generic_contract(void *generic_contract);
+
 void get_keystore(long long result_port, void *storage);
 
 void get_entries(long long result_port, void *keystore);
@@ -156,7 +197,8 @@ void ton_wallet_prepare_transfer(long long result_port,
                                  char *expiration,
                                  char *destination,
                                  unsigned long long amount,
-                                 char *body);
+                                 char *body,
+                                 unsigned int is_comment);
 
 void ton_wallet_prepare_confirm_transaction(long long result_port,
                                             void *ton_wallet,
@@ -209,6 +251,10 @@ void get_participant_info(long long result_port,
 
 void get_depool_info(long long result_port, void *transport, char *address);
 
+void get_adnl_connection(long long result_port, char *adnl_config);
+
+void free_adnl_connection(void *adnl_connection);
+
 void *get_gql_connection(long long port);
 
 void free_gql_connection(void *gql_connection);
@@ -230,6 +276,63 @@ void *validate_address(char *address);
 void *repack_address(char *address);
 
 void *parse_message_body_data(char *data);
+
+void *run_local(char *gen_timings,
+                char *last_transaction_id,
+                char *account_stuff_boc,
+                char *contract_abi,
+                char *method,
+                char *input);
+
+void *get_expected_address(char *tvc,
+                           char *contract_abi,
+                           signed char workchain_id,
+                           char *public_key,
+                           char *init_data);
+
+void *pack_into_cell(char *params, char *tokens);
+
+void *unpack_from_cell(char *params, char *boc, unsigned int allow_partial);
+
+void *extract_public_key(char *boc);
+
+void *code_to_tvc(char *code);
+
+void *split_tvc(char *tvc);
+
+void *encode_internal_input(char *contract_abi, char *method, char *input);
+
+void *decode_input(char *message_body, char *contract_abi, char *method, unsigned int internal);
+
+void *decode_output(char *message_body, char *contract_abi, char *method);
+
+void *decode_event(char *message_body, char *contract_abi, char *event);
+
+void *decode_transaction(char *transaction, char *contract_abi, char *method);
+
+void *decode_transaction_events(char *transaction, char *contract_abi);
+
+void *parse_known_payload(char *payload);
+
+void *create_external_message(char *dst,
+                              char *contract_abi,
+                              char *method,
+                              char *state_init,
+                              char *input,
+                              char *public_key,
+                              unsigned int timeout);
+
+void get_full_account_state(long long result_port, void *transport, char *address);
+
+void get_transactions(long long result_port,
+                      void *transport,
+                      char *address,
+                      char *continuation,
+                      unsigned char limit);
+
+void get_adnl_transport(long long result_port, void *connection);
+
+void free_adnl_transport(void *adnl_transport);
 
 void get_gql_transport(long long result_port, void *connection);
 
