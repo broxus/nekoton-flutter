@@ -5,7 +5,7 @@ import 'package:ffi/ffi.dart';
 
 import '../connection_controller.dart';
 import '../ffi_utils.dart';
-import '../native_library.dart';
+import '../nekoton.dart';
 import '../transport/gql_transport.dart';
 import 'models/depool_info.dart';
 import 'models/participant_info.dart';
@@ -17,8 +17,7 @@ Future<ParticipantInfo> getParticipantInfo({
   final connectionController = await ConnectionController.getInstance();
   final transport = connectionController.transport as GqlTransport;
 
-  final nativeLibrary = NativeLibrary.instance();
-  final result = await proceedAsync((port) => nativeLibrary.bindings.get_participant_info(
+  final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_participant_info(
         port,
         transport.nativeGqlTransport.ptr!,
         address.toNativeUtf8().cast<Int8>(),
@@ -36,8 +35,7 @@ Future<DePoolInfo> getDePoolInfo(String address) async {
   final connectionController = await ConnectionController.getInstance();
   final transport = connectionController.transport as GqlTransport;
 
-  final nativeLibrary = NativeLibrary.instance();
-  final result = await proceedAsync((port) => nativeLibrary.bindings.get_depool_info(
+  final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_depool_info(
         port,
         transport.nativeGqlTransport.ptr!,
         address.toNativeUtf8().cast<Int8>(),

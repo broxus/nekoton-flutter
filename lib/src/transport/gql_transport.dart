@@ -8,7 +8,7 @@ import '../core/models/transaction_id.dart';
 import '../external/gql_connection.dart';
 import '../external/models/connection_data.dart';
 import '../ffi_utils.dart';
-import '../native_library.dart';
+import '../nekoton.dart';
 import '../provider/models/full_contract_state.dart';
 import '../provider/models/transactions_list.dart';
 import 'models/native_gql_transport.dart';
@@ -16,7 +16,6 @@ import 'transport.dart';
 
 class GqlTransport implements Transport {
   static GqlTransport? _instance;
-  final _nativeLibrary = NativeLibrary.instance();
   late final GqlConnection _gqlConnection;
   late final NativeGqlTransport nativeGqlTransport;
   @override
@@ -38,7 +37,7 @@ class GqlTransport implements Transport {
   Future<FullContractState?> getFullAccountState({
     required String address,
   }) async {
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.get_full_account_state(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_full_account_state(
           port,
           nativeGqlTransport.ptr!,
           address.toNativeUtf8().cast<Int8>(),
@@ -64,7 +63,7 @@ class GqlTransport implements Transport {
   }) async {
     final fromPtr = continuation != null ? jsonEncode(continuation).toNativeUtf8().cast<Int8>() : nullptr;
 
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.get_transactions(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_transactions(
           port,
           nativeGqlTransport.ptr!,
           address.toNativeUtf8().cast<Int8>(),
@@ -80,7 +79,7 @@ class GqlTransport implements Transport {
   }
 
   Future<String> getLatestBlockId(String address) async {
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.get_latest_block_id(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_latest_block_id(
           port,
           nativeGqlTransport.ptr!,
           address.toNativeUtf8().cast<Int8>(),
@@ -95,7 +94,7 @@ class GqlTransport implements Transport {
     required String currentBlockId,
     required String address,
   }) async {
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.wait_for_next_block_id(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.wait_for_next_block_id(
           port,
           nativeGqlTransport.ptr!,
           currentBlockId.toNativeUtf8().cast<Int8>(),
@@ -108,7 +107,7 @@ class GqlTransport implements Transport {
   }
 
   void free() {
-    _nativeLibrary.bindings.free_gql_transport(
+    nativeLibraryInstance.bindings.free_gql_transport(
       nativeGqlTransport.ptr!,
     );
     nativeGqlTransport.ptr = null;
@@ -120,7 +119,7 @@ class GqlTransport implements Transport {
     _gqlConnection = await GqlConnection.getInstance(connectionData);
 
     final transportResult = await proceedAsync(
-        (port) => _nativeLibrary.bindings.get_gql_transport(port, _gqlConnection.nativeGqlConnection.ptr!));
+        (port) => nativeLibraryInstance.bindings.get_gql_transport(port, _gqlConnection.nativeGqlConnection.ptr!));
     final transportPtr = Pointer.fromAddress(transportResult).cast<Void>();
     nativeGqlTransport = NativeGqlTransport(transportPtr);
   }

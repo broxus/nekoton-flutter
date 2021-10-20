@@ -109,7 +109,7 @@ export 'src/keystore_controller.dart';
 export 'src/models/approval_request.dart';
 export 'src/models/native_exception.dart';
 export 'src/models/nekoton_exception.dart';
-export 'src/nekoton.dart';
+export 'src/nekoton.dart' show Nekoton;
 export 'src/permissions_controller.dart';
 export 'src/provider/models/abi_param.dart';
 export 'src/provider/models/account_interaction.dart';

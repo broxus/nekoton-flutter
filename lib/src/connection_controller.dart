@@ -91,7 +91,7 @@ class ConnectionController {
       );
 
   Future<void> _initialize() async {
-    await updateTransport(networkPresets.first);
+    await updateTransport(networkPresets[1]);
 
     transportStream
         .transform<String>(

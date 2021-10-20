@@ -6,14 +6,13 @@ import 'package:ffi/ffi.dart';
 
 import '../../external/storage.dart';
 import '../../ffi_utils.dart';
-import '../../native_library.dart';
+import '../../nekoton.dart';
 import 'models/assets_list.dart';
 import 'models/native_accounts_storage.dart';
 import 'models/wallet_type.dart';
 
 class AccountsStorage {
   static AccountsStorage? _instance;
-  final _nativeLibrary = NativeLibrary.instance();
   late final Storage _storage;
   late final NativeAccountsStorage _nativeAccountsStorage;
 
@@ -30,7 +29,7 @@ class AccountsStorage {
   }
 
   Future<List<AssetsList>> get accounts async {
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.get_accounts(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_accounts(
           port,
           _nativeAccountsStorage.ptr!,
         ));
@@ -51,7 +50,7 @@ class AccountsStorage {
   }) async {
     final walletTypeStr = jsonEncode(walletType);
 
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.add_account(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.add_account(
           port,
           _nativeAccountsStorage.ptr!,
           name.toNativeUtf8().cast<Int8>(),
@@ -71,7 +70,7 @@ class AccountsStorage {
     required String address,
     required String name,
   }) async {
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.rename_account(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.rename_account(
           port,
           _nativeAccountsStorage.ptr!,
           address.toNativeUtf8().cast<Int8>(),
@@ -86,7 +85,7 @@ class AccountsStorage {
   }
 
   Future<AssetsList?> removeAccount(String address) async {
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.remove_account(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.remove_account(
           port,
           _nativeAccountsStorage.ptr!,
           address.toNativeUtf8().cast<Int8>(),
@@ -104,7 +103,7 @@ class AccountsStorage {
     required String rootTokenContract,
     required String networkGroup,
   }) async {
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.add_token_wallet(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.add_token_wallet(
           port,
           _nativeAccountsStorage.ptr!,
           address.toNativeUtf8().cast<Int8>(),
@@ -124,7 +123,7 @@ class AccountsStorage {
     required String rootTokenContract,
     required String networkGroup,
   }) async {
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.remove_token_wallet(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.remove_token_wallet(
           port,
           _nativeAccountsStorage.ptr!,
           address.toNativeUtf8().cast<Int8>(),
@@ -139,13 +138,13 @@ class AccountsStorage {
     return list;
   }
 
-  Future<void> clear() async => proceedAsync((port) => _nativeLibrary.bindings.clear_accounts_storage(
+  Future<void> clear() async => proceedAsync((port) => nativeLibraryInstance.bindings.clear_accounts_storage(
         port,
         _nativeAccountsStorage.ptr!,
       ));
 
   void free() {
-    _nativeLibrary.bindings.free_accounts_storage(
+    nativeLibraryInstance.bindings.free_accounts_storage(
       _nativeAccountsStorage.ptr!,
     );
     _nativeAccountsStorage.ptr = null;
@@ -154,7 +153,7 @@ class AccountsStorage {
   Future<void> _initialize() async {
     _storage = await Storage.getInstance();
 
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.get_accounts_storage(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_accounts_storage(
           port,
           _storage.nativeStorage.ptr!,
         ));

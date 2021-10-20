@@ -19,13 +19,12 @@ import '../../crypto/models/update_key_input.dart';
 import '../../external/storage.dart';
 import '../../ffi_utils.dart';
 import '../../models/nekoton_exception.dart';
-import '../../native_library.dart';
+import '../../nekoton.dart';
 import 'models/key_store_entry.dart';
 import 'models/native_keystore.dart';
 
 class Keystore {
   static Keystore? _instance;
-  final _nativeLibrary = NativeLibrary.instance();
   late final Storage _storage;
   late final NativeKeystore nativeKeystore;
 
@@ -42,7 +41,7 @@ class Keystore {
   }
 
   Future<List<KeyStoreEntry>> get entries async {
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.get_entries(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_entries(
           port,
           nativeKeystore.ptr!,
         ));
@@ -58,7 +57,7 @@ class Keystore {
   Future<KeyStoreEntry> addKey(CreateKeyInput createKeyInput) async {
     final createKeyInputStr = jsonEncode(createKeyInput);
 
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.add_key(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.add_key(
           port,
           nativeKeystore.ptr!,
           createKeyInputStr.toNativeUtf8().cast<Int8>(),
@@ -74,7 +73,7 @@ class Keystore {
   Future<KeyStoreEntry> updateKey(UpdateKeyInput updateKeyInput) async {
     final updateKeyInputStr = jsonEncode(updateKeyInput);
 
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.update_key(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.update_key(
           port,
           nativeKeystore.ptr!,
           updateKeyInputStr.toNativeUtf8().cast<Int8>(),
@@ -90,7 +89,7 @@ class Keystore {
   Future<ExportKeyOutput> exportKey(ExportKeyInput exportKeyInput) async {
     final exportKeyInputStr = jsonEncode(exportKeyInput);
 
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.export_key(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.export_key(
           port,
           nativeKeystore.ptr!,
           exportKeyInputStr.toNativeUtf8().cast<Int8>(),
@@ -111,7 +110,7 @@ class Keystore {
   Future<bool> checkKeyPassword(SignInput signInput) async {
     final signInputStr = jsonEncode(signInput);
 
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.check_key_password(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.check_key_password(
           port,
           nativeKeystore.ptr!,
           signInputStr.toNativeUtf8().cast<Int8>(),
@@ -142,7 +141,7 @@ class Keystore {
             );
 
   Future<KeyStoreEntry?> removeKey(String publicKey) async {
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.remove_key(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.remove_key(
           port,
           nativeKeystore.ptr!,
           publicKey.toNativeUtf8().cast<Int8>(),
@@ -155,13 +154,13 @@ class Keystore {
     return entry;
   }
 
-  Future<void> clear() async => proceedAsync((port) => _nativeLibrary.bindings.clear_keystore(
+  Future<void> clear() async => proceedAsync((port) => nativeLibraryInstance.bindings.clear_keystore(
         port,
         nativeKeystore.ptr!,
       ));
 
   void free() {
-    _nativeLibrary.bindings.free_keystore(
+    nativeLibraryInstance.bindings.free_keystore(
       nativeKeystore.ptr!,
     );
     nativeKeystore.ptr = null;
@@ -170,7 +169,7 @@ class Keystore {
   Future<void> _initialize() async {
     _storage = await Storage.getInstance();
 
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.get_keystore(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_keystore(
           port,
           _storage.nativeStorage.ptr!,
         ));

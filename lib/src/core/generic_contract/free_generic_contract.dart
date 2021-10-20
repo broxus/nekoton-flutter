@@ -1,7 +1,7 @@
 part of 'generic_contract.dart';
 
 void freeGenericContract(GenericContract genericContract) {
-  genericContract._nativeLibrary.bindings.free_generic_contract(
+  nativeLibraryInstance.bindings.free_generic_contract(
     genericContract._nativeGenericContract.ptr!,
   );
   genericContract._nativeGenericContract.ptr = null;

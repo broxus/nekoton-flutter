@@ -25,6 +25,7 @@ use ton_block::MsgAddressInt;
 
 lazy_static! {
     static ref RUNTIME: io::Result<Runtime> = Builder::new_multi_thread()
+        .enable_time()
         .worker_threads(4)
         .thread_name("nekoton_flutter")
         .thread_stack_size(3 * 1024 * 1024)

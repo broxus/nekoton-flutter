@@ -8,7 +8,7 @@ part 'gql_request.g.dart';
 class GqlRequest with _$GqlRequest {
   @JsonSerializable()
   const factory GqlRequest({
-    required int tx,
+    required BigInt tx,
     required String data,
   }) = _GqlRequest;
 

@@ -1,30 +1,81 @@
+import 'dart:async';
 import 'dart:ffi';
 import 'dart:io';
+import 'dart:math';
+
+import 'package:flutter/services.dart';
+import 'package:nekoton_flutter/src/nekoton.dart';
+import 'package:synchronized/synchronized.dart';
 
 import 'bindings.g.dart';
 import 'models/nekoton_exception.dart';
 
 class NativeLibrary {
+  static const _methodChannel = MethodChannel('nekoton_native_library');
   static NativeLibrary? _instance;
+  static final _lock = Lock();
   late final DynamicLibrary _dynamicLibrary;
   late final Bindings bindings;
 
-  factory NativeLibrary.instance() => _instance ??= NativeLibrary._().._initialize();
-
   NativeLibrary._();
 
-  void _initialize() {
-    _dynamicLibrary = _dlOpenPlatformSpecific();
+  static Future<NativeLibrary> getInstance() async => _lock.synchronized<NativeLibrary>(() async {
+        if (_instance == null) {
+          final instance = NativeLibrary._();
+          await instance._initialize();
+          _instance = instance;
+        }
+
+        return _instance!;
+      });
+
+  Future<void> _initialize() async {
+    _dynamicLibrary = await _dlOpenPlatformSpecific();
     bindings = Bindings(_dynamicLibrary)..store_post_cobject(Pointer.fromAddress(NativeApi.postCObject.address));
   }
 
-  DynamicLibrary _dlOpenPlatformSpecific() {
+  Future<DynamicLibrary> _dlOpenPlatformSpecific() async {
     if (Platform.isAndroid) {
-      return DynamicLibrary.open("libnekoton_flutter.so");
+      return _dlOpenAndroidPlatform();
     } else if (Platform.isIOS) {
       return DynamicLibrary.process();
     } else {
       throw DynamicLibraryException();
+    }
+  }
+
+  Future<DynamicLibrary> _dlOpenAndroidPlatform() async {
+    try {
+      try {
+        return DynamicLibrary.open("libnekoton_flutter.so");
+      } catch (err, st) {
+        nekotonLogger?.e(err, err, st);
+
+        try {
+          final nativeLibraryDir = (await _methodChannel.invokeMethod<String>('getNativeLibraryDir'))!;
+
+          return DynamicLibrary.open("$nativeLibraryDir/libnekoton_flutter.so");
+        } catch (err, st) {
+          nekotonLogger?.e(err, err, st);
+
+          final appIdAsBytes = File('/proc/self/cmdline').readAsBytesSync();
+          final endOfAppId = max(appIdAsBytes.indexOf(0), 0);
+          final appId = String.fromCharCodes(appIdAsBytes.sublist(0, endOfAppId));
+
+          return DynamicLibrary.open('/data/data/$appId/lib/libnekoton_flutter.so');
+        }
+      }
+    } catch (err, st) {
+      nekotonLogger?.e(err, err, st);
+
+      try {
+        await _methodChannel.invokeMethod('loadLibrary', "nekoton_flutter");
+
+        return DynamicLibrary.open("libnekoton_flutter.so");
+      } catch (err, st) {
+        nekotonLogger?.e(err, err, st);
+        rethrow;
+      }
     }
   }
 }

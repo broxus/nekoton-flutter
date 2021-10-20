@@ -8,7 +8,6 @@ import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import '../ffi_utils.dart';
-import '../native_library.dart';
 import '../nekoton.dart';
 import 'models/native_storage.dart';
 import 'models/storage_request.dart';
@@ -16,7 +15,6 @@ import 'models/storage_request_type.dart';
 
 class Storage {
   static Storage? _instance;
-  final _nativeLibrary = NativeLibrary.instance();
   late final Box<String> _box;
   final _receivePort = ReceivePort();
   late final NativeStorage nativeStorage;
@@ -34,7 +32,7 @@ class Storage {
   }
 
   void free() {
-    _nativeLibrary.bindings.free_storage(
+    nativeLibraryInstance.bindings.free_storage(
       nativeStorage.ptr!,
     );
     nativeStorage.ptr = null;
@@ -46,7 +44,7 @@ class Storage {
 
     _receivePort.listen(_storageListener);
 
-    final result = proceedSync(() => _nativeLibrary.bindings.get_storage(_receivePort.sendPort.nativePort));
+    final result = proceedSync(() => nativeLibraryInstance.bindings.get_storage(_receivePort.sendPort.nativePort));
     final ptr = Pointer.fromAddress(result).cast<Void>();
     nativeStorage = NativeStorage(ptr);
   }
@@ -59,10 +57,10 @@ class Storage {
 
       final json = jsonDecode(data) as Map<String, dynamic>;
       final request = StorageRequest.fromJson(json);
-      final tx = Pointer.fromAddress(request.tx).cast<Void>();
+      final tx = request.tx.toString();
 
       Pointer<Int8> value = Pointer.fromAddress(0).cast<Int8>();
-      int isSuccessful = 0;
+      bool isSuccessful = false;
 
       try {
         switch (request.requestType) {
@@ -80,12 +78,16 @@ class Storage {
             break;
         }
 
-        isSuccessful = 1;
+        isSuccessful = true;
       } catch (err) {
         value = err.toString().toNativeUtf8().cast<Int8>();
       }
 
-      _nativeLibrary.bindings.resolve_storage_request(tx, isSuccessful, value);
+      nativeLibraryInstance.bindings.resolve_storage_request(
+        tx.toNativeUtf8().cast<Int8>(),
+        isSuccessful ? 1 : 0,
+        value,
+      );
     } catch (err, st) {
       nekotonLogger?.e(err, err, st);
     }

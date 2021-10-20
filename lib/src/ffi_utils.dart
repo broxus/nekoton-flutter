@@ -5,18 +5,19 @@ import 'dart:isolate';
 import 'package:ffi/ffi.dart';
 
 import 'models/native_result.dart';
-import 'native_library.dart';
+import 'nekoton.dart';
 
 int proceedSync(Pointer<Void> Function() function) {
-  final nativeLibrary = NativeLibrary.instance();
-
   final ptr = function();
   final nativeResult = ptr.cast<NativeResult>().ref;
 
   try {
     return nativeResult.handle();
+  } catch (err, st) {
+    nekotonLogger?.e(err, err, st);
+    rethrow;
   } finally {
-    nativeLibrary.bindings.free_native_result(ptr);
+    nativeLibraryInstance.bindings.free_native_result(ptr);
   }
 }
 
@@ -29,8 +30,6 @@ Future<int> proceedAsync(void Function(int port) function) async {
       return;
     }
 
-    final nativeLibrary = NativeLibrary.instance();
-
     final ptr = Pointer.fromAddress(data).cast<Void>();
     final nativeResult = ptr.cast<NativeResult>().ref;
 
@@ -38,10 +37,11 @@ Future<int> proceedAsync(void Function(int port) function) async {
       final result = nativeResult.handle();
       completer.complete(result);
     } catch (err, st) {
+      nekotonLogger?.e(err, err, st);
       completer.completeError(err, st);
     }
 
-    nativeLibrary.bindings.free_native_result(ptr);
+    nativeLibraryInstance.bindings.free_native_result(ptr);
     receivePort.close();
   });
 
@@ -51,12 +51,10 @@ Future<int> proceedAsync(void Function(int port) function) async {
 }
 
 String cStringToDart(int address) {
-  final nativeLibrary = NativeLibrary.instance();
-
   final ptr = Pointer.fromAddress(address).cast<Int8>();
   final string = ptr.cast<Utf8>().toDartString();
 
-  nativeLibrary.bindings.free_cstring(ptr);
+  nativeLibraryInstance.bindings.free_cstring(ptr);
 
   return string;
 }

@@ -122,7 +122,7 @@ class SubscriptionsController {
     return tokenWallet;
   }
 
-  Future<void> subscribeToGenericContract({
+  Future<GenericContract> subscribeToGenericContract({
     required String origin,
     required String address,
   }) async {
@@ -152,6 +152,8 @@ class SubscriptionsController {
         info: event.item2,
       ));
     });
+
+    return genericContract;
   }
 
   void removeTonWalletSubscription(TonWalletAsset tonWalletAsset) {

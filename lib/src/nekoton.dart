@@ -12,11 +12,13 @@ import 'connection_controller.dart';
 import 'core/accounts_storage/models/assets_list.dart';
 import 'core/keystore/models/key_store_entry.dart';
 import 'keystore_controller.dart';
+import 'native_library.dart';
 import 'permissions_controller.dart';
 import 'subscriptions_controller.dart';
 import 'transport/transport.dart';
 
 Logger? nekotonLogger;
+late NativeLibrary nativeLibraryInstance;
 
 class Nekoton {
   static Nekoton? _instance;
@@ -162,6 +164,8 @@ class Nekoton {
   }
 
   Future<void> _initialize() async {
+    nativeLibraryInstance = await NativeLibrary.getInstance();
+
     connectionController = await ConnectionController.getInstance();
     permissionsController = await PermissionsController.getInstance();
     approvalController = ApprovalController.instance();

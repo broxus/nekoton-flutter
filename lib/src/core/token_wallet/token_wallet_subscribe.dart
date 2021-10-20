@@ -12,7 +12,7 @@ Future<TokenWallet> tokenWalletSubscribe({
   tokenWallet._transport = transport;
 
   final tonWalletAddress = tokenWallet._tonWallet.address;
-  final result = await proceedAsync((port) => tokenWallet._nativeLibrary.bindings.token_wallet_subscribe(
+  final result = await proceedAsync((port) => nativeLibraryInstance.bindings.token_wallet_subscribe(
         port,
         tokenWallet._receivePort.sendPort.nativePort,
         tokenWallet._transport.nativeGqlTransport.ptr!,

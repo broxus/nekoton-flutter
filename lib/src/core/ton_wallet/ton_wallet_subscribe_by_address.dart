@@ -9,7 +9,7 @@ Future<TonWallet> tonWalletSubscribeByAddress({
   tonWallet._transport = transport;
   tonWallet._subscription = tonWallet._receivePort.listen(tonWallet._subscriptionListener);
 
-  final result = await proceedAsync((port) => tonWallet._nativeLibrary.bindings.ton_wallet_subscribe_by_address(
+  final result = await proceedAsync((port) => nativeLibraryInstance.bindings.ton_wallet_subscribe_by_address(
         port,
         tonWallet._receivePort.sendPort.nativePort,
         tonWallet._transport.nativeGqlTransport.ptr!,

@@ -7,7 +7,6 @@ import 'package:dio/dio.dart';
 import 'package:ffi/ffi.dart';
 
 import '../ffi_utils.dart';
-import '../native_library.dart';
 import '../nekoton.dart';
 import 'models/connection_data.dart';
 import 'models/gql_request.dart';
@@ -15,7 +14,6 @@ import 'models/native_gql_connection.dart';
 
 class GqlConnection {
   static GqlConnection? _instance;
-  final _nativeLibrary = NativeLibrary.instance();
   late final Dio _dio;
   final _receivePort = ReceivePort();
   late final NativeGqlConnection nativeGqlConnection;
@@ -33,7 +31,7 @@ class GqlConnection {
   }
 
   void free() {
-    _nativeLibrary.bindings.free_gql_connection(
+    nativeLibraryInstance.bindings.free_gql_connection(
       nativeGqlConnection.ptr!,
     );
     nativeGqlConnection.ptr = null;
@@ -51,7 +49,7 @@ class GqlConnection {
     _receivePort.listen(_gqlConnectionListener);
 
     final connectionResult =
-        proceedSync(() => _nativeLibrary.bindings.get_gql_connection(_receivePort.sendPort.nativePort));
+        proceedSync(() => nativeLibraryInstance.bindings.get_gql_connection(_receivePort.sendPort.nativePort));
     final connectionPtr = Pointer.fromAddress(connectionResult).cast<Void>();
     nativeGqlConnection = NativeGqlConnection(connectionPtr);
   }
@@ -64,22 +62,26 @@ class GqlConnection {
 
       final json = jsonDecode(data) as Map<String, dynamic>;
       final request = GqlRequest.fromJson(json);
-      final tx = Pointer.fromAddress(request.tx).cast<Void>();
+      final tx = request.tx.toString();
 
       Pointer<Int8> value = Pointer.fromAddress(0).cast<Int8>();
-      int isSuccessful = 0;
+      bool isSuccessful = false;
 
       try {
         final response = await _dio.post("graphql", data: request.data);
         final responseData = response.data as String;
         value = responseData.toNativeUtf8().cast<Int8>();
 
-        isSuccessful = 1;
+        isSuccessful = true;
       } catch (err) {
         value = err.toString().toNativeUtf8().cast<Int8>();
       }
 
-      _nativeLibrary.bindings.resolve_gql_request(tx, isSuccessful, value);
+      nativeLibraryInstance.bindings.resolve_gql_request(
+        tx.toNativeUtf8().cast<Int8>(),
+        isSuccessful ? 1 : 0,
+        value,
+      );
     } catch (err, st) {
       nekotonLogger?.e(err, err, st);
     }

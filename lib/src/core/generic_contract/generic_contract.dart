@@ -12,7 +12,6 @@ import 'package:tuple/tuple.dart';
 import '../../core/keystore/keystore.dart';
 import '../../ffi_utils.dart';
 import '../../models/nekoton_exception.dart';
-import '../../native_library.dart';
 import '../../nekoton.dart';
 import '../../transport/gql_transport.dart';
 import '../models/contract_state.dart';
@@ -36,7 +35,6 @@ part 'generic_contract_subscribe.dart';
 
 class GenericContract {
   final _receivePort = ReceivePort();
-  final _nativeLibrary = NativeLibrary.instance();
   late final GqlTransport _transport;
   late final Keystore _keystore;
   late final NativeGenericContract _nativeGenericContract;
@@ -69,7 +67,7 @@ class GenericContract {
       _onTransactionsFoundRawSubject.stream;
 
   Future<String> get _address async {
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.get_generic_contract_address(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_generic_contract_address(
           port,
           _nativeGenericContract.ptr!,
         ));
@@ -79,7 +77,7 @@ class GenericContract {
   }
 
   Future<ContractState> get contractState async {
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.get_generic_contract_contract_state(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_generic_contract_contract_state(
           port,
           _nativeGenericContract.ptr!,
         ));
@@ -92,10 +90,11 @@ class GenericContract {
   }
 
   Future<List<PendingTransaction>> get pendingTransactions async {
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.get_generic_contract_pending_transactions(
-          port,
-          _nativeGenericContract.ptr!,
-        ));
+    final result =
+        await proceedAsync((port) => nativeLibraryInstance.bindings.get_generic_contract_pending_transactions(
+              port,
+              _nativeGenericContract.ptr!,
+            ));
 
     final string = cStringToDart(result);
     final json = jsonDecode(string) as List<dynamic>;
@@ -124,7 +123,7 @@ class GenericContract {
     );
     final signInputStr = jsonEncode(signInput);
 
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.generic_contract_send(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.generic_contract_send(
           port,
           _nativeGenericContract.ptr!,
           _keystore.nativeKeystore.ptr!,
@@ -142,7 +141,7 @@ class GenericContract {
     return transaction;
   }
 
-  Future<void> refresh() async => proceedAsync((port) => _nativeLibrary.bindings.generic_contract_refresh(
+  Future<void> refresh() async => proceedAsync((port) => nativeLibraryInstance.bindings.generic_contract_refresh(
         port,
         _nativeGenericContract.ptr!,
       ));
@@ -150,7 +149,7 @@ class GenericContract {
   Future<void> preloadTransactions(TransactionId from) async {
     final fromStr = jsonEncode(from);
 
-    await proceedAsync((port) => _nativeLibrary.bindings.generic_contract_preload_transactions(
+    await proceedAsync((port) => nativeLibraryInstance.bindings.generic_contract_preload_transactions(
           port,
           _nativeGenericContract.ptr!,
           fromStr.toNativeUtf8().cast<Int8>(),
@@ -158,7 +157,7 @@ class GenericContract {
   }
 
   Future<int> estimateFees(UnsignedMessage message) async =>
-      proceedAsync((port) => _nativeLibrary.bindings.generic_contract_estimate_fees(
+      proceedAsync((port) => nativeLibraryInstance.bindings.generic_contract_estimate_fees(
             port,
             _nativeGenericContract.ptr!,
             message.nativeUnsignedMessage.ptr!,
@@ -184,14 +183,15 @@ class GenericContract {
     final signInputStr = jsonEncode(signInput);
     final optionsStr = jsonEncode(options);
 
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.generic_contract_execute_transaction_locally(
-          port,
-          _nativeGenericContract.ptr!,
-          _keystore.nativeKeystore.ptr!,
-          message.nativeUnsignedMessage.ptr!,
-          signInputStr.toNativeUtf8().cast<Int8>(),
-          optionsStr.toNativeUtf8().cast<Int8>(),
-        ));
+    final result =
+        await proceedAsync((port) => nativeLibraryInstance.bindings.generic_contract_execute_transaction_locally(
+              port,
+              _nativeGenericContract.ptr!,
+              _keystore.nativeKeystore.ptr!,
+              message.nativeUnsignedMessage.ptr!,
+              signInputStr.toNativeUtf8().cast<Int8>(),
+              optionsStr.toNativeUtf8().cast<Int8>(),
+            ));
     message.nativeUnsignedMessage.ptr = null;
 
     final string = cStringToDart(result);
@@ -202,7 +202,7 @@ class GenericContract {
   }
 
   Future<PollingMethod> get _pollingMethod async {
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.get_generic_contract_polling_method(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_generic_contract_polling_method(
           port,
           _nativeGenericContract.ptr!,
         ));
@@ -249,7 +249,7 @@ class GenericContract {
   }
 
   Future<void> _handleBlock(String id) async =>
-      proceedAsync((port) => _nativeLibrary.bindings.generic_contract_handle_block(
+      proceedAsync((port) => nativeLibraryInstance.bindings.generic_contract_handle_block(
             port,
             _nativeGenericContract.ptr!,
             _transport.nativeGqlTransport.ptr!,

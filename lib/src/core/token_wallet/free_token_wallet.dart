@@ -1,7 +1,7 @@
 part of 'token_wallet.dart';
 
 void freeTokenWallet(TokenWallet tokenWallet) {
-  tokenWallet._nativeLibrary.bindings.free_token_wallet(
+  nativeLibraryInstance.bindings.free_token_wallet(
     tokenWallet._nativeTokenWallet.ptr!,
   );
   tokenWallet._nativeTokenWallet.ptr = null;

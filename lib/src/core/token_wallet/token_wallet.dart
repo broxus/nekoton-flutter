@@ -9,7 +9,6 @@ import 'package:recase/recase.dart';
 import 'package:rxdart/rxdart.dart';
 
 import '../../ffi_utils.dart';
-import '../../native_library.dart';
 import '../../nekoton.dart';
 import '../../transport/gql_transport.dart';
 import '../models/contract_state.dart';
@@ -34,7 +33,6 @@ part 'token_wallet_subscribe.dart';
 
 class TokenWallet implements Comparable<TokenWallet> {
   final _receivePort = ReceivePort();
-  final _nativeLibrary = NativeLibrary.instance();
   late final GqlTransport _transport;
   late final NativeTokenWallet _nativeTokenWallet;
   late final TonWallet _tonWallet;
@@ -55,7 +53,7 @@ class TokenWallet implements Comparable<TokenWallet> {
   Stream<List<TokenWalletTransactionWithData>> get onTransactionsFoundStream => _onTransactionsFoundSubject.stream;
 
   Future<String> get _owner async {
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.get_token_wallet_owner(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_token_wallet_owner(
           port,
           _nativeTokenWallet.ptr!,
         ));
@@ -65,7 +63,7 @@ class TokenWallet implements Comparable<TokenWallet> {
   }
 
   Future<String> get _address async {
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.get_token_wallet_address(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_token_wallet_address(
           port,
           _nativeTokenWallet.ptr!,
         ));
@@ -75,7 +73,7 @@ class TokenWallet implements Comparable<TokenWallet> {
   }
 
   Future<Symbol> get _symbol async {
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.get_token_wallet_symbol(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_token_wallet_symbol(
           port,
           _nativeTokenWallet.ptr!,
         ));
@@ -88,7 +86,7 @@ class TokenWallet implements Comparable<TokenWallet> {
   }
 
   Future<TokenWalletVersion> get _version async {
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.get_token_wallet_version(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_token_wallet_version(
           port,
           _nativeTokenWallet.ptr!,
         ));
@@ -101,7 +99,7 @@ class TokenWallet implements Comparable<TokenWallet> {
   }
 
   Future<String> get balance async {
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.get_token_wallet_balance(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_token_wallet_balance(
           port,
           _nativeTokenWallet.ptr!,
         ));
@@ -111,7 +109,7 @@ class TokenWallet implements Comparable<TokenWallet> {
   }
 
   Future<ContractState> get contractState async {
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.get_token_wallet_contract_state(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_token_wallet_contract_state(
           port,
           _nativeTokenWallet.ptr!,
         ));
@@ -128,7 +126,7 @@ class TokenWallet implements Comparable<TokenWallet> {
   Future<UnsignedMessage> prepareDeploy(Expiration expiration) async {
     final expirationStr = jsonEncode(expiration);
 
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.token_wallet_prepare_deploy(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.token_wallet_prepare_deploy(
           port,
           _nativeTokenWallet.ptr!,
           _tonWallet.nativeTonWallet.ptr!,
@@ -151,7 +149,7 @@ class TokenWallet implements Comparable<TokenWallet> {
   }) async {
     final expirationStr = jsonEncode(expiration);
 
-    final result = await proceedAsync((port) => _nativeLibrary.bindings.token_wallet_prepare_transfer(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.token_wallet_prepare_transfer(
           port,
           _nativeTokenWallet.ptr!,
           _tonWallet.nativeTonWallet.ptr!,
@@ -187,7 +185,7 @@ class TokenWallet implements Comparable<TokenWallet> {
     return result;
   }
 
-  Future<void> refresh() async => proceedAsync((port) => _nativeLibrary.bindings.token_wallet_refresh(
+  Future<void> refresh() async => proceedAsync((port) => nativeLibraryInstance.bindings.token_wallet_refresh(
         port,
         _nativeTokenWallet.ptr!,
       ));
@@ -195,7 +193,7 @@ class TokenWallet implements Comparable<TokenWallet> {
   Future<void> preloadTransactions(TransactionId from) async {
     final fromStr = jsonEncode(from);
 
-    await proceedAsync((port) => _nativeLibrary.bindings.token_wallet_preload_transactions(
+    await proceedAsync((port) => nativeLibraryInstance.bindings.token_wallet_preload_transactions(
           port,
           _nativeTokenWallet.ptr!,
           fromStr.toNativeUtf8().cast<Int8>(),
@@ -203,7 +201,7 @@ class TokenWallet implements Comparable<TokenWallet> {
   }
 
   Future<void> _handleBlock(String id) async =>
-      proceedAsync((port) => _nativeLibrary.bindings.token_wallet_handle_block(
+      proceedAsync((port) => nativeLibraryInstance.bindings.token_wallet_handle_block(
             port,
             _nativeTokenWallet.ptr!,
             _transport.nativeGqlTransport.ptr!,

@@ -13,7 +13,7 @@ Future<TonWallet> tonWalletSubscribe({
   tonWallet._subscription = tonWallet._receivePort.listen(tonWallet._subscriptionListener);
 
   final walletTypeStr = jsonEncode(walletType);
-  final result = await proceedAsync((port) => tonWallet._nativeLibrary.bindings.ton_wallet_subscribe(
+  final result = await proceedAsync((port) => nativeLibraryInstance.bindings.ton_wallet_subscribe(
         port,
         tonWallet._receivePort.sendPort.nativePort,
         tonWallet._transport.nativeGqlTransport.ptr!,

@@ -10,7 +10,7 @@ Future<GenericContract> genericContractSubscribe({
   genericContract._keystore = await Keystore.getInstance();
   genericContract._subscription = genericContract._receivePort.listen(genericContract._subscriptionListener);
 
-  final result = await proceedAsync((port) => genericContract._nativeLibrary.bindings.generic_contract_subscribe(
+  final result = await proceedAsync((port) => nativeLibraryInstance.bindings.generic_contract_subscribe(
         port,
         genericContract._receivePort.sendPort.nativePort,
         genericContract._transport.nativeGqlTransport.ptr!,

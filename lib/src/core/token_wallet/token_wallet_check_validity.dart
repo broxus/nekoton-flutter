@@ -5,11 +5,10 @@ Future<bool> tokenWalletCheckValidity({
   required String owner,
   required String rootTokenContract,
 }) async {
-  final nativeLibrary = NativeLibrary.instance();
   final receivePort = ReceivePort();
 
   try {
-    final result = await proceedAsync((port) => nativeLibrary.bindings.token_wallet_subscribe(
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.token_wallet_subscribe(
           port,
           receivePort.sendPort.nativePort,
           transport.nativeGqlTransport.ptr!,
@@ -18,7 +17,7 @@ Future<bool> tokenWalletCheckValidity({
         ));
     final ptr = Pointer.fromAddress(result).cast<Void>();
 
-    nativeLibrary.bindings.free_token_wallet(ptr);
+    nativeLibraryInstance.bindings.free_token_wallet(ptr);
 
     return true;
   } catch (_) {

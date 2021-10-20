@@ -10,7 +10,7 @@ part 'storage_request.g.dart';
 class StorageRequest with _$StorageRequest {
   @JsonSerializable(fieldRename: FieldRename.snake)
   const factory StorageRequest({
-    required int tx,
+    required BigInt tx,
     required String key,
     String? value,
     required StorageRequestType requestType,

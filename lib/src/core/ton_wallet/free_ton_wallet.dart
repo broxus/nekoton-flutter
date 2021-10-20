@@ -1,7 +1,7 @@
 part of 'ton_wallet.dart';
 
 void freeTonWallet(TonWallet tonWallet) {
-  tonWallet._nativeLibrary.bindings.free_ton_wallet(
+  nativeLibraryInstance.bindings.free_ton_wallet(
     tonWallet.nativeTonWallet.ptr!,
   );
   tonWallet.nativeTonWallet.ptr = null;

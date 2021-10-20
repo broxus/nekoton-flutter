@@ -12,7 +12,7 @@ Future<TonWallet> tonWalletSubscribeByExisting({
   tonWallet._subscription = tonWallet._receivePort.listen(tonWallet._subscriptionListener);
 
   final existingWalletInfoStr = jsonEncode(existingWalletInfo);
-  final result = await proceedAsync((port) => tonWallet._nativeLibrary.bindings.ton_wallet_subscribe_by_existing(
+  final result = await proceedAsync((port) => nativeLibraryInstance.bindings.ton_wallet_subscribe_by_existing(
         port,
         tonWallet._receivePort.sendPort.nativePort,
         tonWallet._transport.nativeGqlTransport.ptr!,

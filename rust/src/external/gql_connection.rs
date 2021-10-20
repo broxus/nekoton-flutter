@@ -8,11 +8,15 @@ use std::{
     ffi::c_void,
     os::raw::{c_char, c_longlong, c_uint, c_ulonglong},
     sync::Arc,
+    time::Duration,
     u64,
 };
-use tokio::sync::{
-    oneshot::{self, Sender},
-    Mutex,
+use tokio::{
+    sync::{
+        oneshot::{self, Sender},
+        Mutex,
+    },
+    time::timeout,
 };
 
 pub type MutexGqlConnection = Mutex<Arc<GqlConnectionImpl>>;
@@ -60,18 +64,23 @@ impl GqlConnection for GqlConnectionImpl {
         let (tx, rx) = oneshot::channel::<Result<String, String>>();
         let tx = Mutex::new(Some(tx));
         let tx = Arc::new(tx);
-        let tx = Arc::into_raw(tx) as usize;
+        let tx = Arc::into_raw(tx) as u64;
 
-        let request = GqlRequest { tx, data };
+        let request = GqlRequest {
+            tx: tx.to_string(),
+            data,
+        };
         let request = serde_json::to_string(&request).map_err(|e| anyhow!("{}", e))?;
 
         let isolate = Isolate::new(self.port);
         let sent = isolate.post(request);
 
         if sent {
-            let result = rx.await.map_err(|e| anyhow!("{}", e))?;
-
-            result.map_err(|e| anyhow!("{}", e))
+            timeout(Duration::from_secs(6), rx)
+                .await
+                .map_err(|e| anyhow!("{}", e))?
+                .map_err(|e| anyhow!("{}", e))?
+                .map_err(|e| anyhow!("{}", e))
         } else {
             let tx = tx as *mut MutexGqlSender;
             unsafe { Arc::from_raw(tx) };
@@ -83,16 +92,18 @@ impl GqlConnection for GqlConnectionImpl {
 
 #[derive(Serialize)]
 pub struct GqlRequest {
-    pub tx: usize,
+    pub tx: String,
     pub data: String,
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn resolve_gql_request(
-    tx: *mut c_void,
+    tx: *mut c_char,
     is_successful: c_uint,
     value: *mut c_char,
 ) {
+    let tx = tx.from_ptr().parse::<u64>().unwrap();
+    let tx = tx as *mut c_void;
     let tx = tx as *mut MutexGqlSender;
     let tx = Arc::from_raw(tx);
     let is_successful = is_successful != 0;
@@ -101,16 +112,17 @@ pub unsafe extern "C" fn resolve_gql_request(
     let rt = runtime!();
     rt.spawn(async move {
         let mut tx = tx.lock().await;
-        let tx = tx.take().unwrap();
 
-        let result;
+        if let Some(tx) = tx.take() {
+            let result;
 
-        if is_successful {
-            result = Ok(value);
-        } else {
-            result = Err(value);
+            if is_successful {
+                result = Ok(value);
+            } else {
+                result = Err(value);
+            }
+
+            let _ = tx.send(result);
         }
-
-        tx.send(result).unwrap();
     });
 }
