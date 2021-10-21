@@ -76,7 +76,7 @@ impl GqlConnection for GqlConnectionImpl {
         let sent = isolate.post(request);
 
         if sent {
-            timeout(Duration::from_secs(6), rx)
+            timeout(Duration::from_secs(60), rx)
                 .await
                 .map_err(|e| anyhow!("{}", e))?
                 .map_err(|e| anyhow!("{}", e))?
