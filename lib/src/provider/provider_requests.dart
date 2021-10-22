@@ -476,7 +476,7 @@ Future<EstimateFeesOutput> estimateFees({
   final selectedAddress = allowedAccount!.address;
   final repackedRecipient = helpers.repackAddress(input.recipient);
 
-  String body = '';
+  String? body;
   if (input.payload != null) {
     body = helpers.encodeInternalInput(
       contractAbi: input.payload!.abi,
@@ -527,7 +527,7 @@ Future<SendMessageOutput> sendMessage({
   final selectedAddress = allowedAccount!.address;
   final repackedRecipient = helpers.repackAddress(input.recipient);
 
-  String body = '';
+  String? body;
   KnownPayload? knownPayload;
   if (input.payload != null) {
     body = helpers.encodeInternalInput(

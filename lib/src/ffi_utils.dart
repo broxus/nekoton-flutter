@@ -13,9 +13,6 @@ int proceedSync(Pointer<Void> Function() function) {
 
   try {
     return nativeResult.handle();
-  } catch (err, st) {
-    nekotonLogger?.e(err, err, st);
-    rethrow;
   } finally {
     nativeLibraryInstance.bindings.free_native_result(ptr);
   }
@@ -24,9 +21,12 @@ int proceedSync(Pointer<Void> Function() function) {
 Future<int> proceedAsync(void Function(int port) function) async {
   final receivePort = ReceivePort();
   final completer = Completer<int>();
+  final st = StackTrace.current;
 
   receivePort.listen((data) {
     if (data is! int) {
+      completer.completeError(Exception());
+      receivePort.close();
       return;
     }
 
@@ -36,13 +36,12 @@ Future<int> proceedAsync(void Function(int port) function) async {
     try {
       final result = nativeResult.handle();
       completer.complete(result);
-    } catch (err, st) {
-      nekotonLogger?.e(err, err, st);
+    } catch (err) {
       completer.completeError(err, st);
+    } finally {
+      nativeLibraryInstance.bindings.free_native_result(ptr);
+      receivePort.close();
     }
-
-    nativeLibraryInstance.bindings.free_native_result(ptr);
-    receivePort.close();
   });
 
   function(receivePort.sendPort.nativePort);
