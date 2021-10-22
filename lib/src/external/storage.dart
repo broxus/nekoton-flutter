@@ -31,12 +31,7 @@ class Storage {
     return _instance!;
   }
 
-  void free() {
-    nativeLibraryInstance.bindings.free_storage(
-      nativeStorage.ptr!,
-    );
-    nativeStorage.ptr = null;
-  }
+  Future<void> free() => nativeStorage.free();
 
   Future<void> _initialize() async {
     await Hive.initFlutter();
@@ -92,14 +87,4 @@ class Storage {
       nekotonLogger?.e(err, err, st);
     }
   }
-
-  @override
-  String toString() => 'Storage(${nativeStorage.ptr?.address})';
-
-  @override
-  bool operator ==(dynamic other) =>
-      identical(this, other) || other is Storage && other.nativeStorage.ptr?.address == nativeStorage.ptr?.address;
-
-  @override
-  int get hashCode => nativeStorage.ptr?.address ?? 0;
 }

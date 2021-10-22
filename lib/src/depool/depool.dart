@@ -17,12 +17,16 @@ Future<ParticipantInfo> getParticipantInfo({
   final connectionController = await ConnectionController.getInstance();
   final transport = connectionController.transport as GqlTransport;
 
-  final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_participant_info(
+  final result = await transport.nativeGqlTransport.use(
+    (ptr) async => proceedAsync(
+      (port) => nativeLibraryInstance.bindings.get_participant_info(
         port,
-        transport.nativeGqlTransport.ptr!,
+        ptr,
         address.toNativeUtf8().cast<Int8>(),
         walletAddress.toNativeUtf8().cast<Int8>(),
-      ));
+      ),
+    ),
+  );
 
   final string = cStringToDart(result);
   final json = jsonDecode(string) as Map<String, dynamic>;
@@ -35,11 +39,15 @@ Future<DePoolInfo> getDePoolInfo(String address) async {
   final connectionController = await ConnectionController.getInstance();
   final transport = connectionController.transport as GqlTransport;
 
-  final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_depool_info(
+  final result = await transport.nativeGqlTransport.use(
+    (ptr) async => proceedAsync(
+      (port) => nativeLibraryInstance.bindings.get_depool_info(
         port,
-        transport.nativeGqlTransport.ptr!,
+        ptr,
         address.toNativeUtf8().cast<Int8>(),
-      ));
+      ),
+    ),
+  );
 
   final string = cStringToDart(result);
   final json = jsonDecode(string) as Map<String, dynamic>;

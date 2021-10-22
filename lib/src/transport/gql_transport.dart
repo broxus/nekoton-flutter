@@ -37,11 +37,15 @@ class GqlTransport implements Transport {
   Future<FullContractState?> getFullAccountState({
     required String address,
   }) async {
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_full_account_state(
+    final result = await nativeGqlTransport.use(
+      (ptr) async =>  proceedAsync(
+        (port) => nativeLibraryInstance.bindings.get_full_account_state(
           port,
-          nativeGqlTransport.ptr!,
+          ptr,
           address.toNativeUtf8().cast<Int8>(),
-        ));
+        ),
+      ),
+    );
 
     final string = cStringToDart(result);
     final json = jsonDecode(string) as Map<String, dynamic>?;
@@ -63,13 +67,17 @@ class GqlTransport implements Transport {
   }) async {
     final fromPtr = continuation != null ? jsonEncode(continuation).toNativeUtf8().cast<Int8>() : nullptr;
 
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_transactions(
+    final result = await nativeGqlTransport.use(
+      (ptr) async => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.get_transactions(
           port,
-          nativeGqlTransport.ptr!,
+          ptr,
           address.toNativeUtf8().cast<Int8>(),
           fromPtr,
           limit ?? 50,
-        ));
+        ),
+      ),
+    );
 
     final string = cStringToDart(result);
     final json = jsonDecode(string) as Map<String, dynamic>;
@@ -79,11 +87,15 @@ class GqlTransport implements Transport {
   }
 
   Future<String> getLatestBlockId(String address) async {
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_latest_block_id(
+    final result = await nativeGqlTransport.use(
+      (ptr) async => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.get_latest_block_id(
           port,
-          nativeGqlTransport.ptr!,
+          ptr,
           address.toNativeUtf8().cast<Int8>(),
-        ));
+        ),
+      ),
+    );
 
     final id = cStringToDart(result);
 
@@ -94,44 +106,38 @@ class GqlTransport implements Transport {
     required String currentBlockId,
     required String address,
   }) async {
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.wait_for_next_block_id(
+    final result = await nativeGqlTransport.use(
+      (ptr) async => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.wait_for_next_block_id(
           port,
-          nativeGqlTransport.ptr!,
+          ptr,
           currentBlockId.toNativeUtf8().cast<Int8>(),
           address.toNativeUtf8().cast<Int8>(),
-        ));
+        ),
+      ),
+    );
 
     final nextBlockId = cStringToDart(result);
 
     return nextBlockId;
   }
 
-  void free() {
-    nativeLibraryInstance.bindings.free_gql_transport(
-      nativeGqlTransport.ptr!,
-    );
-    nativeGqlTransport.ptr = null;
-  }
+  Future<void> free() async => nativeGqlTransport.free();
 
   Future<void> _initialize(ConnectionData connectionData) async {
     this.connectionData = connectionData;
 
     _gqlConnection = await GqlConnection.getInstance(connectionData);
 
-    final transportResult = await proceedAsync(
-        (port) => nativeLibraryInstance.bindings.get_gql_transport(port, _gqlConnection.nativeGqlConnection.ptr!));
+    final transportResult = await _gqlConnection.nativeGqlConnection.use(
+      (ptr) async => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.get_gql_transport(
+          port,
+          ptr,
+        ),
+      ),
+    );
     final transportPtr = Pointer.fromAddress(transportResult).cast<Void>();
     nativeGqlTransport = NativeGqlTransport(transportPtr);
   }
-
-  @override
-  String toString() => 'GqlTransport(${nativeGqlTransport.ptr?.address})';
-
-  @override
-  bool operator ==(dynamic other) =>
-      identical(this, other) ||
-      other is GqlTransport && other.nativeGqlTransport.ptr?.address == nativeGqlTransport.ptr?.address;
-
-  @override
-  int get hashCode => nativeGqlTransport.ptr?.address ?? 0;
 }

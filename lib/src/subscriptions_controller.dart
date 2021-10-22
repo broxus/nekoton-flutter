@@ -10,10 +10,7 @@ import 'core/accounts_storage/models/ton_wallet_asset.dart';
 import 'core/generic_contract/generic_contract.dart';
 import 'core/token_wallet/token_wallet.dart';
 import 'core/ton_wallet/ton_wallet.dart';
-import 'provider/models/contract_state_changed_event.dart';
 import 'provider/models/contract_updates_subscription.dart';
-import 'provider/models/transactions_found_event.dart';
-import 'provider/provider_events.dart';
 import 'transport/gql_transport.dart';
 
 class SubscriptionsController {
@@ -137,21 +134,6 @@ class SubscriptionsController {
     subscriptions[origin] = [...subscriptions[origin] ?? [], genericContract];
 
     _genericContractsSubject.add(subscriptions);
-
-    genericContract.onStateChangedStream.listen((event) {
-      contractStateChangedSubject.add(ContractStateChangedEvent(
-        address: genericContract.address,
-        state: event,
-      ));
-    });
-
-    genericContract.onTransactionsFoundRawStream.listen((event) {
-      transactionsFoundSubject.add(TransactionsFoundEvent(
-        address: genericContract.address,
-        transactions: event.item1,
-        info: event.item2,
-      ));
-    });
 
     return genericContract;
   }

@@ -41,10 +41,14 @@ class Keystore {
   }
 
   Future<List<KeyStoreEntry>> get entries async {
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_entries(
+    final result = await nativeKeystore.use(
+      (ptr) async => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.get_entries(
           port,
-          nativeKeystore.ptr!,
-        ));
+          ptr,
+        ),
+      ),
+    );
 
     final string = cStringToDart(result);
     final json = jsonDecode(string) as List<dynamic>;
@@ -57,11 +61,15 @@ class Keystore {
   Future<KeyStoreEntry> addKey(CreateKeyInput createKeyInput) async {
     final createKeyInputStr = jsonEncode(createKeyInput);
 
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.add_key(
+    final result = await nativeKeystore.use(
+      (ptr) async => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.add_key(
           port,
-          nativeKeystore.ptr!,
+          ptr,
           createKeyInputStr.toNativeUtf8().cast<Int8>(),
-        ));
+        ),
+      ),
+    );
 
     final string = cStringToDart(result);
     final json = jsonDecode(string) as Map<String, dynamic>;
@@ -73,11 +81,15 @@ class Keystore {
   Future<KeyStoreEntry> updateKey(UpdateKeyInput updateKeyInput) async {
     final updateKeyInputStr = jsonEncode(updateKeyInput);
 
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.update_key(
+    final result = await nativeKeystore.use(
+      (ptr) async => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.update_key(
           port,
-          nativeKeystore.ptr!,
+          ptr,
           updateKeyInputStr.toNativeUtf8().cast<Int8>(),
-        ));
+        ),
+      ),
+    );
 
     final string = cStringToDart(result);
     final json = jsonDecode(string) as Map<String, dynamic>;
@@ -89,11 +101,15 @@ class Keystore {
   Future<ExportKeyOutput> exportKey(ExportKeyInput exportKeyInput) async {
     final exportKeyInputStr = jsonEncode(exportKeyInput);
 
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.export_key(
+    final result = await nativeKeystore.use(
+      (ptr) async => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.export_key(
           port,
-          nativeKeystore.ptr!,
+          ptr,
           exportKeyInputStr.toNativeUtf8().cast<Int8>(),
-        ));
+        ),
+      ),
+    );
 
     final string = cStringToDart(result);
     final json = jsonDecode(string) as Map<String, dynamic>;
@@ -110,11 +126,15 @@ class Keystore {
   Future<bool> checkKeyPassword(SignInput signInput) async {
     final signInputStr = jsonEncode(signInput);
 
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.check_key_password(
+    final result = await nativeKeystore.use(
+      (ptr) async => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.check_key_password(
           port,
-          nativeKeystore.ptr!,
+          ptr,
           signInputStr.toNativeUtf8().cast<Int8>(),
-        ));
+        ),
+      ),
+    );
 
     return result == 1;
   }
@@ -141,11 +161,15 @@ class Keystore {
             );
 
   Future<KeyStoreEntry?> removeKey(String publicKey) async {
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.remove_key(
+    final result = await nativeKeystore.use(
+      (ptr) async => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.remove_key(
           port,
-          nativeKeystore.ptr!,
+          ptr,
           publicKey.toNativeUtf8().cast<Int8>(),
-        ));
+        ),
+      ),
+    );
 
     final string = cStringToDart(result);
     final json = jsonDecode(string) as Map<String, dynamic>?;
@@ -154,37 +178,30 @@ class Keystore {
     return entry;
   }
 
-  Future<void> clear() async => proceedAsync((port) => nativeLibraryInstance.bindings.clear_keystore(
-        port,
-        nativeKeystore.ptr!,
-      ));
+  Future<void> clear() async => nativeKeystore.use(
+        (ptr) async => proceedAsync(
+          (port) => nativeLibraryInstance.bindings.clear_keystore(
+            port,
+            ptr,
+          ),
+        ),
+      );
 
-  void free() {
-    nativeLibraryInstance.bindings.free_keystore(
-      nativeKeystore.ptr!,
-    );
-    nativeKeystore.ptr = null;
-  }
+  Future<void> free() async => nativeKeystore.free();
 
   Future<void> _initialize() async {
     _storage = await Storage.getInstance();
 
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_keystore(
+    final result = await _storage.nativeStorage.use(
+      (ptr) async => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.get_keystore(
           port,
-          _storage.nativeStorage.ptr!,
-        ));
+          ptr,
+        ),
+      ),
+    );
     final ptr = Pointer.fromAddress(result).cast<Void>();
 
     nativeKeystore = NativeKeystore(ptr);
   }
-
-  @override
-  String toString() => 'Keystore(${nativeKeystore.ptr?.address})';
-
-  @override
-  bool operator ==(dynamic other) =>
-      identical(this, other) || other is Keystore && other.nativeKeystore.ptr?.address == nativeKeystore.ptr?.address;
-
-  @override
-  int get hashCode => nativeKeystore.ptr?.address ?? 0;
 }

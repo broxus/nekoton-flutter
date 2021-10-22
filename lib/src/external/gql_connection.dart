@@ -30,12 +30,7 @@ class GqlConnection {
     return _instance!;
   }
 
-  void free() {
-    nativeLibraryInstance.bindings.free_gql_connection(
-      nativeGqlConnection.ptr!,
-    );
-    nativeGqlConnection.ptr = null;
-  }
+  Future<void> free() => nativeGqlConnection.free();
 
   Future<void> _initialize(ConnectionData connectionData) async {
     final baseOptions = BaseOptions(
@@ -86,15 +81,4 @@ class GqlConnection {
       nekotonLogger?.e(err, err, st);
     }
   }
-
-  @override
-  String toString() => 'GqlConnection(${nativeGqlConnection.ptr?.address})';
-
-  @override
-  bool operator ==(dynamic other) =>
-      identical(this, other) ||
-      other is GqlConnection && other.nativeGqlConnection.ptr?.address == nativeGqlConnection.ptr?.address;
-
-  @override
-  int get hashCode => nativeGqlConnection.ptr?.address ?? 0;
 }

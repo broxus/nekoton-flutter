@@ -112,30 +112,42 @@ class TonWallet implements Comparable<TonWallet> {
   Stream<List<TonWalletTransactionWithData>> get onTransactionsFoundStream => _onTransactionsFoundSubject.stream;
 
   Future<String> get _address async {
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_ton_wallet_address(
+    final result = await nativeTonWallet.use(
+      (ptr) async => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.get_ton_wallet_address(
           port,
-          nativeTonWallet.ptr!,
-        ));
+          ptr,
+        ),
+      ),
+    );
     final address = cStringToDart(result);
 
     return address;
   }
 
   Future<String> get _publicKey async {
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_ton_wallet_public_key(
+    final result = await nativeTonWallet.use(
+      (ptr) async => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.get_ton_wallet_public_key(
           port,
-          nativeTonWallet.ptr!,
-        ));
+          ptr,
+        ),
+      ),
+    );
     final publicKey = cStringToDart(result);
 
     return publicKey;
   }
 
   Future<WalletType> get _walletType async {
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_ton_wallet_wallet_type(
+    final result = await nativeTonWallet.use(
+      (ptr) async => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.get_ton_wallet_wallet_type(
           port,
-          nativeTonWallet.ptr!,
-        ));
+          ptr,
+        ),
+      ),
+    );
 
     final string = cStringToDart(result);
     final json = jsonDecode(string) as Map<String, dynamic>;
@@ -145,10 +157,14 @@ class TonWallet implements Comparable<TonWallet> {
   }
 
   Future<ContractState> get contractState async {
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_ton_wallet_contract_state(
+    final result = await nativeTonWallet.use(
+      (ptr) async => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.get_ton_wallet_contract_state(
           port,
-          nativeTonWallet.ptr!,
-        ));
+          ptr,
+        ),
+      ),
+    );
 
     final string = cStringToDart(result);
     final json = jsonDecode(string) as Map<String, dynamic>;
@@ -158,10 +174,14 @@ class TonWallet implements Comparable<TonWallet> {
   }
 
   Future<List<PendingTransaction>> get pendingTransactions async {
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_ton_wallet_pending_transactions(
+    final result = await nativeTonWallet.use(
+      (ptr) async => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.get_ton_wallet_pending_transactions(
           port,
-          nativeTonWallet.ptr!,
-        ));
+          ptr,
+        ),
+      ),
+    );
 
     final string = cStringToDart(result);
     final json = jsonDecode(string) as List<dynamic>;
@@ -172,10 +192,14 @@ class TonWallet implements Comparable<TonWallet> {
   }
 
   Future<PollingMethod> get pollingMethod async {
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_ton_wallet_polling_method(
+    final result = await nativeTonWallet.use(
+      (ptr) async => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.get_ton_wallet_polling_method(
           port,
-          nativeTonWallet.ptr!,
-        ));
+          ptr,
+        ),
+      ),
+    );
 
     final string = cStringToDart(result);
     final json = jsonDecode(string);
@@ -185,10 +209,14 @@ class TonWallet implements Comparable<TonWallet> {
   }
 
   Future<TonWalletDetails> get _details async {
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_ton_wallet_details(
+    final result = await nativeTonWallet.use(
+      (ptr) async => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.get_ton_wallet_details(
           port,
-          nativeTonWallet.ptr!,
-        ));
+          ptr,
+        ),
+      ),
+    );
 
     final string = cStringToDart(result);
     final json = jsonDecode(string) as Map<String, dynamic>;
@@ -198,10 +226,14 @@ class TonWallet implements Comparable<TonWallet> {
   }
 
   Future<List<MultisigPendingTransaction>> get unconfirmedTransactions async {
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_ton_wallet_unconfirmed_transactions(
+    final result = await nativeTonWallet.use(
+      (ptr) async => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.get_ton_wallet_unconfirmed_transactions(
           port,
-          nativeTonWallet.ptr!,
-        ));
+          ptr,
+        ),
+      ),
+    );
 
     final string = cStringToDart(result);
     final json = jsonDecode(string) as List<dynamic>;
@@ -212,10 +244,14 @@ class TonWallet implements Comparable<TonWallet> {
   }
 
   Future<List<String>?> get _custodians async {
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.get_ton_wallet_custodians(
+    final result = await nativeTonWallet.use(
+      (ptr) async => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.get_ton_wallet_custodians(
           port,
-          nativeTonWallet.ptr!,
-        ));
+          ptr,
+        ),
+      ),
+    );
 
     final string = cStringToDart(result);
     final json = jsonDecode(string) as List<dynamic>?;
@@ -227,11 +263,15 @@ class TonWallet implements Comparable<TonWallet> {
   Future<UnsignedMessage> prepareDeploy(Expiration expiration) async {
     final expirationStr = jsonEncode(expiration);
 
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.ton_wallet_prepare_deploy(
+    final result = await nativeTonWallet.use(
+      (ptr) async => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.ton_wallet_prepare_deploy(
           port,
-          nativeTonWallet.ptr!,
+          ptr,
           expirationStr.toNativeUtf8().cast<Int8>(),
-        ));
+        ),
+      ),
+    );
 
     final ptr = Pointer.fromAddress(result).cast<Void>();
     final nativeUnsignedMessage = NativeUnsignedMessage(ptr);
@@ -248,14 +288,17 @@ class TonWallet implements Comparable<TonWallet> {
     final expirationStr = jsonEncode(expiration);
     final custodiansStr = jsonEncode(custodians);
 
-    final result =
-        await proceedAsync((port) => nativeLibraryInstance.bindings.ton_wallet_prepare_deploy_with_multiple_owners(
-              port,
-              nativeTonWallet.ptr!,
-              expirationStr.toNativeUtf8().cast<Int8>(),
-              custodiansStr.toNativeUtf8().cast<Int8>(),
-              reqConfirms,
-            ));
+    final result = await nativeTonWallet.use(
+      (ptr) async => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.ton_wallet_prepare_deploy_with_multiple_owners(
+          port,
+          ptr,
+          expirationStr.toNativeUtf8().cast<Int8>(),
+          custodiansStr.toNativeUtf8().cast<Int8>(),
+          reqConfirms,
+        ),
+      ),
+    );
 
     final ptr = Pointer.fromAddress(result).cast<Void>();
     final nativeUnsignedMessage = NativeUnsignedMessage(ptr);
@@ -273,16 +316,22 @@ class TonWallet implements Comparable<TonWallet> {
   }) async {
     final expirationStr = jsonEncode(expiration);
 
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.ton_wallet_prepare_transfer(
-          port,
-          nativeTonWallet.ptr!,
-          _transport.nativeGqlTransport.ptr!,
-          expirationStr.toNativeUtf8().cast<Int8>(),
-          destination.toNativeUtf8().cast<Int8>(),
-          amount,
-          body?.toNativeUtf8().cast<Int8>() ?? Pointer.fromAddress(0).cast<Int8>(),
-          isComment ? 1 : 0,
-        ));
+    final result = await nativeTonWallet.use(
+      (ptr) async => _transport.nativeGqlTransport.use(
+        (nativeGqlTransportPtr) async => proceedAsync(
+          (port) => nativeLibraryInstance.bindings.ton_wallet_prepare_transfer(
+            port,
+            ptr,
+            nativeGqlTransportPtr,
+            expirationStr.toNativeUtf8().cast<Int8>(),
+            destination.toNativeUtf8().cast<Int8>(),
+            amount,
+            body?.toNativeUtf8().cast<Int8>() ?? Pointer.fromAddress(0).cast<Int8>(),
+            isComment ? 1 : 0,
+          ),
+        ),
+      ),
+    );
 
     final ptr = Pointer.fromAddress(result).cast<Void>();
     final nativeUnsignedMessage = NativeUnsignedMessage(ptr);
@@ -297,13 +346,19 @@ class TonWallet implements Comparable<TonWallet> {
   }) async {
     final expirationStr = jsonEncode(expiration);
 
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.ton_wallet_prepare_confirm_transaction(
-          port,
-          nativeTonWallet.ptr!,
-          _transport.nativeGqlTransport.ptr!,
-          transactionId,
-          expirationStr.toNativeUtf8().cast<Int8>(),
-        ));
+    final result = await nativeTonWallet.use(
+      (ptr) async => _transport.nativeGqlTransport.use(
+        (nativeGqlTransportPtr) async => proceedAsync(
+          (port) => nativeLibraryInstance.bindings.ton_wallet_prepare_confirm_transaction(
+            port,
+            ptr,
+            nativeGqlTransportPtr,
+            transactionId,
+            expirationStr.toNativeUtf8().cast<Int8>(),
+          ),
+        ),
+      ),
+    );
 
     final ptr = Pointer.fromAddress(result).cast<Void>();
     final nativeUnsignedMessage = NativeUnsignedMessage(ptr);
@@ -320,15 +375,21 @@ class TonWallet implements Comparable<TonWallet> {
   }) async {
     final expirationStr = jsonEncode(expiration);
 
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.prepare_add_ordinary_stake(
-          port,
-          nativeTonWallet.ptr!,
-          _transport.nativeGqlTransport.ptr!,
-          expirationStr.toNativeUtf8().cast<Int8>(),
-          depool.toNativeUtf8().cast<Int8>(),
-          depoolFee,
-          stake,
-        ));
+    final result = await nativeTonWallet.use(
+      (ptr) async => _transport.nativeGqlTransport.use(
+        (nativeGqlTransportPtr) async => proceedAsync(
+          (port) => nativeLibraryInstance.bindings.prepare_add_ordinary_stake(
+            port,
+            ptr,
+            nativeGqlTransportPtr,
+            expirationStr.toNativeUtf8().cast<Int8>(),
+            depool.toNativeUtf8().cast<Int8>(),
+            depoolFee,
+            stake,
+          ),
+        ),
+      ),
+    );
 
     final ptr = Pointer.fromAddress(result).cast<Void>();
     final nativeUnsignedMessage = NativeUnsignedMessage(ptr);
@@ -345,15 +406,21 @@ class TonWallet implements Comparable<TonWallet> {
   }) async {
     final expirationStr = jsonEncode(expiration);
 
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.prepare_withdraw_part(
-          port,
-          nativeTonWallet.ptr!,
-          _transport.nativeGqlTransport.ptr!,
-          expirationStr.toNativeUtf8().cast<Int8>(),
-          depool.toNativeUtf8().cast<Int8>(),
-          depoolFee,
-          withdrawValue,
-        ));
+    final result = await nativeTonWallet.use(
+      (ptr) async => _transport.nativeGqlTransport.use(
+        (nativeGqlTransportPtr) async => proceedAsync(
+          (port) => nativeLibraryInstance.bindings.prepare_withdraw_part(
+            port,
+            ptr,
+            nativeGqlTransportPtr,
+            expirationStr.toNativeUtf8().cast<Int8>(),
+            depool.toNativeUtf8().cast<Int8>(),
+            depoolFee,
+            withdrawValue,
+          ),
+        ),
+      ),
+    );
 
     final ptr = Pointer.fromAddress(result).cast<Void>();
     final nativeUnsignedMessage = NativeUnsignedMessage(ptr);
@@ -362,12 +429,17 @@ class TonWallet implements Comparable<TonWallet> {
     return unsignedMessage;
   }
 
-  Future<int> estimateFees(UnsignedMessage message) async =>
-      proceedAsync((port) => nativeLibraryInstance.bindings.ton_wallet_estimate_fees(
-            port,
-            nativeTonWallet.ptr!,
-            message.nativeUnsignedMessage.ptr!,
-          ));
+  Future<int> estimateFees(UnsignedMessage message) async => nativeTonWallet.use(
+        (ptr) async => message.nativeUnsignedMessage.use(
+          (nativeUnsignedMessagePtr) async => proceedAsync(
+            (port) => nativeLibraryInstance.bindings.ton_wallet_estimate_fees(
+              port,
+              ptr,
+              nativeUnsignedMessagePtr,
+            ),
+          ),
+        ),
+      );
 
   Future<PendingTransaction> send({
     required UnsignedMessage message,
@@ -387,14 +459,22 @@ class TonWallet implements Comparable<TonWallet> {
     );
     final signInputStr = jsonEncode(signInput);
 
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.ton_wallet_send(
-          port,
-          nativeTonWallet.ptr!,
-          _keystore.nativeKeystore.ptr!,
-          message.nativeUnsignedMessage.ptr!,
-          signInputStr.toNativeUtf8().cast<Int8>(),
-        ));
-    message.nativeUnsignedMessage.ptr = null;
+    final result = await nativeTonWallet.use(
+      (ptr) async => _keystore.nativeKeystore.use(
+        (nativeKeystorePtr) async => message.nativeUnsignedMessage.use(
+          (nativeUnsignedMessagePtr) async => proceedAsync(
+            (port) => nativeLibraryInstance.bindings.ton_wallet_send(
+              port,
+              ptr,
+              nativeKeystorePtr,
+              nativeUnsignedMessagePtr,
+              signInputStr.toNativeUtf8().cast<Int8>(),
+            ),
+          ),
+        ),
+      ),
+    );
+    await message.nativeUnsignedMessage.free();
 
     final string = cStringToDart(result);
     final json = jsonDecode(string) as Map<String, dynamic>;
@@ -405,19 +485,27 @@ class TonWallet implements Comparable<TonWallet> {
     return transaction;
   }
 
-  Future<void> refresh() async => proceedAsync((port) => nativeLibraryInstance.bindings.ton_wallet_refresh(
-        port,
-        nativeTonWallet.ptr!,
-      ));
+  Future<void> refresh() async => nativeTonWallet.use(
+        (ptr) async => proceedAsync(
+          (port) => nativeLibraryInstance.bindings.ton_wallet_refresh(
+            port,
+            ptr,
+          ),
+        ),
+      );
 
   Future<void> preloadTransactions(TransactionId from) async {
     final fromStr = jsonEncode(from);
 
-    await proceedAsync((port) => nativeLibraryInstance.bindings.ton_wallet_preload_transactions(
+    await nativeTonWallet.use(
+      (ptr) async => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.ton_wallet_preload_transactions(
           port,
-          nativeTonWallet.ptr!,
+          ptr,
           fromStr.toNativeUtf8().cast<Int8>(),
-        ));
+        ),
+      ),
+    );
   }
 
   Future<Transaction> waitForTransaction(PendingTransaction pendingTransaction) async {
@@ -454,27 +542,33 @@ class TonWallet implements Comparable<TonWallet> {
     return completer.future;
   }
 
-  void free() {
-    nativeLibraryInstance.bindings.free_ton_wallet(
-      nativeTonWallet.ptr!,
-    );
-    nativeTonWallet.ptr = null;
-    _receivePort.close();
-    _subscription.cancel();
+  Future<void> free() async {
     _timer.cancel();
+
+    _subscription.cancel();
+
     _onMessageSentSubject.close();
     _onMessageExpiredSubject.close();
     _onStateChangedSubject.close();
     _onTransactionsFoundSubject.close();
+
+    _receivePort.close();
+
+    return nativeTonWallet.free();
   }
 
-  Future<void> _handleBlock(String id) async =>
-      proceedAsync((port) => nativeLibraryInstance.bindings.ton_wallet_handle_block(
-            port,
-            nativeTonWallet.ptr!,
-            _transport.nativeGqlTransport.ptr!,
-            id.toNativeUtf8().cast<Int8>(),
-          ));
+  Future<void> _handleBlock(String id) async => nativeTonWallet.use(
+        (ptr) async => _transport.nativeGqlTransport.use(
+          (nativeGqlTransportPtr) async => proceedAsync(
+            (port) => nativeLibraryInstance.bindings.ton_wallet_handle_block(
+              port,
+              ptr,
+              nativeGqlTransportPtr,
+              id.toNativeUtf8().cast<Int8>(),
+            ),
+          ),
+        ),
+      );
 
   Future<void> _internalRefresh(String currentBlockId) async {
     for (var i = 0; 0 < 10; i++) {
@@ -492,6 +586,7 @@ class TonWallet implements Comparable<TonWallet> {
         }
       } catch (err, st) {
         nekotonLogger?.e(err, err, st);
+        break;
       }
     }
   }
@@ -507,14 +602,18 @@ class TonWallet implements Comparable<TonWallet> {
     _subscription = _receivePort.listen(_subscriptionListener);
 
     final walletTypeStr = jsonEncode(walletType);
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.ton_wallet_subscribe(
+    final result = await _transport.nativeGqlTransport.use(
+      (ptr) async => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.ton_wallet_subscribe(
           port,
           _receivePort.sendPort.nativePort,
-          _transport.nativeGqlTransport.ptr!,
+          ptr,
           workchain,
           publicKey.toNativeUtf8().cast<Int8>(),
           walletTypeStr.toNativeUtf8().cast<Int8>(),
-        ));
+        ),
+      ),
+    );
     final ptr = Pointer.fromAddress(result).cast<Void>();
 
     nativeTonWallet = NativeTonWallet(ptr);
@@ -536,12 +635,16 @@ class TonWallet implements Comparable<TonWallet> {
     _transport = transport;
     _subscription = _receivePort.listen(_subscriptionListener);
 
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.ton_wallet_subscribe_by_address(
+    final result = await _transport.nativeGqlTransport.use(
+      (ptr) async => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.ton_wallet_subscribe_by_address(
           port,
           _receivePort.sendPort.nativePort,
-          _transport.nativeGqlTransport.ptr!,
+          ptr,
           address.toNativeUtf8().cast<Int8>(),
-        ));
+        ),
+      ),
+    );
     final ptr = Pointer.fromAddress(result).cast<Void>();
 
     nativeTonWallet = NativeTonWallet(ptr);
@@ -566,12 +669,16 @@ class TonWallet implements Comparable<TonWallet> {
     _subscription = _receivePort.listen(_subscriptionListener);
 
     final existingWalletInfoStr = jsonEncode(existingWalletInfo);
-    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.ton_wallet_subscribe_by_existing(
+    final result = await _transport.nativeGqlTransport.use(
+      (ptr) async => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.ton_wallet_subscribe_by_existing(
           port,
           _receivePort.sendPort.nativePort,
-          _transport.nativeGqlTransport.ptr!,
+          ptr,
           existingWalletInfoStr.toNativeUtf8().cast<Int8>(),
-        ));
+        ),
+      ),
+    );
     final ptr = Pointer.fromAddress(result).cast<Void>();
 
     nativeTonWallet = NativeTonWallet(ptr);
@@ -682,17 +789,6 @@ class TonWallet implements Comparable<TonWallet> {
   }
 
   @override
-  String toString() => 'TonWallet(${nativeTonWallet.ptr?.address})';
-
-  @override
-  bool operator ==(dynamic other) =>
-      identical(this, other) ||
-      other is TonWallet && other.nativeTonWallet.ptr?.address == nativeTonWallet.ptr?.address;
-
-  @override
-  int get hashCode => nativeTonWallet.ptr?.address ?? 0;
-
-  @override
   int compareTo(TonWallet other) => walletType.toInt().compareTo(other.walletType.toInt());
 }
 
@@ -701,12 +797,16 @@ Future<List<ExistingWalletInfo>> findExistingWallets({
   required String publicKey,
   required int workchainId,
 }) async {
-  final result = await proceedAsync((port) => nativeLibraryInstance.bindings.find_existing_wallets(
+  final result = await transport.nativeGqlTransport.use(
+    (ptr) async => proceedAsync(
+      (port) => nativeLibraryInstance.bindings.find_existing_wallets(
         port,
-        transport.nativeGqlTransport.ptr!,
+        ptr,
         publicKey.toNativeUtf8().cast<Int8>(),
         workchainId,
-      ));
+      ),
+    ),
+  );
 
   final string = cStringToDart(result);
   final json = jsonDecode(string) as List<dynamic>;

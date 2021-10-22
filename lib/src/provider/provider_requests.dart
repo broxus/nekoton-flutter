@@ -628,12 +628,14 @@ Future<SendExternalMessageOutput> sendExternalMessage({
       password: password,
       options: const TransactionExecutionOptions(disableSignatureCheck: false),
     );
+    message.nativeUnsignedMessage.free();
   } else {
     final pendingTransaction = await genericContract.send(
       message: message,
       publicKey: selectedPublicKey,
       password: password,
     );
+    message.nativeUnsignedMessage.free();
 
     transaction = await genericContract.waitForTransaction(pendingTransaction);
   }
