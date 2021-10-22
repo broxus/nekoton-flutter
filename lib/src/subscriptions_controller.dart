@@ -79,7 +79,7 @@ class SubscriptionsController {
   }) async {
     final transport = _connectionController.transport as GqlTransport;
 
-    final tonWallet = await tonWalletSubscribe(
+    final tonWallet = await TonWallet.subscribe(
       transport: transport,
       workchain: tonWalletAsset.workchain,
       publicKey: publicKey,
@@ -105,7 +105,7 @@ class SubscriptionsController {
 
     final tonWallet = tonWallets.firstWhere((e) => e.address == tonWalletAsset.address);
 
-    final tokenWallet = await tokenWalletSubscribe(
+    final tokenWallet = await TokenWallet.subscribe(
       transport: transport,
       tonWallet: tonWallet,
       rootTokenContract: tokenWalletAsset.rootTokenContract,
@@ -128,7 +128,7 @@ class SubscriptionsController {
   }) async {
     final transport = _connectionController.transport as GqlTransport;
 
-    final genericContract = await genericContractSubscribe(
+    final genericContract = await GenericContract.subscribe(
       transport: transport,
       address: address,
     );
@@ -171,7 +171,7 @@ class SubscriptionsController {
 
     _tonWalletsSubject.add(subscriptions);
 
-    freeTonWallet(tonWallet);
+    tonWallet.free();
   }
 
   void removeTokenWalletSubscription({
@@ -193,7 +193,7 @@ class SubscriptionsController {
 
     _tokenWalletsSubject.add(subscriptions);
 
-    freeTokenWallet(tokenWallet);
+    tokenWallet.free();
   }
 
   void removeOriginGenericContractSubscriptions(String origin) {
@@ -210,7 +210,7 @@ class SubscriptionsController {
     _genericContractsSubject.add(subscriptions);
 
     for (final genericContract in genericContracts) {
-      freeGenericContract(genericContract);
+      genericContract.free();
     }
   }
 
@@ -230,7 +230,7 @@ class SubscriptionsController {
 
     _genericContractsSubject.add(subscriptions);
 
-    freeGenericContract(genericContract);
+    genericContract.free();
   }
 
   void clearTonWalletsSubscriptions() {
@@ -239,7 +239,7 @@ class SubscriptionsController {
     _tonWalletsSubject.add([]);
 
     for (final subscription in subscriptions) {
-      freeTonWallet(subscription);
+      subscription.free();
     }
   }
 
@@ -249,7 +249,7 @@ class SubscriptionsController {
     _tokenWalletsSubject.add([]);
 
     for (final subscription in subscriptions) {
-      freeTokenWallet(subscription);
+      subscription.free();
     }
   }
 
@@ -259,7 +259,7 @@ class SubscriptionsController {
     _genericContractsSubject.add({});
 
     for (final subscription in subscriptions.values.expand((e) => e)) {
-      freeGenericContract(subscription);
+      subscription.free();
     }
   }
 

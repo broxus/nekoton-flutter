@@ -27,10 +27,6 @@ import 'models/symbol.dart';
 import 'models/token_wallet_transaction_with_data.dart';
 import 'models/token_wallet_version.dart';
 
-part 'free_token_wallet.dart';
-part 'token_wallet_check_validity.dart';
-part 'token_wallet_subscribe.dart';
-
 class TokenWallet implements Comparable<TokenWallet> {
   final _receivePort = ReceivePort();
   late final GqlTransport _transport;
@@ -47,6 +43,20 @@ class TokenWallet implements Comparable<TokenWallet> {
   final _onTransactionsFoundSubject = BehaviorSubject<List<TokenWalletTransactionWithData>>.seeded([]);
 
   TokenWallet._();
+
+  static Future<TokenWallet> subscribe({
+    required GqlTransport transport,
+    required TonWallet tonWallet,
+    required String rootTokenContract,
+  }) async {
+    final tokenWallet = TokenWallet._();
+    await tokenWallet._initialize(
+      transport: transport,
+      tonWallet: tonWallet,
+      rootTokenContract: rootTokenContract,
+    );
+    return tokenWallet;
+  }
 
   Stream<String> get onBalanceChangedStream => _onBalanceChangedSubject.stream;
 
@@ -200,6 +210,18 @@ class TokenWallet implements Comparable<TokenWallet> {
         ));
   }
 
+  void free() {
+    nativeLibraryInstance.bindings.free_token_wallet(
+      _nativeTokenWallet.ptr!,
+    );
+    _nativeTokenWallet.ptr = null;
+    _receivePort.close();
+    _subscription.cancel();
+    _timer.cancel();
+    _onBalanceChangedSubject.close();
+    _onTransactionsFoundSubject.close();
+  }
+
   Future<void> _handleBlock(String id) async =>
       proceedAsync((port) => nativeLibraryInstance.bindings.token_wallet_handle_block(
             port,
@@ -228,12 +250,35 @@ class TokenWallet implements Comparable<TokenWallet> {
     }
   }
 
-  Future<void> _refreshTimer(Timer timer) async {
-    try {
-      await refresh();
-    } catch (err, st) {
-      nekotonLogger?.e(err, err, st);
-    }
+  Future<void> _initialize({
+    required GqlTransport transport,
+    required TonWallet tonWallet,
+    required String rootTokenContract,
+  }) async {
+    _tonWallet = tonWallet;
+    _subscription = _receivePort.listen(_subscriptionListener);
+    _transport = transport;
+
+    final tonWalletAddress = _tonWallet.address;
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.token_wallet_subscribe(
+          port,
+          _receivePort.sendPort.nativePort,
+          _transport.nativeGqlTransport.ptr!,
+          tonWalletAddress.toNativeUtf8().cast<Int8>(),
+          rootTokenContract.toNativeUtf8().cast<Int8>(),
+        ));
+    final ptr = Pointer.fromAddress(result).cast<Void>();
+
+    _nativeTokenWallet = NativeTokenWallet(ptr);
+    _timer = Timer.periodic(
+      const Duration(seconds: 15),
+      _refreshTimer,
+    );
+    owner = await _owner;
+    address = await _address;
+    symbol = await _symbol;
+    version = await _version;
+    ownerPublicKey = tonWallet.publicKey;
   }
 
   Future<void> _subscriptionListener(dynamic data) async {
@@ -269,6 +314,14 @@ class TokenWallet implements Comparable<TokenWallet> {
     }
   }
 
+  Future<void> _refreshTimer(Timer timer) async {
+    try {
+      await refresh();
+    } catch (err, st) {
+      nekotonLogger?.e(err, err, st);
+    }
+  }
+
   @override
   String toString() => 'TokenWallet(${_nativeTokenWallet.ptr?.address})';
 
@@ -282,4 +335,29 @@ class TokenWallet implements Comparable<TokenWallet> {
 
   @override
   int compareTo(TokenWallet other) => symbol.name.compareTo(other.symbol.name);
+}
+
+Future<bool> checkTokenWalletValidity({
+  required GqlTransport transport,
+  required String owner,
+  required String rootTokenContract,
+}) async {
+  final receivePort = ReceivePort();
+
+  try {
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.token_wallet_subscribe(
+          port,
+          receivePort.sendPort.nativePort,
+          transport.nativeGqlTransport.ptr!,
+          owner.toNativeUtf8().cast<Int8>(),
+          rootTokenContract.toNativeUtf8().cast<Int8>(),
+        ));
+    final ptr = Pointer.fromAddress(result).cast<Void>();
+
+    nativeLibraryInstance.bindings.free_token_wallet(ptr);
+
+    return true;
+  } catch (_) {
+    return false;
+  }
 }

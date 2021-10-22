@@ -30,9 +30,6 @@ import '../models/unsigned_message.dart';
 import 'models/native_generic_contract.dart';
 import 'models/transaction_execution_options.dart';
 
-part 'free_generic_contract.dart';
-part 'generic_contract_subscribe.dart';
-
 class GenericContract {
   final _receivePort = ReceivePort();
   late final GqlTransport _transport;
@@ -48,6 +45,18 @@ class GenericContract {
   final _onTransactionsFoundRawSubject = BehaviorSubject<Tuple2<List<Transaction>, TransactionsBatchInfo>>();
 
   GenericContract._();
+
+  static Future<GenericContract> subscribe({
+    required GqlTransport transport,
+    required String address,
+  }) async {
+    final genericContract = GenericContract._();
+    await genericContract._initialize(
+      transport: transport,
+      address: address,
+    );
+    return genericContract;
+  }
 
   Stream<List<Transaction>> get onMessageSentStream => _onMessageSentSubject.stream.transform<List<Transaction>>(
         StreamTransformer.fromHandlers(
@@ -248,6 +257,20 @@ class GenericContract {
     return completer.future;
   }
 
+  void free() {
+    nativeLibraryInstance.bindings.free_generic_contract(
+      _nativeGenericContract.ptr!,
+    );
+    _nativeGenericContract.ptr = null;
+    _receivePort.close();
+    _subscription.cancel();
+    _timer.cancel();
+    _onMessageSentSubject.close();
+    _onMessageExpiredSubject.close();
+    _onStateChangedSubject.close();
+    _onTransactionsFoundSubject.close();
+  }
+
   Future<void> _handleBlock(String id) async =>
       proceedAsync((port) => nativeLibraryInstance.bindings.generic_contract_handle_block(
             port,
@@ -276,16 +299,28 @@ class GenericContract {
     }
   }
 
-  Future<void> _refreshTimer(Timer timer) async {
-    try {
-      if (await _pollingMethod == PollingMethod.reliable) {
-        return;
-      }
+  Future<void> _initialize({
+    required GqlTransport transport,
+    required String address,
+  }) async {
+    _transport = transport;
+    _keystore = await Keystore.getInstance();
+    _subscription = _receivePort.listen(_subscriptionListener);
 
-      await refresh();
-    } catch (err, st) {
-      nekotonLogger?.e(err, err, st);
-    }
+    final result = await proceedAsync((port) => nativeLibraryInstance.bindings.generic_contract_subscribe(
+          port,
+          _receivePort.sendPort.nativePort,
+          _transport.nativeGqlTransport.ptr!,
+          address.toNativeUtf8().cast<Int8>(),
+        ));
+    final ptr = Pointer.fromAddress(result).cast<Void>();
+
+    _nativeGenericContract = NativeGenericContract(ptr);
+    _timer = Timer.periodic(
+      const Duration(seconds: 15),
+      _refreshTimer,
+    );
+    this.address = await _address;
   }
 
   Future<void> _subscriptionListener(dynamic data) async {
@@ -368,6 +403,18 @@ class GenericContract {
           _onTransactionsFoundSubject.add(transactions);
           break;
       }
+    } catch (err, st) {
+      nekotonLogger?.e(err, err, st);
+    }
+  }
+
+  Future<void> _refreshTimer(Timer timer) async {
+    try {
+      if (await _pollingMethod == PollingMethod.reliable) {
+        return;
+      }
+
+      await refresh();
     } catch (err, st) {
       nekotonLogger?.e(err, err, st);
     }
