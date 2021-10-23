@@ -16,7 +16,7 @@ use crate::{
     match_result,
     models::{HandleError, NativeError, NativeStatus},
     parse_address, parse_public_key, runtime, send_to_result_port,
-    transport::gql_transport::MutexGqlTransport,
+    transport::gql_transport::{MutexGqlTransport, GQL_TRANSPORT_NOT_FOUND},
     FromPtr, ToPtr, RUNTIME,
 };
 use nekoton::{
@@ -58,12 +58,27 @@ pub unsafe extern "C" fn ton_wallet_subscribe(
 
     let rt = runtime!();
     rt.spawn(async move {
-        let transport = transport.lock().await;
-        let transport = transport.clone();
+        let mut transport_guard = transport.lock().await;
+        let transport = transport_guard.take();
+        let transport = match transport {
+            Some(transport) => transport,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
+                }));
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
 
         let result =
-            internal_ton_wallet_subscribe(port, transport, workchain, public_key, contract).await;
+            internal_ton_wallet_subscribe(port, transport.clone(), workchain, public_key, contract)
+                .await;
         let result = match_result(result);
+
+        *transport_guard = Some(transport);
+
         send_to_result_port(result_port, result);
     });
 }
@@ -110,11 +125,26 @@ pub unsafe extern "C" fn ton_wallet_subscribe_by_address(
 
     let rt = runtime!();
     rt.spawn(async move {
-        let transport = transport.lock().await;
-        let transport = transport.clone();
+        let mut transport_guard = transport.lock().await;
+        let transport = transport_guard.take();
+        let transport = match transport {
+            Some(transport) => transport,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
+                }));
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
 
-        let result = internal_ton_wallet_subscribe_by_address(port, transport, address).await;
+        let result =
+            internal_ton_wallet_subscribe_by_address(port, transport.clone(), address).await;
         let result = match_result(result);
+
+        *transport_guard = Some(transport);
+
         send_to_result_port(result_port, result);
     });
 }
@@ -155,12 +185,27 @@ pub unsafe extern "C" fn ton_wallet_subscribe_by_existing(
 
     let rt = runtime!();
     rt.spawn(async move {
-        let transport = transport.lock().await;
-        let transport = transport.clone();
+        let mut transport_guard = transport.lock().await;
+        let transport = transport_guard.take();
+        let transport = match transport {
+            Some(transport) => transport,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
+                }));
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
 
         let result =
-            internal_ton_wallet_subscribe_by_existing(port, transport, existing_wallet).await;
+            internal_ton_wallet_subscribe_by_existing(port, transport.clone(), existing_wallet)
+                .await;
         let result = match_result(result);
+
+        *transport_guard = Some(transport);
+
         send_to_result_port(result_port, result);
     });
 }
@@ -203,11 +248,26 @@ pub unsafe extern "C" fn find_existing_wallets(
 
     let rt = runtime!();
     rt.spawn(async move {
-        let transport = transport.lock().await;
-        let transport = transport.clone();
+        let mut transport_guard = transport.lock().await;
+        let transport = transport_guard.take();
+        let transport = match transport {
+            Some(transport) => transport,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
+                }));
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
 
-        let result = internal_find_existing_wallets(transport, public_key, workchain_id).await;
+        let result =
+            internal_find_existing_wallets(transport.clone(), public_key, workchain_id).await;
         let result = match_result(result);
+
+        *transport_guard = Some(transport);
+
         send_to_result_port(result_port, result);
     });
 }
@@ -787,8 +847,22 @@ pub unsafe extern "C" fn ton_wallet_prepare_transfer(
             }
         };
 
-        let transport = transport.lock().await;
-        let transport = transport.clone();
+        let mut transport_guard = transport.lock().await;
+        let transport = transport_guard.take();
+        let transport = match transport {
+            Some(transport) => transport,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
+                }));
+
+                *ton_wallet_guard = Some(ton_wallet);
+
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
 
         let result =
             internal_ton_wallet_prepare_transfer_params(expiration, destination, body, is_comment)
@@ -805,7 +879,7 @@ pub unsafe extern "C" fn ton_wallet_prepare_transfer(
 
         let result = internal_ton_wallet_prepare_transfer(
             &mut ton_wallet,
-            transport,
+            transport.clone(),
             expiration,
             destination,
             amount,
@@ -815,6 +889,7 @@ pub unsafe extern "C" fn ton_wallet_prepare_transfer(
         let result = match_result(result);
 
         *ton_wallet_guard = Some(ton_wallet);
+        *transport_guard = Some(transport);
 
         send_to_result_port(result_port, result);
     });
@@ -940,12 +1015,26 @@ pub unsafe extern "C" fn ton_wallet_prepare_confirm_transaction(
             }
         };
 
-        let transport = transport.lock().await;
-        let transport = transport.clone();
+        let mut transport_guard = transport.lock().await;
+        let transport = transport_guard.take();
+        let transport = match transport {
+            Some(transport) => transport,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
+                }));
+
+                *ton_wallet_guard = Some(ton_wallet);
+
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
 
         let result = internal_ton_wallet_prepare_confirm_transaction(
             &mut ton_wallet,
-            transport,
+            transport.clone(),
             transaction_id,
             expiration,
         )
@@ -953,6 +1042,7 @@ pub unsafe extern "C" fn ton_wallet_prepare_confirm_transaction(
         let result = match_result(result);
 
         *ton_wallet_guard = Some(ton_wallet);
+        *transport_guard = Some(transport);
 
         send_to_result_port(result_port, result);
     });
@@ -1019,9 +1109,6 @@ pub unsafe extern "C" fn prepare_add_ordinary_stake(
 
     let rt = runtime!();
     rt.spawn(async move {
-        let transport = transport.lock().await;
-        let transport = transport.clone();
-
         let mut ton_wallet_guard = ton_wallet.lock().await;
         let ton_wallet = ton_wallet_guard.take();
         let mut ton_wallet = match ton_wallet {
@@ -1036,9 +1123,26 @@ pub unsafe extern "C" fn prepare_add_ordinary_stake(
             }
         };
 
+        let mut transport_guard = transport.lock().await;
+        let transport = transport_guard.take();
+        let transport = match transport {
+            Some(transport) => transport,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
+                }));
+
+                *ton_wallet_guard = Some(ton_wallet);
+
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
+
         let result = internal_prepare_add_ordinary_stake(
             &mut ton_wallet,
-            transport,
+            transport.clone(),
             expiration,
             depool,
             depool_fee,
@@ -1048,6 +1152,7 @@ pub unsafe extern "C" fn prepare_add_ordinary_stake(
         let result = match_result(result);
 
         *ton_wallet_guard = Some(ton_wallet);
+        *transport_guard = Some(transport);
 
         send_to_result_port(result_port, result);
     });
@@ -1103,9 +1208,6 @@ pub unsafe extern "C" fn prepare_withdraw_part(
 
     let rt = runtime!();
     rt.spawn(async move {
-        let transport = transport.lock().await;
-        let transport = transport.clone();
-
         let mut ton_wallet_guard = ton_wallet.lock().await;
         let ton_wallet = ton_wallet_guard.take();
         let mut ton_wallet = match ton_wallet {
@@ -1120,9 +1222,26 @@ pub unsafe extern "C" fn prepare_withdraw_part(
             }
         };
 
+        let mut transport_guard = transport.lock().await;
+        let transport = transport_guard.take();
+        let transport = match transport {
+            Some(transport) => transport,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
+                }));
+
+                *ton_wallet_guard = Some(ton_wallet);
+
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
+
         let result = internal_prepare_withdraw_part(
             &mut ton_wallet,
-            transport,
+            transport.clone(),
             expiration,
             depool,
             depool_fee,
@@ -1132,6 +1251,7 @@ pub unsafe extern "C" fn prepare_withdraw_part(
         let result = match_result(result);
 
         *ton_wallet_guard = Some(ton_wallet);
+        *transport_guard = Some(transport);
 
         send_to_result_port(result_port, result);
     });
@@ -1293,7 +1413,6 @@ async fn internal_ton_wallet_send(
     message: &MutexUnsignedMessage,
     sign_input: String,
 ) -> Result<u64, NativeError> {
-    let message = unsafe { Arc::from_raw(message) };
     let message = message.lock().await;
     let mut message = dyn_clone::clone_box(&**message);
 
@@ -1455,13 +1574,28 @@ pub unsafe extern "C" fn ton_wallet_handle_block(
             }
         };
 
-        let transport = transport.lock().await;
-        let transport = transport.clone();
+        let mut transport_guard = transport.lock().await;
+        let transport = transport_guard.take();
+        let transport = match transport {
+            Some(transport) => transport,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
+                }));
 
-        let result = internal_ton_wallet_handle_block(&mut ton_wallet, transport, id).await;
+                *ton_wallet_guard = Some(ton_wallet);
+
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
+
+        let result = internal_ton_wallet_handle_block(&mut ton_wallet, transport.clone(), id).await;
         let result = match_result(result);
 
         *ton_wallet_guard = Some(ton_wallet);
+        *transport_guard = Some(transport);
 
         send_to_result_port(result_port, result);
     });
@@ -1486,7 +1620,29 @@ async fn internal_ton_wallet_handle_block(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn free_ton_wallet(ton_wallet: *mut c_void) {
+pub unsafe extern "C" fn free_ton_wallet(result_port: c_longlong, ton_wallet: *mut c_void) {
     let ton_wallet = ton_wallet as *mut MutexTonWallet;
-    Arc::from_raw(ton_wallet);
+    let ton_wallet = &(*ton_wallet);
+
+    let rt = runtime!();
+    rt.spawn(async move {
+        let mut ton_wallet_guard = ton_wallet.lock().await;
+        let ton_wallet = ton_wallet_guard.take();
+        match ton_wallet {
+            Some(ton_wallet) => ton_wallet,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: TON_WALLET_NOT_FOUND.to_owned(),
+                }));
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
+
+        let result = Ok(0);
+        let result = match_result(result);
+
+        send_to_result_port(result_port, result);
+    });
 }

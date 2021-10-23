@@ -3,45 +3,33 @@ import 'dart:ffi';
 
 import 'package:nekoton_flutter/src/nekoton.dart';
 
+import '../../ffi_utils.dart';
+
 class NativeGqlTransport {
-  Completer<void>? _completer;
   Pointer<Void>? _ptr;
 
   NativeGqlTransport(this._ptr);
 
   Future<int> use(Future<int> Function(Pointer<Void> ptr) function) async {
-    await _completer?.future;
-
     if (_ptr == null) {
       throw Exception("Gql transport not found");
     } else {
-      _completer = Completer<void>();
-      return function(_ptr!)
-        ..then((_) {
-          if (_completer != null && !_completer!.isCompleted) {
-            _completer?.complete();
-          }
-        }).onError((_, __) {
-          if (_completer != null && !_completer!.isCompleted) {
-            _completer?.complete();
-          }
-        });
+      return function(_ptr!);
     }
   }
 
   Future<void> free() async {
-    await _completer?.future;
-    _completer = Completer<void>();
-
     if (_ptr == null) {
       throw Exception("Gql transport not found");
     } else {
-      nativeLibraryInstance.bindings.free_gql_transport(_ptr!);
-      _ptr = null;
-    }
+      await proceedAsync(
+        (port) => nativeLibraryInstance.bindings.free_gql_transport(
+          port,
+          _ptr!,
+        ),
+      );
 
-    if (_completer != null && !_completer!.isCompleted) {
-      _completer?.complete();
+      _ptr = null;
     }
   }
 }

@@ -2,7 +2,7 @@ use crate::{
     match_result,
     models::{FromPtr, HandleError, NativeError, NativeStatus, ToPtr},
     parse_address, runtime, send_to_result_port,
-    transport::gql_transport::MutexGqlTransport,
+    transport::gql_transport::{MutexGqlTransport, GQL_TRANSPORT_NOT_FOUND},
     RUNTIME,
 };
 use nekoton::transport::gql::GqlTransport;
@@ -27,11 +27,26 @@ pub unsafe extern "C" fn get_participant_info(
 
     let rt = runtime!();
     rt.spawn(async move {
-        let transport = transport.lock().await;
-        let transport = transport.clone();
+        let mut transport_guard = transport.lock().await;
+        let transport = transport_guard.take();
+        let transport = match transport {
+            Some(transport) => transport,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
+                }));
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
 
-        let result = internal_get_participant_info(transport, address, wallet_address).await;
+        let result =
+            internal_get_participant_info(transport.clone(), address, wallet_address).await;
         let result = match_result(result);
+
+        *transport_guard = Some(transport);
+
         send_to_result_port(result_port, result);
     });
 }
@@ -67,11 +82,25 @@ pub unsafe extern "C" fn get_depool_info(
 
     let rt = runtime!();
     rt.spawn(async move {
-        let transport = transport.lock().await;
-        let transport = transport.clone();
+        let mut transport_guard = transport.lock().await;
+        let transport = transport_guard.take();
+        let transport = match transport {
+            Some(transport) => transport,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
+                }));
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
 
-        let result = internal_get_depool_info(transport, address).await;
+        let result = internal_get_depool_info(transport.clone(), address).await;
         let result = match_result(result);
+
+        *transport_guard = Some(transport);
+
         send_to_result_port(result_port, result);
     });
 }

@@ -7,20 +7,21 @@ use crate::{
     models::{FromPtr, HandleError, NativeError, NativeStatus, ToPtr},
     parse_address, runtime, send_to_result_port,
     transport::{
-        gql_transport::MutexGqlTransport,
+        gql_transport::{MutexGqlTransport, GQL_TRANSPORT_NOT_FOUND},
         models::{FullContractState, TransactionsList},
     },
     RUNTIME,
 };
 use nekoton::{
     core::models::{Transaction, TransactionsBatchInfo, TransactionsBatchType},
-    transport::{models::RawContractState, Transport},
+    transport::{gql::GqlTransport, models::RawContractState, Transport},
 };
 use nekoton_abi::TransactionId;
 use std::{
     convert::TryFrom,
     ffi::c_void,
     os::raw::{c_char, c_longlong, c_uchar, c_ulonglong},
+    sync::Arc,
 };
 
 #[no_mangle]
@@ -31,22 +32,38 @@ pub unsafe extern "C" fn get_full_account_state(
 ) {
     let transport = transport as *mut MutexGqlTransport;
     let transport = &(*transport);
+
     let address = address.from_ptr();
 
     let rt = runtime!();
     rt.spawn(async move {
-        let result = internal_get_full_account_state(transport, address).await;
+        let mut transport_guard = transport.lock().await;
+        let transport = transport_guard.take();
+        let transport = match transport {
+            Some(transport) => transport,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
+                }));
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
+
+        let result = internal_get_full_account_state(transport.clone(), address).await;
         let result = match_result(result);
+
+        *transport_guard = Some(transport);
+
         send_to_result_port(result_port, result);
     });
 }
 
 async fn internal_get_full_account_state(
-    transport: &MutexGqlTransport,
+    transport: Arc<GqlTransport>,
     address: String,
 ) -> Result<u64, NativeError> {
-    let transport = transport.lock().await;
-
     let address = parse_address(&address)?;
 
     let raw_contract_state = transport
@@ -94,6 +111,7 @@ pub unsafe extern "C" fn get_transactions(
 ) {
     let transport = transport as *mut MutexGqlTransport;
     let transport = &(*transport);
+
     let address = address.from_ptr();
     let continuation = match !continuation.is_null() {
         true => Some(continuation.from_ptr()),
@@ -102,20 +120,36 @@ pub unsafe extern "C" fn get_transactions(
 
     let rt = runtime!();
     rt.spawn(async move {
-        let result = internal_get_transactions(transport, address, continuation, limit).await;
+        let mut transport_guard = transport.lock().await;
+        let transport = transport_guard.take();
+        let transport = match transport {
+            Some(transport) => transport,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
+                }));
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
+
+        let result =
+            internal_get_transactions(transport.clone(), address, continuation, limit).await;
         let result = match_result(result);
+
+        *transport_guard = Some(transport);
+
         send_to_result_port(result_port, result);
     });
 }
 
 async fn internal_get_transactions(
-    transport: &MutexGqlTransport,
+    transport: Arc<GqlTransport>,
     address: String,
     continuation: Option<String>,
     limit: u8,
 ) -> Result<u64, NativeError> {
-    let transport = transport.lock().await;
-
     let address = parse_address(&address)?;
     let continuation = continuation
         .map(|e| serde_json::from_str::<TransactionId>(&e))

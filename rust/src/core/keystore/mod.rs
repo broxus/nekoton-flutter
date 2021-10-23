@@ -6,7 +6,7 @@ use crate::{
         derived_key::{DerivedKeyExportParams, DerivedKeyUpdateParams},
         encrypted_key::{EncryptedKeyPassword, EncryptedKeyUpdateParams},
     },
-    external::storage::StorageImpl,
+    external::storage::{StorageImpl, STORAGE_NOT_FOUND},
     match_result,
     models::{NativeError, NativeStatus},
     parse_public_key, runtime, send_to_result_port, FromPtr, ToPtr, RUNTIME,
@@ -41,11 +41,26 @@ pub unsafe extern "C" fn get_keystore(result_port: c_longlong, storage: *mut c_v
 
     let rt = runtime!();
     rt.spawn(async move {
-        let storage = storage.lock().await;
-        let storage = storage.clone();
+        let mut storage_guard = storage.lock().await;
+        let storage = storage_guard.take();
+        let storage = match storage {
+            Some(storage) => storage,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: STORAGE_NOT_FOUND.to_owned(),
+                }));
 
-        let result = internal_get_keystore(storage).await;
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
+
+        let result = internal_get_keystore(storage.clone()).await;
         let result = match_result(result);
+
+        *storage_guard = Some(storage);
+
         send_to_result_port(result_port, result);
     });
 }
@@ -465,7 +480,29 @@ async fn internal_clear_keystore(keystore: &KeyStore) -> Result<u64, NativeError
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn free_keystore(keystore: *mut c_void) {
+pub unsafe extern "C" fn free_keystore(result_port: c_longlong, keystore: *mut c_void) {
     let keystore = keystore as *mut MutexKeyStore;
-    Arc::from_raw(keystore);
+    let keystore = &(*keystore);
+
+    let rt = runtime!();
+    rt.spawn(async move {
+        let mut keystore_guard = keystore.lock().await;
+        let keystore = keystore_guard.take();
+        match keystore {
+            Some(keystore) => keystore,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: KEY_STORE_NOT_FOUND.to_owned(),
+                }));
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
+
+        let result = Ok(0);
+        let result = match_result(result);
+
+        send_to_result_port(result_port, result);
+    });
 }

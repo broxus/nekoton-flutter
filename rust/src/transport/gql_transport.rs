@@ -1,5 +1,5 @@
 use crate::{
-    external::gql_connection::MutexGqlConnection,
+    external::gql_connection::{GqlConnectionImpl, MutexGqlConnection, GQL_CONNECTION_NOT_FOUND},
     match_result,
     models::{HandleError, NativeError, NativeStatus},
     parse_address, runtime, send_to_result_port, FromPtr, ToPtr, RUNTIME,
@@ -14,7 +14,9 @@ use std::{
 };
 use tokio::sync::Mutex;
 
-pub type MutexGqlTransport = Mutex<Arc<GqlTransport>>;
+pub type MutexGqlTransport = Mutex<Option<Arc<GqlTransport>>>;
+
+pub const GQL_TRANSPORT_NOT_FOUND: &str = "Gql transport not found";
 
 #[no_mangle]
 pub unsafe extern "C" fn get_gql_transport(result_port: c_longlong, connection: *mut c_void) {
@@ -23,20 +25,35 @@ pub unsafe extern "C" fn get_gql_transport(result_port: c_longlong, connection: 
 
     let rt = runtime!();
     rt.spawn(async move {
-        let result = internal_get_gql_transport(connection).await;
+        let mut connection_guard = connection.lock().await;
+        let connection = connection_guard.take();
+        let connection = match connection {
+            Some(connection) => connection,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: GQL_CONNECTION_NOT_FOUND.to_owned(),
+                }));
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
+
+        let result = internal_get_gql_transport(connection.clone()).await;
         let result = match_result(result);
+
+        *connection_guard = Some(connection);
+
         send_to_result_port(result_port, result);
     });
 }
 
-async fn internal_get_gql_transport(connection: &MutexGqlConnection) -> Result<u64, NativeError> {
-    let connection = connection.lock().await;
-
-    let connection = connection.clone();
-
+async fn internal_get_gql_transport(
+    connection: Arc<GqlConnectionImpl>,
+) -> Result<u64, NativeError> {
     let transport = GqlTransport::new(connection);
     let transport = Arc::new(transport);
-    let transport = Mutex::new(transport);
+    let transport = Mutex::new(Some(transport));
     let transport = Arc::new(transport);
 
     let ptr = Arc::into_raw(transport) as *mut c_void;
@@ -46,9 +63,31 @@ async fn internal_get_gql_transport(connection: &MutexGqlConnection) -> Result<u
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn free_gql_transport(gql_transport: *mut c_void) {
+pub unsafe extern "C" fn free_gql_transport(result_port: c_longlong, gql_transport: *mut c_void) {
     let gql_transport = gql_transport as *mut MutexGqlTransport;
-    Arc::from_raw(gql_transport);
+    let gql_transport = &(*gql_transport);
+
+    let rt = runtime!();
+    rt.spawn(async move {
+        let mut gql_transport_guard = gql_transport.lock().await;
+        let gql_transport = gql_transport_guard.take();
+        match gql_transport {
+            Some(gql_transport) => gql_transport,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
+                }));
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
+
+        let result = Ok(0);
+        let result = match_result(result);
+
+        send_to_result_port(result_port, result);
+    });
 }
 
 #[no_mangle]
@@ -59,22 +98,38 @@ pub unsafe extern "C" fn get_latest_block_id(
 ) {
     let transport = transport as *mut MutexGqlTransport;
     let transport = &(*transport);
+
     let address = address.from_ptr();
 
     let rt = runtime!();
     rt.spawn(async move {
-        let result = internal_get_latest_block_id(transport, address).await;
+        let mut transport_guard = transport.lock().await;
+        let transport = transport_guard.take();
+        let transport = match transport {
+            Some(transport) => transport,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
+                }));
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
+
+        let result = internal_get_latest_block_id(transport.clone(), address).await;
         let result = match_result(result);
+
+        *transport_guard = Some(transport);
+
         send_to_result_port(result_port, result);
     });
 }
 
 async fn internal_get_latest_block_id(
-    transport: &MutexGqlTransport,
+    transport: Arc<GqlTransport>,
     address: String,
 ) -> Result<u64, NativeError> {
-    let transport = transport.lock().await;
-
     let address = parse_address(&address)?;
 
     let latest_block = transport
@@ -96,26 +151,43 @@ pub unsafe extern "C" fn wait_for_next_block_id(
 ) {
     let transport = transport as *mut MutexGqlTransport;
     let transport = &(*transport);
+
     let current_block_id = current_block_id.from_ptr();
     let address = address.from_ptr();
 
     let rt = runtime!();
     rt.spawn(async move {
-        let result = internal_wait_for_next_block_id(transport, current_block_id, address).await;
+        let mut transport_guard = transport.lock().await;
+        let transport = transport_guard.take();
+        let transport = match transport {
+            Some(transport) => transport,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
+                }));
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
+
+        let result =
+            internal_wait_for_next_block_id(transport.clone(), current_block_id, address).await;
         let result = match_result(result);
+
+        *transport_guard = Some(transport);
+
         send_to_result_port(result_port, result);
     });
 }
 
 async fn internal_wait_for_next_block_id(
-    transport: &MutexGqlTransport,
+    transport: Arc<GqlTransport>,
     current_block_id: String,
     address: String,
 ) -> Result<u64, NativeError> {
-    let transport = transport.lock().await;
-
     let address = parse_address(&address)?;
-    let timeout = Duration::from_secs(30);
+    let timeout = Duration::from_secs(60);
 
     let next_block_id = transport
         .wait_for_next_block(&current_block_id, &address, timeout)

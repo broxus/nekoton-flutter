@@ -1,4 +1,8 @@
-use crate::{match_result, models::NativeError, runtime, FromPtr, RUNTIME};
+use crate::{
+    match_result,
+    models::{NativeError, NativeStatus},
+    runtime, send_to_result_port, FromPtr, RUNTIME,
+};
 use allo_isolate::Isolate;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
@@ -19,10 +23,10 @@ use tokio::{
     time::timeout,
 };
 
-pub type MutexStorage = Mutex<Arc<StorageImpl>>;
-pub type MutexStorageSender = Mutex<Option<Sender<Result<Option<String>, String>>>>;
+pub type MutexStorage = Mutex<Option<Arc<StorageImpl>>>;
 
 const STORAGE_REQUEST_ERROR: &str = "Unable to make storage request";
+pub const STORAGE_NOT_FOUND: &str = "Storage not found";
 
 #[no_mangle]
 pub unsafe extern "C" fn get_storage(port: c_longlong) -> *mut c_void {
@@ -33,7 +37,7 @@ pub unsafe extern "C" fn get_storage(port: c_longlong) -> *mut c_void {
 fn internal_get_storage(port: c_longlong) -> Result<u64, NativeError> {
     let storage = StorageImpl { port };
     let storage = Arc::new(storage);
-    let storage = Mutex::new(storage);
+    let storage = Mutex::new(Some(storage));
     let storage = Arc::new(storage);
 
     let ptr = Arc::into_raw(storage) as *mut c_void;
@@ -43,9 +47,31 @@ fn internal_get_storage(port: c_longlong) -> Result<u64, NativeError> {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn free_storage(storage: *mut c_void) {
+pub unsafe extern "C" fn free_storage(result_port: c_longlong, storage: *mut c_void) {
     let storage = storage as *mut MutexStorage;
-    Arc::from_raw(storage);
+    let storage = &(*storage);
+
+    let rt = runtime!();
+    rt.spawn(async move {
+        let mut storage_guard = storage.lock().await;
+        let storage = storage_guard.take();
+        match storage {
+            Some(storage) => storage,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: STORAGE_NOT_FOUND.to_owned(),
+                }));
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
+
+        let result = Ok(0);
+        let result = match_result(result);
+
+        send_to_result_port(result_port, result);
+    });
 }
 
 pub struct StorageImpl {
@@ -92,9 +118,8 @@ async fn make_storage_request(
     request_type: StorageRequestType,
 ) -> Result<Option<String>> {
     let (tx, rx) = oneshot::channel::<Result<Option<String>, String>>();
-    let tx = Mutex::new(Some(tx));
-    let tx = Arc::new(tx);
-    let tx = Arc::into_raw(tx) as u64;
+    let tx = Box::new(tx);
+    let tx = Box::into_raw(tx) as u64;
 
     let request = StorageRequest {
         tx: tx.to_string(),
@@ -114,8 +139,8 @@ async fn make_storage_request(
             .map_err(|e| anyhow!("{}", e))?
             .map_err(|e| anyhow!("{}", e))
     } else {
-        let tx = tx as *mut MutexStorageSender;
-        unsafe { Arc::from_raw(tx) };
+        let tx = tx as *mut Sender<Result<Option<String>, String>>;
+        unsafe { Box::from_raw(tx) };
 
         Err(anyhow!(STORAGE_REQUEST_ERROR.to_owned()))
     }
@@ -144,28 +169,21 @@ pub unsafe extern "C" fn resolve_storage_request(
 ) {
     let tx = tx.from_ptr().parse::<u64>().unwrap();
     let tx = tx as *mut c_void;
-    let tx = tx as *mut MutexStorageSender;
-    let tx = Arc::from_raw(tx);
+    let tx = tx as *mut Sender<Result<Option<String>, String>>;
+    let tx = Box::from_raw(tx);
     let is_successful = is_successful != 0;
     let value = match value.is_null() {
         true => None,
         false => Some(value.from_ptr()),
     };
 
-    let rt = runtime!();
-    rt.spawn(async move {
-        let mut tx = tx.lock().await;
+    let result;
 
-        if let Some(tx) = tx.take() {
-            let result;
+    if is_successful {
+        result = Ok(value);
+    } else {
+        result = Err(value.unwrap_or(String::new()));
+    }
 
-            if is_successful {
-                result = Ok(value);
-            } else {
-                result = Err(value.unwrap_or(String::new()));
-            }
-
-            let _ = tx.send(result);
-        }
-    });
+    let _ = tx.send(result);
 }

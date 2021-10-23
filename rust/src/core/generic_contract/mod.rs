@@ -13,7 +13,7 @@ use crate::{
     match_result,
     models::{HandleError, NativeError, NativeStatus},
     parse_address, runtime, send_to_result_port,
-    transport::gql_transport::MutexGqlTransport,
+    transport::gql_transport::{MutexGqlTransport, GQL_TRANSPORT_NOT_FOUND},
     FromPtr, ToPtr, RUNTIME,
 };
 use nekoton::{
@@ -45,11 +45,26 @@ pub unsafe extern "C" fn generic_contract_subscribe(
 
     let rt = runtime!();
     rt.spawn(async move {
-        let transport = transport.lock().await;
-        let transport = transport.clone();
+        let mut transport_guard = transport.lock().await;
+        let transport = transport_guard.take();
+        let transport = match transport {
+            Some(transport) => transport,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
+                }));
 
-        let result = internal_generic_contract_subscribe(port, transport, address).await;
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
+
+        let result = internal_generic_contract_subscribe(port, transport.clone(), address).await;
         let result = match_result(result);
+
+        *transport_guard = Some(transport);
+
         send_to_result_port(result_port, result);
     });
 }
@@ -320,7 +335,6 @@ async fn internal_generic_contract_send(
     message: &MutexUnsignedMessage,
     sign_input: String,
 ) -> Result<u64, NativeError> {
-    let message = unsafe { Arc::from_raw(message) };
     let message = message.lock().await;
     let mut message = dyn_clone::clone_box(&**message);
 
@@ -436,14 +450,30 @@ pub unsafe extern "C" fn generic_contract_handle_block(
             }
         };
 
-        let transport = transport.lock().await;
-        let transport = transport.clone();
+        let mut transport_guard = transport.lock().await;
+        let transport = transport_guard.take();
+        let transport = match transport {
+            Some(transport) => transport,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
+                }));
+
+                *generic_contract_guard = Some(generic_contract);
+
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
 
         let result =
-            internal_generic_contract_handle_block(&mut generic_contract, transport, id).await;
+            internal_generic_contract_handle_block(&mut generic_contract, transport.clone(), id)
+                .await;
         let result = match_result(result);
 
         *generic_contract_guard = Some(generic_contract);
+        *transport_guard = Some(transport);
 
         send_to_result_port(result_port, result);
     });
@@ -654,7 +684,6 @@ async fn internal_generic_contract_execute_transaction_locally(
     sign_input: String,
     options: String,
 ) -> Result<u64, NativeError> {
-    let message = unsafe { Arc::from_raw(message) };
     let message = message.lock().await;
     let mut message = dyn_clone::clone_box(&**message);
 
@@ -699,7 +728,32 @@ async fn internal_generic_contract_execute_transaction_locally(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn free_generic_contract(generic_contract: *mut c_void) {
+pub unsafe extern "C" fn free_generic_contract(
+    result_port: c_longlong,
+    generic_contract: *mut c_void,
+) {
     let generic_contract = generic_contract as *mut MutexGenericContract;
-    Arc::from_raw(generic_contract);
+    let generic_contract = &(*generic_contract);
+
+    let rt = runtime!();
+    rt.spawn(async move {
+        let mut generic_contract_guard = generic_contract.lock().await;
+        let generic_contract = generic_contract_guard.take();
+        match generic_contract {
+            Some(generic_contract) => generic_contract,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: GENERIC_CONTRACT_NOT_FOUND.to_owned(),
+                }));
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
+
+        let result = Ok(0);
+        let result = match_result(result);
+
+        send_to_result_port(result_port, result);
+    });
 }

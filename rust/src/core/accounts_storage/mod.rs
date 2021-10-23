@@ -5,7 +5,7 @@ use crate::{
         accounts_storage::models::{AssetsList, MutexAccountsStorage},
         ton_wallet::models::WalletType,
     },
-    external::storage::{MutexStorage, StorageImpl},
+    external::storage::{MutexStorage, StorageImpl, STORAGE_NOT_FOUND},
     match_result,
     models::{HandleError, NativeError, NativeStatus},
     parse_address, parse_public_key, runtime, send_to_result_port, FromPtr, ToPtr, RUNTIME,
@@ -27,11 +27,26 @@ pub unsafe extern "C" fn get_accounts_storage(result_port: c_longlong, storage: 
 
     let rt = runtime!();
     rt.spawn(async move {
-        let storage = storage.lock().await;
-        let storage = storage.clone();
+        let mut storage_guard = storage.lock().await;
+        let storage = storage_guard.take();
+        let storage = match storage {
+            Some(storage) => storage,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: STORAGE_NOT_FOUND.to_owned(),
+                }));
 
-        let result = internal_get_accounts_storage(storage).await;
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
+
+        let result = internal_get_accounts_storage(storage.clone()).await;
         let result = match_result(result);
+
+        *storage_guard = Some(storage);
+
         send_to_result_port(result_port, result);
     });
 }
@@ -443,7 +458,32 @@ async fn internal_clear_accounts_storage(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn free_accounts_storage(accounts_storage: *mut c_void) {
+pub unsafe extern "C" fn free_accounts_storage(
+    result_port: c_longlong,
+    accounts_storage: *mut c_void,
+) {
     let accounts_storage = accounts_storage as *mut MutexAccountsStorage;
-    Arc::from_raw(accounts_storage);
+    let accounts_storage = &(*accounts_storage);
+
+    let rt = runtime!();
+    rt.spawn(async move {
+        let mut accounts_storage_guard = accounts_storage.lock().await;
+        let accounts_storage = accounts_storage_guard.take();
+        match accounts_storage {
+            Some(accounts_storage) => accounts_storage,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: ACCOUNTS_STORAGE_NOT_FOUND.to_owned(),
+                }));
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
+
+        let result = Ok(0);
+        let result = match_result(result);
+
+        send_to_result_port(result_port, result);
+    });
 }

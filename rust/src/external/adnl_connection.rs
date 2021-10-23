@@ -22,7 +22,9 @@ use tiny_adnl::{AdnlTcpClient, AdnlTcpClientConfig};
 use tokio::sync::Mutex;
 use ton_api::ton;
 
-pub type MutexAdnlConnection = Mutex<Arc<AdnlConnectionImpl>>;
+pub type MutexAdnlConnection = Mutex<Option<Arc<AdnlConnectionImpl>>>;
+
+pub const ADNL_CONNECTION_NOT_FOUND: &str = "Adnl connection not found";
 
 #[no_mangle]
 pub unsafe extern "C" fn get_adnl_connection(result_port: c_longlong, adnl_config: *mut c_char) {
@@ -52,7 +54,7 @@ async fn internal_get_adnl_connection(adnl_config: String) -> Result<u64, Native
 
     let connection = AdnlConnectionImpl { pool };
     let connection = Arc::new(connection);
-    let connection = Mutex::new(connection);
+    let connection = Mutex::new(Some(connection));
     let connection = Arc::new(connection);
 
     let ptr = Arc::into_raw(connection) as *mut c_void;
@@ -62,9 +64,34 @@ async fn internal_get_adnl_connection(adnl_config: String) -> Result<u64, Native
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn free_adnl_connection(adnl_connection: *mut c_void) {
+pub unsafe extern "C" fn free_adnl_connection(
+    result_port: c_longlong,
+    adnl_connection: *mut c_void,
+) {
     let adnl_connection = adnl_connection as *mut MutexAdnlConnection;
-    Arc::from_raw(adnl_connection);
+    let adnl_connection = &(*adnl_connection);
+
+    let rt = runtime!();
+    rt.spawn(async move {
+        let mut adnl_connection_guard = adnl_connection.lock().await;
+        let adnl_connection = adnl_connection_guard.take();
+        match adnl_connection {
+            Some(adnl_connection) => adnl_connection,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: ADNL_CONNECTION_NOT_FOUND.to_owned(),
+                }));
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
+
+        let result = Ok(0);
+        let result = match_result(result);
+
+        send_to_result_port(result_port, result);
+    });
 }
 
 pub struct AdnlConnectionImpl {

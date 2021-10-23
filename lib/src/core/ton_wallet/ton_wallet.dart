@@ -602,6 +602,7 @@ class TonWallet implements Comparable<TonWallet> {
     _subscription = _receivePort.listen(_subscriptionListener);
 
     final walletTypeStr = jsonEncode(walletType);
+
     final result = await _transport.nativeGqlTransport.use(
       (ptr) async => proceedAsync(
         (port) => nativeLibraryInstance.bindings.ton_wallet_subscribe(
@@ -617,15 +618,17 @@ class TonWallet implements Comparable<TonWallet> {
     final ptr = Pointer.fromAddress(result).cast<Void>();
 
     nativeTonWallet = NativeTonWallet(ptr);
-    _timer = Timer.periodic(
-      const Duration(seconds: 15),
-      _refreshTimer,
-    );
+
     address = await _address;
     this.publicKey = await _publicKey;
     this.walletType = await _walletType;
     details = await _details;
     custodians = await _custodians;
+
+    _timer = Timer.periodic(
+      const Duration(seconds: 15),
+      _refreshTimer,
+    );
   }
 
   Future<void> _initializeByAddress({
@@ -648,15 +651,17 @@ class TonWallet implements Comparable<TonWallet> {
     final ptr = Pointer.fromAddress(result).cast<Void>();
 
     nativeTonWallet = NativeTonWallet(ptr);
-    _timer = Timer.periodic(
-      const Duration(seconds: 15),
-      _refreshTimer,
-    );
+
     this.address = await _address;
     publicKey = await _publicKey;
     walletType = await _walletType;
     details = await _details;
     custodians = await _custodians;
+
+    _timer = Timer.periodic(
+      const Duration(seconds: 15),
+      _refreshTimer,
+    );
   }
 
   Future<void> _initializeByExisting({
@@ -669,6 +674,7 @@ class TonWallet implements Comparable<TonWallet> {
     _subscription = _receivePort.listen(_subscriptionListener);
 
     final existingWalletInfoStr = jsonEncode(existingWalletInfo);
+
     final result = await _transport.nativeGqlTransport.use(
       (ptr) async => proceedAsync(
         (port) => nativeLibraryInstance.bindings.ton_wallet_subscribe_by_existing(
@@ -682,15 +688,17 @@ class TonWallet implements Comparable<TonWallet> {
     final ptr = Pointer.fromAddress(result).cast<Void>();
 
     nativeTonWallet = NativeTonWallet(ptr);
-    _timer = Timer.periodic(
-      const Duration(seconds: 15),
-      _refreshTimer,
-    );
+
     address = await _address;
     publicKey = await _publicKey;
     walletType = await _walletType;
     details = await _details;
     custodians = await _custodians;
+
+    _timer = Timer.periodic(
+      const Duration(seconds: 15),
+      _refreshTimer,
+    );
   }
 
   Future<void> _subscriptionListener(dynamic data) async {

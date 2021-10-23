@@ -12,7 +12,7 @@ use crate::{
     match_result,
     models::{HandleError, NativeError, NativeStatus},
     parse_address, runtime, send_to_result_port,
-    transport::gql_transport::MutexGqlTransport,
+    transport::gql_transport::{MutexGqlTransport, GQL_TRANSPORT_NOT_FOUND},
     FromPtr, ToPtr, RUNTIME,
 };
 use nekoton::{
@@ -46,12 +46,28 @@ pub unsafe extern "C" fn token_wallet_subscribe(
 
     let rt = runtime!();
     rt.spawn(async move {
-        let transport = transport.lock().await;
-        let transport = transport.clone();
+        let mut transport_guard = transport.lock().await;
+        let transport = transport_guard.take();
+        let transport = match transport {
+            Some(transport) => transport,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
+                }));
+
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
 
         let result =
-            internal_token_wallet_subscribe(port, transport, owner, root_token_contract).await;
+            internal_token_wallet_subscribe(port, transport.clone(), owner, root_token_contract)
+                .await;
         let result = match_result(result);
+
+        *transport_guard = Some(transport);
+
         send_to_result_port(result_port, result);
     });
 }
@@ -373,23 +389,40 @@ pub unsafe extern "C" fn token_wallet_prepare_deploy(
         let mut ton_wallet = match ton_wallet {
             Some(ton_wallet) => ton_wallet,
             None => {
-                *token_wallet_guard = Some(token_wallet);
                 let result = match_result(Err(NativeError {
                     status: NativeStatus::MutexError,
                     info: TON_WALLET_NOT_FOUND.to_owned(),
                 }));
+
+                *token_wallet_guard = Some(token_wallet);
+
                 send_to_result_port(result_port, result);
                 return;
             }
         };
 
-        let transport = transport.lock().await;
-        let transport = transport.clone();
+        let mut transport_guard = transport.lock().await;
+        let transport = transport_guard.take();
+        let transport = match transport {
+            Some(transport) => transport,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
+                }));
+
+                *token_wallet_guard = Some(token_wallet);
+                *ton_wallet_guard = Some(ton_wallet);
+
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
 
         let result = internal_token_wallet_prepare_deploy(
             &mut token_wallet,
             &mut ton_wallet,
-            transport,
+            transport.clone(),
             expiration,
         )
         .await;
@@ -397,6 +430,7 @@ pub unsafe extern "C" fn token_wallet_prepare_deploy(
 
         *token_wallet_guard = Some(token_wallet);
         *ton_wallet_guard = Some(ton_wallet);
+        *transport_guard = Some(transport);
 
         send_to_result_port(result_port, result);
     });
@@ -487,13 +521,28 @@ pub unsafe extern "C" fn token_wallet_prepare_transfer(
             }
         };
 
-        let transport = transport.lock().await;
-        let transport = transport.clone();
+        let mut transport_guard = transport.lock().await;
+        let transport = transport_guard.take();
+        let transport = match transport {
+            Some(transport) => transport,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
+                }));
+
+                *token_wallet_guard = Some(token_wallet);
+                *ton_wallet_guard = Some(ton_wallet);
+
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
 
         let result = internal_token_wallet_prepare_transfer(
             &mut token_wallet,
             &mut ton_wallet,
-            transport,
+            transport.clone(),
             expiration,
             destination,
             tokens,
@@ -504,6 +553,7 @@ pub unsafe extern "C" fn token_wallet_prepare_transfer(
 
         *token_wallet_guard = Some(token_wallet);
         *ton_wallet_guard = Some(ton_wallet);
+        *transport_guard = Some(transport);
 
         send_to_result_port(result_port, result);
     });
@@ -671,13 +721,29 @@ pub unsafe extern "C" fn token_wallet_handle_block(
             }
         };
 
-        let transport = transport.lock().await;
-        let transport = transport.clone();
+        let mut transport_guard = transport.lock().await;
+        let transport = transport_guard.take();
+        let transport = match transport {
+            Some(transport) => transport,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
+                }));
 
-        let result = internal_token_wallet_handle_block(&mut token_wallet, transport, id).await;
+                *token_wallet_guard = Some(token_wallet);
+
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
+
+        let result =
+            internal_token_wallet_handle_block(&mut token_wallet, transport.clone(), id).await;
         let result = match_result(result);
 
         *token_wallet_guard = Some(token_wallet);
+        *transport_guard = Some(transport);
 
         send_to_result_port(result_port, result);
     });
@@ -702,7 +768,29 @@ async fn internal_token_wallet_handle_block(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn free_token_wallet(token_wallet: *mut c_void) {
+pub unsafe extern "C" fn free_token_wallet(result_port: c_longlong, token_wallet: *mut c_void) {
     let token_wallet = token_wallet as *mut MutexTokenWallet;
-    Arc::from_raw(token_wallet);
+    let token_wallet = &(*token_wallet);
+
+    let rt = runtime!();
+    rt.spawn(async move {
+        let mut token_wallet_guard = token_wallet.lock().await;
+        let token_wallet = token_wallet_guard.take();
+        match token_wallet {
+            Some(token_wallet) => token_wallet,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: TOKEN_WALLET_NOT_FOUND.to_owned(),
+                }));
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
+
+        let result = Ok(0);
+        let result = match_result(result);
+
+        send_to_result_port(result_port, result);
+    });
 }

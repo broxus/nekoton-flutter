@@ -310,18 +310,17 @@ class TokenWallet implements Comparable<TokenWallet> {
     required TonWallet tonWallet,
     required String rootTokenContract,
   }) async {
+    _transport = transport;
     _tonWallet = tonWallet;
     _subscription = _receivePort.listen(_subscriptionListener);
-    _transport = transport;
 
-    final tonWalletAddress = _tonWallet.address;
     final result = await _transport.nativeGqlTransport.use(
       (ptr) async => proceedAsync(
         (port) => nativeLibraryInstance.bindings.token_wallet_subscribe(
           port,
           _receivePort.sendPort.nativePort,
           ptr,
-          tonWalletAddress.toNativeUtf8().cast<Int8>(),
+          _tonWallet.address.toNativeUtf8().cast<Int8>(),
           rootTokenContract.toNativeUtf8().cast<Int8>(),
         ),
       ),
@@ -329,15 +328,17 @@ class TokenWallet implements Comparable<TokenWallet> {
     final ptr = Pointer.fromAddress(result).cast<Void>();
 
     _nativeTokenWallet = NativeTokenWallet(ptr);
-    _timer = Timer.periodic(
-      const Duration(seconds: 15),
-      _refreshTimer,
-    );
+
     owner = await _owner;
     address = await _address;
     symbol = await _symbol;
     version = await _version;
     ownerPublicKey = tonWallet.publicKey;
+
+    _timer = Timer.periodic(
+      const Duration(seconds: 15),
+      _refreshTimer,
+    );
   }
 
   Future<void> _subscriptionListener(dynamic data) async {
@@ -406,7 +407,12 @@ Future<bool> checkTokenWalletValidity({
     );
     final ptr = Pointer.fromAddress(result).cast<Void>();
 
-    nativeLibraryInstance.bindings.free_token_wallet(ptr);
+    await proceedAsync(
+      (port) => nativeLibraryInstance.bindings.free_token_wallet(
+        port,
+        ptr,
+      ),
+    );
 
     return true;
   } catch (_) {

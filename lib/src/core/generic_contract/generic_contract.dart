@@ -150,7 +150,7 @@ class GenericContract {
 
     final result = await _nativeGenericContract.use(
       (ptr) async => _keystore.nativeKeystore.use(
-        (nativeKeystorePtr) async =>  message.nativeUnsignedMessage.use(
+        (nativeKeystorePtr) async => message.nativeUnsignedMessage.use(
           (nativeUnsignedMessagePtr) async => proceedAsync(
             (port) => nativeLibraryInstance.bindings.generic_contract_send(
               port,
@@ -198,7 +198,7 @@ class GenericContract {
   }
 
   Future<int> estimateFees(UnsignedMessage message) async => _nativeGenericContract.use(
-        (ptr) async =>  message.nativeUnsignedMessage.use(
+        (ptr) async => message.nativeUnsignedMessage.use(
           (nativeUnsignedMessagePtr) async => proceedAsync(
             (port) => nativeLibraryInstance.bindings.generic_contract_estimate_fees(
               port,
@@ -231,7 +231,7 @@ class GenericContract {
 
     final result = await _nativeGenericContract.use(
       (ptr) async => _keystore.nativeKeystore.use(
-        (nativeKeystorePtr) async =>  message.nativeUnsignedMessage.use(
+        (nativeKeystorePtr) async => message.nativeUnsignedMessage.use(
           (nativeUnsignedMessagePtr) async => proceedAsync(
             (port) => nativeLibraryInstance.bindings.generic_contract_execute_transaction_locally(
               port,
@@ -329,7 +329,7 @@ class GenericContract {
   }
 
   Future<void> _handleBlock(String id) async => _nativeGenericContract.use(
-        (ptr) async =>  _transport.nativeGqlTransport.use(
+        (ptr) async => _transport.nativeGqlTransport.use(
           (nativeGqlTransportPtr) async => proceedAsync(
             (port) => nativeLibraryInstance.bindings.generic_contract_handle_block(
               port,
@@ -368,8 +368,6 @@ class GenericContract {
     _transport = transport;
     _keystore = await Keystore.getInstance();
     _subscription = _receivePort.listen(_subscriptionListener);
-    _onContractStateChangedSubscription = onStateChangedStream.listen(_onContractStateChangedSubscriptionListener);
-    _onTransactionsFoundSubscription = onTransactionsFoundRawStream.listen(_onTransactionsFoundSubscriptionListener);
 
     final result = await _transport.nativeGqlTransport.use(
       (ptr) async => proceedAsync(
@@ -384,11 +382,16 @@ class GenericContract {
     final ptr = Pointer.fromAddress(result).cast<Void>();
 
     _nativeGenericContract = NativeGenericContract(ptr);
+
+    this.address = await _address;
+
+    _onContractStateChangedSubscription = onStateChangedStream.listen(_onContractStateChangedSubscriptionListener);
+    _onTransactionsFoundSubscription = onTransactionsFoundRawStream.listen(_onTransactionsFoundSubscriptionListener);
+
     _timer = Timer.periodic(
       const Duration(seconds: 15),
       _refreshTimer,
     );
-    this.address = await _address;
   }
 
   Future<void> _subscriptionListener(dynamic data) async {
