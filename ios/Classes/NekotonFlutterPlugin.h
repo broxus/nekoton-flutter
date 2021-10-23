@@ -38,7 +38,7 @@ void remove_token_wallet(long long result_port,
 
 void clear_accounts_storage(long long result_port, void *accounts_storage);
 
-void free_accounts_storage(void *accounts_storage);
+void free_accounts_storage(long long result_port, void *accounts_storage);
 
 void generic_contract_subscribe(long long result_port,
                                 long long port,
@@ -79,7 +79,7 @@ void generic_contract_execute_transaction_locally(long long result_port,
                                                   char *sign_input,
                                                   char *options);
 
-void free_generic_contract(void *generic_contract);
+void free_generic_contract(long long result_port, void *generic_contract);
 
 void get_keystore(long long result_port, void *storage);
 
@@ -97,7 +97,7 @@ void remove_key(long long result_port, void *keystore, char *public_key);
 
 void clear_keystore(long long result_port, void *keystore);
 
-void free_keystore(void *keystore);
+void free_keystore(long long result_port, void *keystore);
 
 void token_wallet_subscribe(long long result_port,
                             long long port,
@@ -141,7 +141,7 @@ void token_wallet_handle_block(long long result_port,
                                void *transport,
                                char *id);
 
-void free_token_wallet(void *token_wallet);
+void free_token_wallet(long long result_port, void *token_wallet);
 
 void ton_wallet_subscribe(long long result_port,
                           long long port,
@@ -236,7 +236,7 @@ void ton_wallet_preload_transactions(long long result_port, void *ton_wallet, ch
 
 void ton_wallet_handle_block(long long result_port, void *ton_wallet, void *transport, char *id);
 
-void free_ton_wallet(void *ton_wallet);
+void free_ton_wallet(long long result_port, void *ton_wallet);
 
 void *generate_key(char *mnemonic_type);
 
@@ -253,19 +253,19 @@ void get_depool_info(long long result_port, void *transport, char *address);
 
 void get_adnl_connection(long long result_port, char *adnl_config);
 
-void free_adnl_connection(void *adnl_connection);
+void free_adnl_connection(long long result_port, void *adnl_connection);
 
 void *get_gql_connection(long long port);
 
-void free_gql_connection(void *gql_connection);
+void free_gql_connection(long long result_port, void *gql_connection);
 
-void resolve_gql_request(void *tx, unsigned int is_successful, char *value);
+void resolve_gql_request(char *tx, unsigned int is_successful, char *value);
 
 void *get_storage(long long port);
 
-void free_storage(void *storage);
+void free_storage(long long result_port, void *storage);
 
-void resolve_storage_request(void *tx, unsigned int is_successful, char *value);
+void resolve_storage_request(char *tx, unsigned int is_successful, char *value);
 
 void *pack_std_smc_addr(unsigned int base64_url, char *addr, unsigned int bounceable);
 
@@ -332,11 +332,11 @@ void get_transactions(long long result_port,
 
 void get_adnl_transport(long long result_port, void *connection);
 
-void free_adnl_transport(void *adnl_transport);
+void free_adnl_transport(long long result_port, void *adnl_transport);
 
 void get_gql_transport(long long result_port, void *connection);
 
-void free_gql_transport(void *gql_transport);
+void free_gql_transport(long long result_port, void *gql_transport);
 
 void get_latest_block_id(long long result_port, void *transport, char *address);
 

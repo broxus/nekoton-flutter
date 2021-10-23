@@ -33,7 +33,7 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         clear_accounts_storage(0, nil);
 
-        free_accounts_storage(nil);
+        free_accounts_storage(0, nil);
 
         generic_contract_subscribe(0, 0, nil, nil);
 
@@ -57,7 +57,7 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         generic_contract_execute_transaction_locally(0, nil, nil, nil, nil, nil);
 
-        free_generic_contract(nil);
+        free_generic_contract(0, nil);
 
         get_keystore(0, nil);
 
@@ -75,7 +75,7 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         clear_keystore(0, nil);
 
-        free_keystore(nil);
+        free_keystore(0, nil);
 
         token_wallet_subscribe(0, 0, nil, nil, nil);
 
@@ -101,7 +101,7 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         token_wallet_handle_block(0, nil, nil, nil);
 
-        free_token_wallet(nil);
+        free_token_wallet(0, nil);
 
         ton_wallet_subscribe(0, 0, nil, 0, nil, nil);
 
@@ -151,7 +151,7 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         ton_wallet_handle_block(0, nil, nil, nil);
 
-        free_ton_wallet(nil);
+        free_ton_wallet(0, nil);
 
         generate_key(nil);
 
@@ -165,17 +165,17 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         get_adnl_connection(0, nil);
 
-        free_adnl_connection(nil);
+        free_adnl_connection(0, nil);
 
         get_gql_connection(0);
 
-        free_gql_connection(nil);
+        free_gql_connection(0, nil);
 
         resolve_gql_request(nil, 0, nil);
 
         get_storage(0);
 
-        free_storage(nil);
+        free_storage(0, nil);
 
         resolve_storage_request(nil, 0, nil);
 
@@ -225,11 +225,11 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         get_adnl_transport(0, nil);
 
-        free_adnl_transport(nil);
+        free_adnl_transport(0, nil);
 
         get_gql_transport(0, nil);
 
-        free_gql_transport(nil);
+        free_gql_transport(0, nil);
 
         get_latest_block_id(0, nil, nil);
 
