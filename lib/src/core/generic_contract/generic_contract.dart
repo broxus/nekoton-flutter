@@ -6,16 +6,17 @@ import 'dart:isolate';
 import 'package:collection/collection.dart';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
-import 'package:nekoton_flutter/src/provider/models/contract_state_changed_event.dart';
-import 'package:nekoton_flutter/src/provider/models/transactions_found_event.dart';
-import 'package:nekoton_flutter/src/provider/provider_events.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:tuple/tuple.dart';
 
+import '../../constants.dart';
 import '../../core/keystore/keystore.dart';
 import '../../ffi_utils.dart';
 import '../../models/nekoton_exception.dart';
 import '../../nekoton.dart';
+import '../../provider/models/contract_state_changed_event.dart';
+import '../../provider/models/transactions_found_event.dart';
+import '../../provider/provider_events.dart';
 import '../../transport/gql_transport.dart';
 import '../models/contract_state.dart';
 import '../models/on_message_expired_payload.dart';
@@ -283,7 +284,7 @@ class GenericContract {
         _onMessageExpiredSubject,
         (a, b) => Tuple2(a, b),
       ).firstWhere((e) => e.item1.contains(transaction) || e.item2.contains(transaction)).timeout(
-        const Duration(seconds: 60),
+        kRequestTimeout,
         onTimeout: () {
           completer.completeError(
             Exception('Transaction timeout'),
@@ -300,7 +301,7 @@ class GenericContract {
         );
       }
     }).timeout(
-      const Duration(seconds: 60),
+      kRequestTimeout,
       onTimeout: () {
         completer.completeError(
           Exception('Transaction timeout'),
@@ -389,7 +390,7 @@ class GenericContract {
     _onTransactionsFoundSubscription = onTransactionsFoundRawStream.listen(_onTransactionsFoundSubscriptionListener);
 
     _timer = Timer.periodic(
-      const Duration(seconds: 15),
+      kGqlRefreshPeriod,
       _refreshTimer,
     );
   }

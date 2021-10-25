@@ -1,8 +1,6 @@
 import 'dart:async';
 
 import 'package:collection/collection.dart';
-import 'package:nekoton_flutter/nekoton_flutter.dart';
-import 'package:nekoton_flutter/src/core/token_wallet/token_wallet.dart';
 import 'package:rxdart/rxdart.dart';
 
 import 'connection_controller.dart';
@@ -10,6 +8,7 @@ import 'constants.dart';
 import 'core/accounts_storage/accounts_storage.dart';
 import 'core/accounts_storage/models/assets_list.dart';
 import 'core/accounts_storage/models/wallet_type.dart';
+import 'core/token_wallet/token_wallet.dart';
 import 'core/ton_wallet/ton_wallet.dart';
 import 'models/nekoton_exception.dart';
 import 'transport/gql_transport.dart';

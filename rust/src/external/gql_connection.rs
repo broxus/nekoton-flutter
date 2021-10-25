@@ -1,7 +1,7 @@
 use crate::{
     match_result,
     models::{NativeError, NativeStatus},
-    runtime, send_to_result_port, FromPtr, RUNTIME,
+    runtime, send_to_result_port, FromPtr, REQUEST_TIMEOUT, RUNTIME,
 };
 use allo_isolate::Isolate;
 use anyhow::{anyhow, Result};
@@ -12,7 +12,6 @@ use std::{
     ffi::c_void,
     os::raw::{c_char, c_longlong, c_uint, c_ulonglong},
     sync::Arc,
-    time::Duration,
     u64,
 };
 use tokio::{
@@ -101,7 +100,7 @@ impl GqlConnection for GqlConnectionImpl {
         let sent = isolate.post(request);
 
         if sent {
-            timeout(Duration::from_secs(60), rx)
+            timeout(REQUEST_TIMEOUT, rx)
                 .await
                 .map_err(|e| anyhow!("{}", e))?
                 .map_err(|e| anyhow!("{}", e))?

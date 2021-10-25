@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:recase/recase.dart';
 import 'package:rxdart/rxdart.dart';
 
+import '../../constants.dart';
 import '../../ffi_utils.dart';
 import '../../nekoton.dart';
 import '../../transport/gql_transport.dart';
@@ -336,7 +337,7 @@ class TokenWallet implements Comparable<TokenWallet> {
     ownerPublicKey = tonWallet.publicKey;
 
     _timer = Timer.periodic(
-      const Duration(seconds: 15),
+      kGqlRefreshPeriod,
       _refreshTimer,
     );
   }

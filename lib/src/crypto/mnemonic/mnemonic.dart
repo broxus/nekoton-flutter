@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
-import 'package:nekoton_flutter/src/nekoton.dart';
 
 import '../../ffi_utils.dart';
+import '../../nekoton.dart';
 import 'models/generated_key.dart';
 import 'models/keypair.dart';
 import 'models/mnemonic_type.dart';

@@ -1,9 +1,8 @@
 import 'dart:async';
 import 'dart:ffi';
 
-import 'package:nekoton_flutter/src/nekoton.dart';
-
 import '../../../ffi_utils.dart';
+import '../../../nekoton.dart';
 
 class NativeTonWallet {
   Pointer<Void>? _ptr;

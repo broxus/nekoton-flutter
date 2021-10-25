@@ -18,10 +18,13 @@ use std::{
     io,
     os::raw::{c_char, c_longlong, c_uint, c_ulonglong},
     str::FromStr,
+    time::Duration,
     u64,
 };
 use tokio::runtime::{Builder, Runtime};
 use ton_block::MsgAddressInt;
+
+pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 
 lazy_static! {
     static ref RUNTIME: io::Result<Runtime> = Builder::new_multi_thread()

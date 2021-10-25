@@ -38,7 +38,7 @@ class GqlTransport implements Transport {
     required String address,
   }) async {
     final result = await nativeGqlTransport.use(
-      (ptr) async =>  proceedAsync(
+      (ptr) async => proceedAsync(
         (port) => nativeLibraryInstance.bindings.get_full_account_state(
           port,
           ptr,

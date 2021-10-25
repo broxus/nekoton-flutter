@@ -8,7 +8,11 @@ const kTonDecimals = 9;
 
 const kProviderVersion = "0.2.13";
 
-const kDefaultMessageExpiration = Expiration.timeout(value: 60);
+const kGqlRefreshPeriod = Duration(seconds: 15);
+
+const kRequestTimeout = Duration(seconds: 30);
+
+const kDefaultMessageExpiration = Expiration.timeout(value: 30);
 
 const kAvailableWallets = [
   WalletType.multisig(multisigType: MultisigType.safeMultisigWallet),

@@ -2,14 +2,13 @@ use crate::{
     external::gql_connection::{GqlConnectionImpl, MutexGqlConnection, GQL_CONNECTION_NOT_FOUND},
     match_result,
     models::{HandleError, NativeError, NativeStatus},
-    parse_address, runtime, send_to_result_port, FromPtr, ToPtr, RUNTIME,
+    parse_address, runtime, send_to_result_port, FromPtr, ToPtr, REQUEST_TIMEOUT, RUNTIME,
 };
 use nekoton::transport::gql::GqlTransport;
 use std::{
     ffi::c_void,
     os::raw::{c_char, c_longlong, c_ulonglong},
     sync::Arc,
-    time::Duration,
     u64,
 };
 use tokio::sync::Mutex;
@@ -187,7 +186,7 @@ async fn internal_wait_for_next_block_id(
     address: String,
 ) -> Result<u64, NativeError> {
     let address = parse_address(&address)?;
-    let timeout = Duration::from_secs(60);
+    let timeout = REQUEST_TIMEOUT;
 
     let next_block_id = transport
         .wait_for_next_block(&current_block_id, &address, timeout)

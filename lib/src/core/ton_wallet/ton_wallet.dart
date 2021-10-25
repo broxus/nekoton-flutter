@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:tuple/tuple.dart';
 
+import '../../constants.dart';
 import '../../core/keystore/keystore.dart';
 import '../../ffi_utils.dart';
 import '../../models/nekoton_exception.dart';
@@ -520,7 +521,7 @@ class TonWallet implements Comparable<TonWallet> {
         _onMessageExpiredSubject,
         (a, b) => Tuple2(a, b),
       ).firstWhere((e) => e.item1.contains(transaction) || e.item2.contains(transaction)).timeout(
-        const Duration(seconds: 60),
+        kRequestTimeout,
         onTimeout: () {
           completer.completeError(Exception('Transaction timeout'));
           throw Exception();
@@ -533,7 +534,7 @@ class TonWallet implements Comparable<TonWallet> {
         completer.completeError(Exception('Transaction not found'));
       }
     }).timeout(
-      const Duration(seconds: 60),
+      kRequestTimeout,
       onTimeout: () {
         completer.completeError(Exception('Transaction timeout'));
       },
@@ -626,7 +627,7 @@ class TonWallet implements Comparable<TonWallet> {
     custodians = await _custodians;
 
     _timer = Timer.periodic(
-      const Duration(seconds: 15),
+      kGqlRefreshPeriod,
       _refreshTimer,
     );
   }
@@ -659,7 +660,7 @@ class TonWallet implements Comparable<TonWallet> {
     custodians = await _custodians;
 
     _timer = Timer.periodic(
-      const Duration(seconds: 15),
+      kGqlRefreshPeriod,
       _refreshTimer,
     );
   }
@@ -696,7 +697,7 @@ class TonWallet implements Comparable<TonWallet> {
     custodians = await _custodians;
 
     _timer = Timer.periodic(
-      const Duration(seconds: 15),
+      kGqlRefreshPeriod,
       _refreshTimer,
     );
   }

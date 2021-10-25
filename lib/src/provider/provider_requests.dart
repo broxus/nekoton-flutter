@@ -2,7 +2,6 @@ import 'package:collection/collection.dart';
 
 import '../constants.dart';
 import '../core/generic_contract/models/transaction_execution_options.dart';
-import '../core/models/expiration.dart';
 import '../core/models/transaction.dart';
 import '../core/ton_wallet/models/known_payload.dart';
 import '../helpers/helpers.dart' as helpers;
@@ -492,7 +491,7 @@ Future<EstimateFeesOutput> estimateFees({
   }
 
   final unsignedMessage = await tonWallet.prepareTransfer(
-    expiration: const Expiration.timeout(value: 60),
+    expiration: kDefaultMessageExpiration,
     destination: repackedRecipient,
     amount: int.parse(input.amount),
     body: body,
@@ -610,7 +609,7 @@ Future<SendExternalMessageOutput> sendExternalMessage({
     stateInit: input.stateInit,
     input: input.payload.params,
     publicKey: selectedPublicKey,
-    timeout: 60,
+    timeout: 30,
   );
 
   final password = await instance.approvalController.requestApprovalToCallContractMethod(

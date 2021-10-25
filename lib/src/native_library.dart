@@ -4,11 +4,11 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/services.dart';
-import 'package:nekoton_flutter/src/nekoton.dart';
 import 'package:synchronized/synchronized.dart';
 
 import 'bindings.g.dart';
 import 'models/nekoton_exception.dart';
+import 'nekoton.dart';
 
 class NativeLibrary {
   static const _methodChannel = MethodChannel('nekoton_native_library');
