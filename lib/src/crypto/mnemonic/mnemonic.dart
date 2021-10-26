@@ -35,7 +35,7 @@ Keypair deriveFromPhrase({
   required List<String> phrase,
   required MnemonicType mnemonicType,
 }) {
-  final phraseStr = phrase.join(" ");
+  final phraseStr = phrase.join(' ');
   final mnemonicTypeStr = jsonEncode(mnemonicType);
 
   final result = proceedSync(() => nativeLibraryInstance.bindings.derive_from_phrase(

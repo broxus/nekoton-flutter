@@ -352,7 +352,7 @@ class TokenWallet implements Comparable<TokenWallet> {
       final message = SubscriptionHandlerMessage.fromJson(json);
 
       switch (message.event) {
-        case "on_balance_changed":
+        case 'on_balance_changed':
           final json = jsonDecode(message.payload) as Map<String, dynamic>;
           final payload = OnBalanceChangedPayload.fromJson(json);
 
@@ -360,7 +360,7 @@ class TokenWallet implements Comparable<TokenWallet> {
 
           _onBalanceChangedSubject.add(balance);
           break;
-        case "on_transactions_found":
+        case 'on_transactions_found':
           final json = jsonDecode(message.payload) as Map<String, dynamic>;
           final payload = OnTokenWalletTransactionsFoundPayload.fromJson(json);
 

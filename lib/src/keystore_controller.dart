@@ -15,8 +15,8 @@ import 'provider/provider_events.dart';
 
 class KeystoreController {
   static KeystoreController? _instance;
-  late final Preferences _preferences;
   late final Keystore _keystore;
+  late final Preferences _preferences;
   final _keysSubject = BehaviorSubject<List<KeyStoreEntry>>.seeded([]);
   final _currentKeySubject = BehaviorSubject<KeyStoreEntry?>.seeded(null);
 

@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:ffi';
 
+import 'package:nekoton_flutter/src/models/nekoton_exception.dart';
+
 import '../../../ffi_utils.dart';
 import '../../../nekoton.dart';
 
@@ -11,7 +13,7 @@ class NativeGenericContract {
 
   Future<int> use(Future<int> Function(Pointer<Void> ptr) function) async {
     if (_ptr == null) {
-      throw Exception("Generic contract not found");
+      throw GenericContractNotFoundException();
     } else {
       return function(_ptr!);
     }
@@ -19,7 +21,7 @@ class NativeGenericContract {
 
   Future<void> free() async {
     if (_ptr == null) {
-      throw Exception("Generic contract not found");
+      throw GenericContractNotFoundException();
     } else {
       await proceedAsync(
         (port) => nativeLibraryInstance.bindings.free_generic_contract(

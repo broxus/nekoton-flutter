@@ -286,10 +286,9 @@ class GenericContract {
       ).firstWhere((e) => e.item1.contains(transaction) || e.item2.contains(transaction)).timeout(
         kRequestTimeout,
         onTimeout: () {
-          completer.completeError(
-            Exception('Transaction timeout'),
-          );
-          throw Exception();
+          final exception = TransactionTimeoutException();
+          completer.completeError(exception);
+          throw exception;
         },
       );
 
@@ -297,14 +296,14 @@ class GenericContract {
         completer.complete(transaction);
       } else {
         completer.completeError(
-          Exception('Transaction not found'),
+          TransactionNotFoundException(),
         );
       }
     }).timeout(
       kRequestTimeout,
       onTimeout: () {
         completer.completeError(
-          Exception('Transaction timeout'),
+          TransactionTimeoutException(),
         );
       },
     );
@@ -405,7 +404,7 @@ class GenericContract {
       final message = SubscriptionHandlerMessage.fromJson(json);
 
       switch (message.event) {
-        case "on_message_sent":
+        case 'on_message_sent':
           final json = jsonDecode(message.payload) as Map<String, dynamic>;
           final payload = OnMessageSentPayload.fromJson(json);
 
@@ -416,7 +415,7 @@ class GenericContract {
 
           _onMessageSentSubject.add(sent);
           break;
-        case "on_message_expired":
+        case 'on_message_expired':
           final json = jsonDecode(message.payload) as Map<String, dynamic>;
           final payload = OnMessageExpiredPayload.fromJson(json);
 
@@ -437,13 +436,13 @@ class GenericContract {
           }
 
           break;
-        case "on_state_changed":
+        case 'on_state_changed':
           final json = jsonDecode(message.payload) as Map<String, dynamic>;
           final payload = OnStateChangedPayload.fromJson(json);
 
           _onStateChangedSubject.add(payload.newState);
           break;
-        case "on_transactions_found":
+        case 'on_transactions_found':
           final json = jsonDecode(message.payload) as Map<String, dynamic>;
           final payload = OnTransactionsFoundPayload.fromJson(json);
 

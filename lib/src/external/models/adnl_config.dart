@@ -37,12 +37,12 @@ class AdnlConfig with _$AdnlConfig {
   factory AdnlConfig.fromJson(Map<String, dynamic> json) => _$AdnlConfigFromJson(json);
 
   static int _rustDurationFromSecondsFromJson(Map<String, dynamic> json) {
-    final secs = json["secs"] as String;
+    final secs = json['secs'] as String;
     return int.parse(secs);
   }
 
   static Map<String, dynamic> _rustDurationFromSecondsToJson(int secs) {
-    final json = {"secs": secs, "nanos": 0};
+    final json = {'secs': secs, 'nanos': 0};
     return json;
   }
 }

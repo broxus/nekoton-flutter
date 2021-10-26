@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'constants.dart';
+import 'models/nekoton_exception.dart';
 
 extension TokensConvert on String {
   String toTokens([int decimals = kTonDecimals]) {
@@ -54,12 +55,12 @@ extension VersionConvert on String {
     final parts = split('.');
 
     if (parts.length != 3) {
-      throw Exception('Received invalid version string');
+      throw IncorrectDataFormatException();
     }
 
     for (final part in parts) {
       if (int.parse(part) > 999) {
-        throw Exception('Version string invalid, $part is too large');
+        throw IncorrectDataFormatException();
       }
     }
 

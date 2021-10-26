@@ -1,8 +1,8 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 enum Permission {
-  @JsonValue("tonClient")
+  @JsonValue('tonClient')
   tonClient,
-  @JsonValue("accountInteraction")
+  @JsonValue('accountInteraction')
   accountInteraction,
 }

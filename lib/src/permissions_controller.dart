@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'approval_controller.dart';
+import 'models/nekoton_exception.dart';
 import 'preferences.dart';
 import 'provider/models/permission.dart';
 import 'provider/models/permissions.dart';
@@ -70,12 +71,12 @@ class PermissionsController {
       switch (requiredPermission) {
         case Permission.tonClient:
           if (permissions.tonClient == null || permissions.tonClient == false) {
-            throw Exception();
+            throw PermissionsNotGrantedException();
           }
           break;
         case Permission.accountInteraction:
           if (permissions.accountInteraction == null) {
-            throw Exception();
+            throw PermissionsNotGrantedException();
           }
           break;
       }

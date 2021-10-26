@@ -22,5 +22,5 @@ class TonWalletAsset with _$TonWalletAsset {
 
   const TonWalletAsset._();
 
-  int get workchain => int.parse(address.split(":").first);
+  int get workchain => int.parse(address.split(':').first);
 }

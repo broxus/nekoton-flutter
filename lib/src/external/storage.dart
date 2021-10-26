@@ -14,6 +14,7 @@ import 'models/storage_request.dart';
 import 'models/storage_request_type.dart';
 
 class Storage {
+  static const _storageBoxName = 'nekoton_storage';
   static Storage? _instance;
   late final Box<String> _box;
   final _receivePort = ReceivePort();
@@ -35,7 +36,7 @@ class Storage {
 
   Future<void> _initialize() async {
     await Hive.initFlutter();
-    _box = await Hive.openBox("nekoton_storage");
+    _box = await Hive.openBox(_storageBoxName);
 
     _receivePort.listen(_storageListener);
 

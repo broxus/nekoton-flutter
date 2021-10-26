@@ -47,14 +47,14 @@ class NativeLibrary {
   Future<DynamicLibrary> _dlOpenAndroidPlatform() async {
     try {
       try {
-        return DynamicLibrary.open("libnekoton_flutter.so");
+        return DynamicLibrary.open('libnekoton_flutter.so');
       } catch (err, st) {
         nekotonLogger?.e(err, err, st);
 
         try {
           final nativeLibraryDir = (await _methodChannel.invokeMethod<String>('getNativeLibraryDir'))!;
 
-          return DynamicLibrary.open("$nativeLibraryDir/libnekoton_flutter.so");
+          return DynamicLibrary.open('$nativeLibraryDir/libnekoton_flutter.so');
         } catch (err, st) {
           nekotonLogger?.e(err, err, st);
 
@@ -69,9 +69,9 @@ class NativeLibrary {
       nekotonLogger?.e(err, err, st);
 
       try {
-        await _methodChannel.invokeMethod('loadLibrary', "nekoton_flutter");
+        await _methodChannel.invokeMethod('loadLibrary', 'nekoton_flutter');
 
-        return DynamicLibrary.open("libnekoton_flutter.so");
+        return DynamicLibrary.open('libnekoton_flutter.so');
       } catch (err, st) {
         nekotonLogger?.e(err, err, st);
         rethrow;

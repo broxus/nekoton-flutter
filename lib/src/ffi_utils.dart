@@ -5,6 +5,7 @@ import 'dart:isolate';
 import 'package:ffi/ffi.dart';
 
 import 'models/native_result.dart';
+import 'models/nekoton_exception.dart';
 import 'nekoton.dart';
 
 int proceedSync(Pointer<Void> Function() function) {
@@ -25,7 +26,7 @@ Future<int> proceedAsync(void Function(int port) function) async {
 
   receivePort.listen((data) {
     if (data is! int) {
-      completer.completeError(Exception());
+      completer.completeError(IncorrectDataFormatException());
       receivePort.close();
       return;
     }

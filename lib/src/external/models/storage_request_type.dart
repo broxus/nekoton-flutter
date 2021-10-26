@@ -1,10 +1,10 @@
 import 'package:json_annotation/json_annotation.dart';
 
 enum StorageRequestType {
-  @JsonValue("Get")
+  @JsonValue('Get')
   get,
-  @JsonValue("Set")
+  @JsonValue('Set')
   set,
-  @JsonValue("Remove")
+  @JsonValue('Remove')
   remove,
 }

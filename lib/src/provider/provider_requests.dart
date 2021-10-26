@@ -73,7 +73,7 @@ Future<void> disconnect({
   final instance = await Nekoton.getInstance();
 
   await instance.permissionsController.removeOrigin(origin);
-  instance.subscriptionsController.removeOriginGenericContractSubscriptions(origin);
+  await instance.subscriptionsController.removeOriginGenericContractSubscriptions(origin);
 }
 
 Future<SubscribeOutput> subscribe({
@@ -112,7 +112,7 @@ Future<void> unsubscribe({
     throw InvalidAddressException();
   }
 
-  instance.subscriptionsController.removeGenericContractSubscription(
+  await instance.subscriptionsController.removeGenericContractSubscription(
     origin: origin,
     address: input.address,
   );
@@ -123,7 +123,7 @@ Future<void> unsubscribeAll({
 }) async {
   final instance = await Nekoton.getInstance();
 
-  return instance.subscriptionsController.clearGenericContractsSubscriptions();
+  await instance.subscriptionsController.clearGenericContractsSubscriptions();
 }
 
 Future<GetProviderStateOutput> getProviderState({
@@ -131,7 +131,7 @@ Future<GetProviderStateOutput> getProviderState({
 }) async {
   final instance = await Nekoton.getInstance();
 
-  instance.subscriptionsController.clearGenericContractsSubscriptions();
+  await instance.subscriptionsController.clearGenericContractsSubscriptions();
 
   const version = kProviderVersion;
   final numericVersion = kProviderVersion.toInt();
@@ -204,11 +204,11 @@ Future<RunLocalOutput> runLocal({
   }
 
   if (contractState == null) {
-    throw Exception("Account not found");
+    throw AccountNotFoundException();
   }
 
   if (!contractState.isDeployed || contractState.lastTransactionId == null) {
-    throw Exception("Account is not deployed");
+    throw AccountNotDeployedException();
   }
 
   return helpers.runLocal(
@@ -469,7 +469,7 @@ Future<EstimateFeesOutput> estimateFees({
   final allowedAccount = permissions.accountInteraction;
 
   if (allowedAccount?.address != input.sender) {
-    throw Exception();
+    throw PermissionsNotGrantedException();
   }
 
   final selectedAddress = allowedAccount!.address;
@@ -487,7 +487,7 @@ Future<EstimateFeesOutput> estimateFees({
   final tonWallet = instance.subscriptionsController.tonWallets.firstWhereOrNull((e) => e.address == selectedAddress);
 
   if (tonWallet == null) {
-    throw Exception();
+    throw TonWalletNotFoundException();
   }
 
   final unsignedMessage = await tonWallet.prepareTransfer(
@@ -520,7 +520,7 @@ Future<SendMessageOutput> sendMessage({
   final allowedAccount = permissions.accountInteraction;
 
   if (allowedAccount?.address != input.sender) {
-    throw Exception();
+    throw PermissionsNotGrantedException();
   }
 
   final selectedAddress = allowedAccount!.address;
@@ -550,7 +550,7 @@ Future<SendMessageOutput> sendMessage({
   final tonWallet = instance.subscriptionsController.tonWallets.firstWhereOrNull((e) => e.address == selectedAddress);
 
   if (tonWallet == null) {
-    throw Exception();
+    throw TonWalletNotFoundException();
   }
 
   final message = await tonWallet.prepareTransfer(
@@ -588,7 +588,7 @@ Future<SendExternalMessageOutput> sendExternalMessage({
   final allowedAccount = permissions.accountInteraction;
 
   if (allowedAccount?.publicKey != input.publicKey) {
-    throw Exception();
+    throw PermissionsNotGrantedException();
   }
 
   final selectedPublicKey = allowedAccount!.publicKey;
@@ -599,7 +599,7 @@ Future<SendExternalMessageOutput> sendExternalMessage({
       instance.subscriptionsController.genericContracts[origin]?.firstWhereOrNull((e) => e.address == selectedAddress);
 
   if (genericContract == null) {
-    throw Exception();
+    throw GenericContractNotFoundException();
   }
 
   final message = helpers.createExternalMessage(

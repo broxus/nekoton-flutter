@@ -68,21 +68,21 @@ class AccountsStorageController {
       workchainId: kDefaultWorkchain,
     );
 
-    final activeWallets = wallets.where((e) => e.contractState.isDeployed || e.contractState.balance != "0");
+    final activeWallets = wallets.where((e) => e.contractState.isDeployed || e.contractState.balance != '0');
 
-    final futures = <Future<AssetsList>>[];
+    final accounts = <AssetsList>[];
 
     for (final activeWallet in activeWallets) {
-      final future = addAccount(
+      final account = await addAccount(
         name: activeWallet.walletType.describe(),
         publicKey: publicKey,
         walletType: activeWallet.walletType,
         workchain: kDefaultWorkchain,
       );
-      futures.add(future);
+      accounts.add(account);
     }
 
-    return Future.wait(futures);
+    return accounts;
   }
 
   Future<AssetsList> renameAccount({

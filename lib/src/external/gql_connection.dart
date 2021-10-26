@@ -37,7 +37,7 @@ class GqlConnection {
       connectTimeout: connectionData.timeout,
       baseUrl: connectionData.endpoint,
       responseType: ResponseType.plain,
-      headers: {"Content-Type": "application/json"},
+      headers: {'Content-Type': 'application/json'},
     );
     _dio = Dio(baseOptions);
 
@@ -63,7 +63,7 @@ class GqlConnection {
       bool isSuccessful = false;
 
       try {
-        final response = await _dio.post("graphql", data: request.data);
+        final response = await _dio.post('graphql', data: request.data);
         final responseData = response.data as String;
         value = responseData.toNativeUtf8().cast<Int8>();
 

@@ -1,8 +1,8 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 enum TransactionsBatchType {
-  @JsonValue("old")
+  @JsonValue('old')
   oldTransactions,
-  @JsonValue("new")
+  @JsonValue('new')
   newTransactions,
 }

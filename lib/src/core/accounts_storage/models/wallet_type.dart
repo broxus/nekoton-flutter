@@ -43,17 +43,17 @@ extension Describe on WalletType {
         multisig: (multisigType) {
           switch (multisigType) {
             case MultisigType.safeMultisigWallet:
-              return "SafeMultisig";
+              return 'SafeMultisig';
             case MultisigType.safeMultisigWallet24h:
-              return "SafeMultisig24";
+              return 'SafeMultisig24';
             case MultisigType.setcodeMultisigWallet:
-              return "SetcodeMultisig";
+              return 'SetcodeMultisig';
             case MultisigType.bridgeMultisigWallet:
-              return "BridgeMultisig";
+              return 'BridgeMultisig';
             case MultisigType.surfWallet:
-              return "Surf";
+              return 'Surf';
           }
         },
-        walletV3: () => "WalletV3",
+        walletV3: () => 'WalletV3',
       );
 }

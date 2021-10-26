@@ -23,6 +23,9 @@ late NativeLibrary nativeLibraryInstance;
 class Nekoton {
   static Nekoton? _instance;
   static final _lock = Lock();
+  static final _keysStreamSubscriptionLock = Lock();
+  static final _accountsStreamSubscriptionLock = Lock();
+  static final _subscriptionsUpdateStreamSubscriptionLock = Lock();
   late final KeystoreController keystoreController;
   late final AccountsStorageController accountsStorageController;
   late final SubscriptionsController subscriptionsController;
@@ -105,7 +108,7 @@ class Nekoton {
     }
 
     for (final tonWallet in removedTonWallets) {
-      subscriptionsController.removeTonWalletSubscription(tonWallet);
+      await subscriptionsController.removeTonWalletSubscription(tonWallet);
     }
 
     final networkGroup = connectionController.transport.connectionData.group;
@@ -137,7 +140,7 @@ class Nekoton {
     }
 
     for (final tokenWallet in removedTokenWallets) {
-      subscriptionsController.removeTokenWalletSubscription(
+      await subscriptionsController.removeTokenWalletSubscription(
         tonWalletAsset: tokenWallet.item1,
         tokenWalletAsset: tokenWallet.item2,
       );
@@ -150,8 +153,8 @@ class Nekoton {
     final currentKey = event;
 
     if (currentKey == null) {
-      subscriptionsController.clearTonWalletsSubscriptions();
-      subscriptionsController.clearTokenWalletsSubscriptions();
+      await subscriptionsController.clearTonWalletsSubscriptions();
+      await subscriptionsController.clearTokenWalletsSubscriptions();
       return;
     }
 
@@ -174,8 +177,9 @@ class Nekoton {
     subscriptionsController = await SubscriptionsController.getInstance();
 
     _previousKeys = keystoreController.keys;
-    _keysStreamSubscription =
-        keystoreController.keysStream.skip(1).listen((e) => _lock.synchronized(() async => _keysStreamListener(e)));
+    _keysStreamSubscription = keystoreController.keysStream
+        .skip(1)
+        .listen((e) => _keysStreamSubscriptionLock.synchronized(() async => _keysStreamListener(e)));
 
     _previousAccounts = accountsStorageController.accounts;
     _accountsStreamSubscription =
@@ -183,12 +187,13 @@ class Nekoton {
       keystoreController.currentKeyStream,
       accountsStorageController.accountsStream.skip(1),
       (a, b) => Tuple2(a, b),
-    ).listen((e) => _lock.synchronized(() async => _accountsStreamListener(e)));
+    ).listen((e) => _accountsStreamSubscriptionLock.synchronized(() async => _accountsStreamListener(e)));
 
     _subscriptionsUpdateStreamSubscription = Rx.combineLatest2<KeyStoreEntry?, Transport, KeyStoreEntry?>(
       keystoreController.currentKeyStream,
       connectionController.transportStream,
       (a, b) => a,
-    ).listen((e) => _lock.synchronized(() async => _subscriptionsUpdateStreamListener(e)));
+    ).listen((e) =>
+        _subscriptionsUpdateStreamSubscriptionLock.synchronized(() async => _subscriptionsUpdateStreamListener(e)));
   }
 }

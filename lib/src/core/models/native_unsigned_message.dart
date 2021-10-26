@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:ffi';
 
+import 'package:nekoton_flutter/src/models/nekoton_exception.dart';
+
 class NativeUnsignedMessage {
   Completer<void>? _completer;
   Pointer<Void>? _ptr;
@@ -11,7 +13,7 @@ class NativeUnsignedMessage {
     await _completer?.future;
 
     if (_ptr == null) {
-      throw Exception("Unsigned message not found");
+      throw UnsignedMessageNotFoundException();
     } else {
       _completer = Completer<void>();
       return function(_ptr!)
@@ -32,7 +34,7 @@ class NativeUnsignedMessage {
     _completer = Completer<void>();
 
     if (_ptr == null) {
-      throw Exception("Unsigned message not found");
+      throw UnsignedMessageNotFoundException();
     } else {
       _ptr = null;
     }
