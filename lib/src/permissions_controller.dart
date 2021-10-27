@@ -59,6 +59,10 @@ class PermissionsController {
     permissionsChangedSubject.add(const PermissionsChangedEvent(permissions: Permissions()));
   }
 
+  Future<void> deletePermissionsForAccount(String address) async {
+    await _preferences.deletePermissionsForAccount(address);
+  }
+
   Permissions getPermissions(String origin) => _preferences.getPermissions(origin);
 
   Future<Permissions> checkPermissions({

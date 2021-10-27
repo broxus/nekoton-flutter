@@ -230,7 +230,6 @@ class TokenWallet implements Comparable<TokenWallet> {
       message: message,
       password: password,
     );
-    await message.nativeUnsignedMessage.free();
 
     _internalRefresh(currentBlockId);
 

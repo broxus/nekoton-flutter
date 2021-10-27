@@ -35,6 +35,7 @@ class Nekoton {
   late final StreamSubscription _keysStreamSubscription;
   late final StreamSubscription _subscriptionsUpdateStreamSubscription;
   late final StreamSubscription _accountsStreamSubscription;
+  late final StreamSubscription _accountsPermissionsStreamSubscription;
   late List<KeyStoreEntry> _previousKeys;
   late List<AssetsList> _previousAccounts;
 
@@ -59,6 +60,7 @@ class Nekoton {
     _keysStreamSubscription.cancel();
     _subscriptionsUpdateStreamSubscription.cancel();
     _accountsStreamSubscription.cancel();
+    _accountsPermissionsStreamSubscription.cancel();
   }
 
   Future<void> _keysStreamListener(List<KeyStoreEntry> event) async {
@@ -149,6 +151,24 @@ class Nekoton {
     _previousAccounts = currentAccounts;
   }
 
+  Future<void> _accountsPermissionsStreamListener(Tuple2<KeyStoreEntry?, List<AssetsList>> event) async {
+    final currentKey = event.item1;
+    final currentAccounts = event.item2;
+
+    if (currentKey == null) {
+      _previousAccounts = currentAccounts;
+      return;
+    }
+
+    final removedAccounts = ([..._previousAccounts]..removeWhere((e) => currentAccounts.contains(e)));
+
+    for (final account in removedAccounts) {
+      await permissionsController.deletePermissionsForAccount(account.address);
+    }
+
+    _previousAccounts = currentAccounts;
+  }
+
   Future<void> _subscriptionsUpdateStreamListener(KeyStoreEntry? event) async {
     final currentKey = event;
 
@@ -188,6 +208,13 @@ class Nekoton {
       accountsStorageController.accountsStream.skip(1),
       (a, b) => Tuple2(a, b),
     ).listen((e) => _accountsStreamSubscriptionLock.synchronized(() async => _accountsStreamListener(e)));
+
+    _accountsPermissionsStreamSubscription =
+        Rx.combineLatest2<KeyStoreEntry?, List<AssetsList>, Tuple2<KeyStoreEntry?, List<AssetsList>>>(
+      keystoreController.currentKeyStream,
+      accountsStorageController.accountsStream.skip(1),
+      (a, b) => Tuple2(a, b),
+    ).listen((e) => _accountsStreamSubscriptionLock.synchronized(() async => _accountsPermissionsStreamListener(e)));
 
     _subscriptionsUpdateStreamSubscription = Rx.combineLatest2<KeyStoreEntry?, Transport, KeyStoreEntry?>(
       keystoreController.currentKeyStream,

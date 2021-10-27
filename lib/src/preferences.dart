@@ -44,6 +44,13 @@ class Preferences {
 
   Future<void> deletePermissions(String origin) async => _permissionsBox.delete(origin);
 
+  Future<void> deletePermissionsForAccount(String address) async {
+    final newValues = _permissionsBox.values.where((e) => e.accountInteraction?.address != address);
+
+    await _permissionsBox.clear();
+    await _permissionsBox.addAll(newValues);
+  }
+
   Future<void> _initialize() async {
     await Hive.initFlutter();
     Hive
