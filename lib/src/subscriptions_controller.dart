@@ -2,12 +2,15 @@ import 'dart:async';
 
 import 'package:collection/collection.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:tuple/tuple.dart';
 
 import 'connection_controller.dart';
 import 'core/accounts_storage/models/assets_list.dart';
 import 'core/accounts_storage/models/token_wallet_asset.dart';
 import 'core/accounts_storage/models/ton_wallet_asset.dart';
 import 'core/generic_contract/generic_contract.dart';
+import 'core/token_wallet/models/symbol.dart';
+import 'core/token_wallet/models/token_wallet_version.dart';
 import 'core/token_wallet/token_wallet.dart';
 import 'core/ton_wallet/ton_wallet.dart';
 import 'provider/models/contract_updates_subscription.dart';
@@ -70,6 +73,31 @@ class SubscriptionsController {
     }
   }
 
+  Future<TokenWallet> subscribeToTokenWallet({
+    required TonWalletAsset tonWalletAsset,
+    required TokenWalletAsset tokenWalletAsset,
+  }) async {
+    final transport = _connectionController.transport as GqlTransport;
+
+    final tonWallet = tonWallets.firstWhere((e) => e.address == tonWalletAsset.address);
+
+    final tokenWallet = await TokenWallet.subscribe(
+      transport: transport,
+      tonWallet: tonWallet,
+      rootTokenContract: tokenWalletAsset.rootTokenContract,
+    );
+
+    final tokenWallets = [..._tokenWalletsSubject.value];
+
+    tokenWallets
+      ..add(tokenWallet)
+      ..sort();
+
+    _tokenWalletsSubject.add(tokenWallets);
+
+    return tokenWallet;
+  }
+
   Future<TonWallet> subscribeToTonWallet({
     required String publicKey,
     required TonWalletAsset tonWalletAsset,
@@ -94,29 +122,17 @@ class SubscriptionsController {
     return tonWallet;
   }
 
-  Future<TokenWallet> subscribeToTokenWallet({
-    required TonWalletAsset tonWalletAsset,
-    required TokenWalletAsset tokenWalletAsset,
+  Future<Tuple2<Symbol, TokenWalletVersion>> getTokenWalletInfo({
+    required String address,
+    required String rootTokenContract,
   }) async {
     final transport = _connectionController.transport as GqlTransport;
 
-    final tonWallet = tonWallets.firstWhere((e) => e.address == tonWalletAsset.address);
-
-    final tokenWallet = await TokenWallet.subscribe(
+    return loadTokenWalletInfo(
       transport: transport,
-      tonWallet: tonWallet,
-      rootTokenContract: tokenWalletAsset.rootTokenContract,
+      owner: address,
+      rootTokenContract: rootTokenContract,
     );
-
-    final tokenWallets = [..._tokenWalletsSubject.value];
-
-    tokenWallets
-      ..add(tokenWallet)
-      ..sort();
-
-    _tokenWalletsSubject.add(tokenWallets);
-
-    return tokenWallet;
   }
 
   Future<GenericContract> subscribeToGenericContract({

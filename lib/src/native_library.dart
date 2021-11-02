@@ -19,7 +19,7 @@ class NativeLibrary {
 
   NativeLibrary._();
 
-  static Future<NativeLibrary> getInstance() async => _lock.synchronized<NativeLibrary>(() async {
+  static Future<NativeLibrary> getInstance() => _lock.synchronized<NativeLibrary>(() async {
         if (_instance == null) {
           final instance = NativeLibrary._();
           await instance._initialize();

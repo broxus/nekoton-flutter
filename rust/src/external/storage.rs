@@ -1,40 +1,51 @@
 use crate::{
     match_result,
     models::{NativeError, NativeStatus},
-    runtime, send_to_result_port, FromPtr, REQUEST_TIMEOUT, RUNTIME,
+    runtime, send_to_result_port, FromPtr, RUNTIME,
 };
-use allo_isolate::Isolate;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use nekoton::external::Storage;
-use serde::Serialize;
+use pickledb::{PickleDb, PickleDbDumpPolicy, SerializationMethod};
 use std::{
     ffi::c_void,
-    os::raw::{c_char, c_longlong, c_uint, c_ulonglong},
+    os::raw::{c_char, c_longlong, c_ulonglong},
+    path::Path,
     sync::Arc,
     u64,
 };
-use tokio::{
-    sync::{
-        oneshot::{self, Sender},
-        Mutex,
-    },
-    time::timeout,
-};
+use tokio::sync::Mutex;
 
 pub type MutexStorage = Mutex<Option<Arc<StorageImpl>>>;
 
-const STORAGE_REQUEST_ERROR: &str = "Unable to make storage request";
 pub const STORAGE_NOT_FOUND: &str = "Storage not found";
 
 #[no_mangle]
-pub unsafe extern "C" fn get_storage(port: c_longlong) -> *mut c_void {
-    let result = internal_get_storage(port);
+pub unsafe extern "C" fn get_storage(dir: *mut c_char) -> *mut c_void {
+    let result = internal_get_storage(dir);
     match_result(result)
 }
 
-fn internal_get_storage(port: c_longlong) -> Result<u64, NativeError> {
-    let storage = StorageImpl { port };
+fn internal_get_storage(dir: *mut c_char) -> Result<u64, NativeError> {
+    let dir = dir.from_ptr();
+
+    let path = Path::new(&dir).join("nekoton_storage.db");
+
+    let db = match PickleDb::load(
+        path.clone(),
+        PickleDbDumpPolicy::AutoDump,
+        SerializationMethod::Json,
+    ) {
+        Ok(db) => db,
+        Err(_) => PickleDb::new(
+            path,
+            PickleDbDumpPolicy::AutoDump,
+            SerializationMethod::Json,
+        ),
+    };
+    let db = std::sync::Mutex::new(Some(db));
+
+    let storage = StorageImpl { db };
     let storage = Arc::new(storage);
     let storage = Mutex::new(Some(storage));
     let storage = Arc::new(storage);
@@ -74,115 +85,90 @@ pub unsafe extern "C" fn free_storage(result_port: c_longlong, storage: *mut c_v
 }
 
 pub struct StorageImpl {
-    pub port: i64,
+    pub db: std::sync::Mutex<Option<PickleDb>>,
 }
 
 #[async_trait]
 impl Storage for StorageImpl {
     async fn get(&self, key: &str) -> Result<Option<String>> {
-        let key = key.to_owned();
-        let value = make_storage_request(self.port, key, None, StorageRequestType::Get).await?;
-        Ok(value)
+        let mut db_guard = match self.db.lock().ok() {
+            Some(db_guard) => db_guard,
+            None => return Err(anyhow!("Mutex db error")),
+        };
+
+        match db_guard.take() {
+            Some(db) => {
+                let result = db.get::<String>(key);
+                *db_guard = Some(db);
+                Ok(result)
+            }
+            None => return Err(anyhow!("Mutex db error")),
+        }
     }
 
     async fn set(&self, key: &str, value: &str) -> Result<()> {
-        let key = key.to_owned();
-        let value = value.to_owned();
-        make_storage_request(self.port, key, Some(value), StorageRequestType::Set).await?;
-        Ok(())
+        let mut db_guard = match self.db.lock().ok() {
+            Some(db_guard) => db_guard,
+            None => return Err(anyhow!("Mutex db error")),
+        };
+
+        match db_guard.take() {
+            Some(mut db) => {
+                let result = db
+                    .set::<String>(key, &value.to_owned())
+                    .map_err(|e| anyhow!("{}", e));
+                *db_guard = Some(db);
+                result
+            }
+            None => return Err(anyhow!("Mutex db error")),
+        }
     }
 
     fn set_unchecked(&self, key: &str, value: &str) {
-        let key = key.to_owned();
-        let value = value.to_owned();
-        let _ = make_storage_request(self.port, key, Some(value), StorageRequestType::Set);
+        let mut db_guard = match self.db.lock().ok() {
+            Some(db_guard) => db_guard,
+            None => return,
+        };
+
+        let _ = match db_guard.take() {
+            Some(mut db) => {
+                let result = db.set::<String>(key, &value.to_owned());
+                *db_guard = Some(db);
+                result
+            }
+            None => return,
+        };
     }
 
     async fn remove(&self, key: &str) -> Result<()> {
-        let key = key.to_owned();
-        make_storage_request(self.port, key, None, StorageRequestType::Remove).await?;
-        Ok(())
+        let mut db_guard = match self.db.lock().ok() {
+            Some(db_guard) => db_guard,
+            None => return Err(anyhow!("Mutex db error")),
+        };
+
+        match db_guard.take() {
+            Some(mut db) => {
+                let result = db.rem(key).map(|_| ()).map_err(|e| anyhow!("{}", e));
+                *db_guard = Some(db);
+                result
+            }
+            None => return Err(anyhow!("Mutex db error")),
+        }
     }
 
     fn remove_unchecked(&self, key: &str) {
-        let key = key.to_owned();
-        let _ = make_storage_request(self.port, key, None, StorageRequestType::Remove);
+        let mut db_guard = match self.db.lock().ok() {
+            Some(db_guard) => db_guard,
+            None => return,
+        };
+
+        let _ = match db_guard.take() {
+            Some(mut db) => {
+                let result = db.rem(key);
+                *db_guard = Some(db);
+                result
+            }
+            None => return,
+        };
     }
-}
-
-async fn make_storage_request(
-    port: i64,
-    key: String,
-    value: Option<String>,
-    request_type: StorageRequestType,
-) -> Result<Option<String>> {
-    let (tx, rx) = oneshot::channel::<Result<Option<String>, String>>();
-    let tx = Box::new(tx);
-    let tx = Box::into_raw(tx) as u64;
-
-    let request = StorageRequest {
-        tx: tx.to_string(),
-        key,
-        value,
-        request_type,
-    };
-    let request = serde_json::to_string(&request).map_err(|e| anyhow!("{}", e))?;
-
-    let isolate = Isolate::new(port);
-    let sent = isolate.post(request);
-
-    if sent {
-        timeout(REQUEST_TIMEOUT, rx)
-            .await
-            .map_err(|e| anyhow!("{}", e))?
-            .map_err(|e| anyhow!("{}", e))?
-            .map_err(|e| anyhow!("{}", e))
-    } else {
-        let tx = tx as *mut Sender<Result<Option<String>, String>>;
-        unsafe { Box::from_raw(tx) };
-
-        Err(anyhow!(STORAGE_REQUEST_ERROR.to_owned()))
-    }
-}
-
-#[derive(Serialize)]
-pub struct StorageRequest {
-    pub tx: String,
-    pub key: String,
-    pub value: Option<String>,
-    pub request_type: StorageRequestType,
-}
-
-#[derive(Serialize)]
-pub enum StorageRequestType {
-    Get,
-    Set,
-    Remove,
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn resolve_storage_request(
-    tx: *mut c_char,
-    is_successful: c_uint,
-    value: *mut c_char,
-) {
-    let tx = tx.from_ptr().parse::<u64>().unwrap();
-    let tx = tx as *mut c_void;
-    let tx = tx as *mut Sender<Result<Option<String>, String>>;
-    let tx = Box::from_raw(tx);
-    let is_successful = is_successful != 0;
-    let value = match value.is_null() {
-        true => None,
-        false => Some(value.from_ptr()),
-    };
-
-    let result;
-
-    if is_successful {
-        result = Ok(value);
-    } else {
-        result = Err(value.unwrap_or(String::new()));
-    }
-
-    let _ = tx.send(result);
 }

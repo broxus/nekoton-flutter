@@ -117,12 +117,6 @@ void get_token_wallet_balance(long long result_port, void *token_wallet);
 
 void get_token_wallet_contract_state(long long result_port, void *token_wallet);
 
-void token_wallet_prepare_deploy(long long result_port,
-                                 void *token_wallet,
-                                 void *ton_wallet,
-                                 void *transport,
-                                 char *expiration);
-
 void token_wallet_prepare_transfer(long long result_port,
                                    void *token_wallet,
                                    void *ton_wallet,
@@ -255,17 +249,13 @@ void get_adnl_connection(long long result_port, char *adnl_config);
 
 void free_adnl_connection(long long result_port, void *adnl_connection);
 
-void *get_gql_connection(long long port);
+void *get_gql_connection(char *url);
 
 void free_gql_connection(long long result_port, void *gql_connection);
 
-void resolve_gql_request(char *tx, unsigned int is_successful, char *value);
-
-void *get_storage(long long port);
+void *get_storage(char *dir);
 
 void free_storage(long long result_port, void *storage);
-
-void resolve_storage_request(char *tx, unsigned int is_successful, char *value);
 
 void *pack_std_smc_addr(unsigned int base64_url, char *addr, unsigned int bounceable);
 

@@ -83,7 +83,7 @@ class GenericContract {
 
   Future<String> get _address async {
     final result = await _nativeGenericContract.use(
-      (ptr) async => proceedAsync(
+      (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.get_generic_contract_address(
           port,
           ptr,
@@ -97,7 +97,7 @@ class GenericContract {
 
   Future<ContractState> get contractState async {
     final result = await _nativeGenericContract.use(
-      (ptr) async => proceedAsync(
+      (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.get_generic_contract_contract_state(
           port,
           ptr,
@@ -114,7 +114,7 @@ class GenericContract {
 
   Future<List<PendingTransaction>> get pendingTransactions async {
     final result = await _nativeGenericContract.use(
-      (ptr) async => proceedAsync(
+      (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.get_generic_contract_pending_transactions(
           port,
           ptr,
@@ -143,16 +143,16 @@ class GenericContract {
     }
 
     final currentBlockId = await _transport.getLatestBlockId(address);
-    final signInput = await _keystore.getSignInput(
+    final signInput = _keystore.getSignInput(
       entry: entry,
       password: password,
     );
     final signInputStr = jsonEncode(signInput);
 
     final result = await _nativeGenericContract.use(
-      (ptr) async => _keystore.nativeKeystore.use(
-        (nativeKeystorePtr) async => message.nativeUnsignedMessage.use(
-          (nativeUnsignedMessagePtr) async => proceedAsync(
+      (ptr) => _keystore.nativeKeystore.use(
+        (nativeKeystorePtr) => message.nativeUnsignedMessage.use(
+          (nativeUnsignedMessagePtr) => proceedAsync(
             (port) => nativeLibraryInstance.bindings.generic_contract_send(
               port,
               ptr,
@@ -175,8 +175,8 @@ class GenericContract {
     return transaction;
   }
 
-  Future<void> refresh() async => _nativeGenericContract.use(
-        (ptr) async => proceedAsync(
+  Future<void> refresh() => _nativeGenericContract.use(
+        (ptr) => proceedAsync(
           (port) => nativeLibraryInstance.bindings.generic_contract_refresh(
             port,
             ptr,
@@ -188,7 +188,7 @@ class GenericContract {
     final fromStr = jsonEncode(from);
 
     await _nativeGenericContract.use(
-      (ptr) async => proceedAsync(
+      (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.generic_contract_preload_transactions(
           port,
           ptr,
@@ -198,9 +198,9 @@ class GenericContract {
     );
   }
 
-  Future<int> estimateFees(UnsignedMessage message) async => _nativeGenericContract.use(
-        (ptr) async => message.nativeUnsignedMessage.use(
-          (nativeUnsignedMessagePtr) async => proceedAsync(
+  Future<int> estimateFees(UnsignedMessage message) => _nativeGenericContract.use(
+        (ptr) => message.nativeUnsignedMessage.use(
+          (nativeUnsignedMessagePtr) => proceedAsync(
             (port) => nativeLibraryInstance.bindings.generic_contract_estimate_fees(
               port,
               ptr,
@@ -223,7 +223,7 @@ class GenericContract {
       throw GenericContractReadOnlyException();
     }
 
-    final signInput = await _keystore.getSignInput(
+    final signInput = _keystore.getSignInput(
       entry: entry,
       password: password,
     );
@@ -231,9 +231,9 @@ class GenericContract {
     final optionsStr = jsonEncode(options);
 
     final result = await _nativeGenericContract.use(
-      (ptr) async => _keystore.nativeKeystore.use(
-        (nativeKeystorePtr) async => message.nativeUnsignedMessage.use(
-          (nativeUnsignedMessagePtr) async => proceedAsync(
+      (ptr) => _keystore.nativeKeystore.use(
+        (nativeKeystorePtr) => message.nativeUnsignedMessage.use(
+          (nativeUnsignedMessagePtr) => proceedAsync(
             (port) => nativeLibraryInstance.bindings.generic_contract_execute_transaction_locally(
               port,
               ptr,
@@ -257,7 +257,7 @@ class GenericContract {
 
   Future<PollingMethod> get _pollingMethod async {
     final result = await _nativeGenericContract.use(
-      (ptr) async => proceedAsync(
+      (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.get_generic_contract_polling_method(
           port,
           ptr,
@@ -328,9 +328,9 @@ class GenericContract {
     return _nativeGenericContract.free();
   }
 
-  Future<void> _handleBlock(String id) async => _nativeGenericContract.use(
-        (ptr) async => _transport.nativeGqlTransport.use(
-          (nativeGqlTransportPtr) async => proceedAsync(
+  Future<void> _handleBlock(String id) => _nativeGenericContract.use(
+        (ptr) => _transport.nativeGqlTransport.use(
+          (nativeGqlTransportPtr) => proceedAsync(
             (port) => nativeLibraryInstance.bindings.generic_contract_handle_block(
               port,
               ptr,
@@ -370,7 +370,7 @@ class GenericContract {
     _subscription = _receivePort.listen(_subscriptionListener);
 
     final result = await _transport.nativeGqlTransport.use(
-      (ptr) async => proceedAsync(
+      (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.generic_contract_subscribe(
           port,
           _receivePort.sendPort.nativePort,

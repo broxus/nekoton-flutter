@@ -77,9 +77,9 @@ class KeystoreController {
     return key;
   }
 
-  Future<ExportKeyOutput> exportKey(ExportKeyInput exportKeyInput) async => _keystore.exportKey(exportKeyInput);
+  Future<ExportKeyOutput> exportKey(ExportKeyInput exportKeyInput) => _keystore.exportKey(exportKeyInput);
 
-  Future<bool> checkKeyPassword(SignInput signInput) async => _keystore.checkKeyPassword(signInput);
+  Future<bool> checkKeyPassword(SignInput signInput) => _keystore.checkKeyPassword(signInput);
 
   Future<KeyStoreEntry?> removeKey(String publicKey) async {
     final key = _keysSubject.value.firstWhereOrNull((e) => e.publicKey == publicKey);

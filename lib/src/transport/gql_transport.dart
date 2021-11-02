@@ -38,7 +38,7 @@ class GqlTransport implements Transport {
     required String address,
   }) async {
     final result = await nativeGqlTransport.use(
-      (ptr) async => proceedAsync(
+      (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.get_full_account_state(
           port,
           ptr,
@@ -68,7 +68,7 @@ class GqlTransport implements Transport {
     final fromPtr = continuation != null ? jsonEncode(continuation).toNativeUtf8().cast<Int8>() : nullptr;
 
     final result = await nativeGqlTransport.use(
-      (ptr) async => proceedAsync(
+      (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.get_transactions(
           port,
           ptr,
@@ -88,7 +88,7 @@ class GqlTransport implements Transport {
 
   Future<String> getLatestBlockId(String address) async {
     final result = await nativeGqlTransport.use(
-      (ptr) async => proceedAsync(
+      (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.get_latest_block_id(
           port,
           ptr,
@@ -107,7 +107,7 @@ class GqlTransport implements Transport {
     required String address,
   }) async {
     final result = await nativeGqlTransport.use(
-      (ptr) async => proceedAsync(
+      (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.wait_for_next_block_id(
           port,
           ptr,
@@ -122,7 +122,7 @@ class GqlTransport implements Transport {
     return nextBlockId;
   }
 
-  Future<void> free() async => nativeGqlTransport.free();
+  Future<void> free() => nativeGqlTransport.free();
 
   Future<void> _initialize(ConnectionData connectionData) async {
     this.connectionData = connectionData;
@@ -130,7 +130,7 @@ class GqlTransport implements Transport {
     _gqlConnection = await GqlConnection.getInstance(connectionData);
 
     final transportResult = await _gqlConnection.nativeGqlConnection.use(
-      (ptr) async => proceedAsync(
+      (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.get_gql_transport(
           port,
           ptr,

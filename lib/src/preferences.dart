@@ -39,10 +39,10 @@ class Preferences {
   Future<void> setPermissions({
     required String origin,
     required Permissions permissions,
-  }) async =>
+  }) =>
       _permissionsBox.put(origin, permissions);
 
-  Future<void> deletePermissions(String origin) async => _permissionsBox.delete(origin);
+  Future<void> deletePermissions(String origin) => _permissionsBox.delete(origin);
 
   Future<void> deletePermissionsForAccount(String address) async {
     final newValues = _permissionsBox.values.where((e) => e.accountInteraction?.address != address);

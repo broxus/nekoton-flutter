@@ -30,7 +30,7 @@ class AccountsStorage {
 
   Future<List<AssetsList>> get accounts async {
     final result = await _nativeAccountsStorage.use(
-      (ptr) async => proceedAsync(
+      (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.get_accounts(
           port,
           ptr,
@@ -55,7 +55,7 @@ class AccountsStorage {
     final walletTypeStr = jsonEncode(walletType);
 
     final result = await _nativeAccountsStorage.use(
-      (ptr) async => proceedAsync(
+      (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.add_account(
           port,
           ptr,
@@ -79,7 +79,7 @@ class AccountsStorage {
     required String name,
   }) async {
     final result = await _nativeAccountsStorage.use(
-      (ptr) async => proceedAsync(
+      (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.rename_account(
           port,
           ptr,
@@ -98,7 +98,7 @@ class AccountsStorage {
 
   Future<AssetsList?> removeAccount(String address) async {
     final result = await _nativeAccountsStorage.use(
-      (ptr) async => proceedAsync(
+      (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.remove_account(
           port,
           ptr,
@@ -120,7 +120,7 @@ class AccountsStorage {
     required String networkGroup,
   }) async {
     final result = await _nativeAccountsStorage.use(
-      (ptr) async => proceedAsync(
+      (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.add_token_wallet(
           port,
           ptr,
@@ -144,7 +144,7 @@ class AccountsStorage {
     required String networkGroup,
   }) async {
     final result = await _nativeAccountsStorage.use(
-      (ptr) async => proceedAsync(
+      (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.remove_token_wallet(
           port,
           ptr,
@@ -162,8 +162,8 @@ class AccountsStorage {
     return list;
   }
 
-  Future<void> clear() async => _nativeAccountsStorage.use(
-        (ptr) async => proceedAsync(
+  Future<void> clear() => _nativeAccountsStorage.use(
+        (ptr) => proceedAsync(
           (port) => nativeLibraryInstance.bindings.clear_accounts_storage(
             port,
             ptr,
@@ -171,13 +171,13 @@ class AccountsStorage {
         ),
       );
 
-  Future<void> free() async => _nativeAccountsStorage.free();
+  Future<void> free() => _nativeAccountsStorage.free();
 
   Future<void> _initialize() async {
     _storage = await Storage.getInstance();
 
     final result = await _storage.nativeStorage.use(
-      (ptr) async => proceedAsync(
+      (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.get_accounts_storage(
           port,
           ptr,

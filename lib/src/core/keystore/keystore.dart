@@ -42,7 +42,7 @@ class Keystore {
 
   Future<List<KeyStoreEntry>> get entries async {
     final result = await nativeKeystore.use(
-      (ptr) async => proceedAsync(
+      (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.get_entries(
           port,
           ptr,
@@ -62,7 +62,7 @@ class Keystore {
     final createKeyInputStr = jsonEncode(createKeyInput);
 
     final result = await nativeKeystore.use(
-      (ptr) async => proceedAsync(
+      (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.add_key(
           port,
           ptr,
@@ -82,7 +82,7 @@ class Keystore {
     final updateKeyInputStr = jsonEncode(updateKeyInput);
 
     final result = await nativeKeystore.use(
-      (ptr) async => proceedAsync(
+      (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.update_key(
           port,
           ptr,
@@ -102,7 +102,7 @@ class Keystore {
     final exportKeyInputStr = jsonEncode(exportKeyInput);
 
     final result = await nativeKeystore.use(
-      (ptr) async => proceedAsync(
+      (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.export_key(
           port,
           ptr,
@@ -127,7 +127,7 @@ class Keystore {
     final signInputStr = jsonEncode(signInput);
 
     final result = await nativeKeystore.use(
-      (ptr) async => proceedAsync(
+      (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.check_key_password(
           port,
           ptr,
@@ -139,10 +139,10 @@ class Keystore {
     return result == 1;
   }
 
-  Future<SignInput> getSignInput({
+  SignInput getSignInput({
     required KeyStoreEntry entry,
     required String password,
-  }) async =>
+  }) =>
       entry.isLegacy
           ? EncryptedKeyPassword(
               publicKey: entry.publicKey,
@@ -162,7 +162,7 @@ class Keystore {
 
   Future<KeyStoreEntry?> removeKey(String publicKey) async {
     final result = await nativeKeystore.use(
-      (ptr) async => proceedAsync(
+      (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.remove_key(
           port,
           ptr,
@@ -178,8 +178,8 @@ class Keystore {
     return entry;
   }
 
-  Future<void> clear() async => nativeKeystore.use(
-        (ptr) async => proceedAsync(
+  Future<void> clear() => nativeKeystore.use(
+        (ptr) => proceedAsync(
           (port) => nativeLibraryInstance.bindings.clear_keystore(
             port,
             ptr,
@@ -187,13 +187,13 @@ class Keystore {
         ),
       );
 
-  Future<void> free() async => nativeKeystore.free();
+  Future<void> free() => nativeKeystore.free();
 
   Future<void> _initialize() async {
     _storage = await Storage.getInstance();
 
     final result = await _storage.nativeStorage.use(
-      (ptr) async => proceedAsync(
+      (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.get_keystore(
           port,
           ptr,

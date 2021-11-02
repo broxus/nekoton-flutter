@@ -17,6 +17,7 @@ dependencies:
   hive_flutter: ^1.0.0
   json_annotation: ^4.0.0
   logger: ^1.0.0
+  path_provider: ^2.0.6
   recase: ^4.0.0
   rxdart: ^0.27.0
   synchronized: ^3.0.0

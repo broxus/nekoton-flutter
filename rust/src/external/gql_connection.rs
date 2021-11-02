@@ -1,40 +1,39 @@
 use crate::{
     match_result,
-    models::{NativeError, NativeStatus},
-    runtime, send_to_result_port, FromPtr, REQUEST_TIMEOUT, RUNTIME,
+    models::{HandleError, NativeError, NativeStatus},
+    runtime, send_to_result_port, FromPtr, RUNTIME,
 };
-use allo_isolate::Isolate;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use nekoton::external::GqlConnection;
-use serde::Serialize;
 use std::{
     ffi::c_void,
-    os::raw::{c_char, c_longlong, c_uint, c_ulonglong},
+    os::raw::{c_char, c_longlong, c_ulonglong},
     sync::Arc,
     u64,
 };
-use tokio::{
-    sync::{
-        oneshot::{self, Sender},
-        Mutex,
-    },
-    time::timeout,
-};
+use tokio::sync::Mutex;
 
 pub type MutexGqlConnection = Mutex<Option<Arc<GqlConnectionImpl>>>;
 
-const GQL_REQUEST_ERROR: &str = "Unable to make gql request";
 pub const GQL_CONNECTION_NOT_FOUND: &str = "Gql connection not found";
 
 #[no_mangle]
-pub unsafe extern "C" fn get_gql_connection(port: c_longlong) -> *mut c_void {
-    let result = internal_get_gql_connection(port);
+pub unsafe extern "C" fn get_gql_connection(url: *mut c_char) -> *mut c_void {
+    let result = internal_get_gql_connection(url);
     match_result(result)
 }
 
-fn internal_get_gql_connection(port: c_longlong) -> Result<u64, NativeError> {
-    let connection = GqlConnectionImpl { port };
+fn internal_get_gql_connection(url: *mut c_char) -> Result<u64, NativeError> {
+    let url = url.from_ptr();
+    let url = reqwest::Url::parse(&url)
+        .handle_error(NativeStatus::ConversionError)?
+        .join("graphql")
+        .handle_error(NativeStatus::ConversionError)?;
+
+    let client = reqwest::Client::new();
+
+    let connection = GqlConnectionImpl { url, client };
     let connection = Arc::new(connection);
     let connection = Mutex::new(Some(connection));
     let connection = Arc::new(connection);
@@ -74,7 +73,8 @@ pub unsafe extern "C" fn free_gql_connection(result_port: c_longlong, gql_connec
 }
 
 pub struct GqlConnectionImpl {
-    pub port: i64,
+    pub client: reqwest::Client,
+    pub url: reqwest::Url,
 }
 
 #[async_trait]
@@ -84,62 +84,14 @@ impl GqlConnection for GqlConnectionImpl {
     }
 
     async fn post(&self, data: &str) -> Result<String> {
-        let data = data.to_owned();
-
-        let (tx, rx) = oneshot::channel::<Result<String, String>>();
-        let tx = Box::new(tx);
-        let tx = Box::into_raw(tx) as u64;
-
-        let request = GqlRequest {
-            tx: tx.to_string(),
-            data,
-        };
-        let request = serde_json::to_string(&request).map_err(|e| anyhow!("{}", e))?;
-
-        let isolate = Isolate::new(self.port);
-        let sent = isolate.post(request);
-
-        if sent {
-            timeout(REQUEST_TIMEOUT, rx)
-                .await
-                .map_err(|e| anyhow!("{}", e))?
-                .map_err(|e| anyhow!("{}", e))?
-                .map_err(|e| anyhow!("{}", e))
-        } else {
-            let tx = tx as *mut Sender<Result<String, String>>;
-            unsafe { Box::from_raw(tx) };
-
-            Err(anyhow!(GQL_REQUEST_ERROR.to_owned()))
-        }
+        self.client
+            .post(self.url.clone())
+            .header("Content-Type", "application/json")
+            .body(data.to_owned())
+            .send()
+            .await?
+            .text()
+            .await
+            .map_err(|e| anyhow!("{}", e))
     }
-}
-
-#[derive(Serialize)]
-pub struct GqlRequest {
-    pub tx: String,
-    pub data: String,
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn resolve_gql_request(
-    tx: *mut c_char,
-    is_successful: c_uint,
-    value: *mut c_char,
-) {
-    let tx = tx.from_ptr().parse::<u64>().unwrap();
-    let tx = tx as *mut c_void;
-    let tx = tx as *mut Sender<Result<String, String>>;
-    let tx = Box::from_raw(tx);
-    let is_successful = is_successful != 0;
-    let value = value.from_ptr();
-
-    let result;
-
-    if is_successful {
-        result = Ok(value);
-    } else {
-        result = Err(value);
-    }
-
-    let _ = tx.send(result);
 }

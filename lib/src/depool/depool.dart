@@ -18,7 +18,7 @@ Future<ParticipantInfo> getParticipantInfo({
   final transport = connectionController.transport as GqlTransport;
 
   final result = await transport.nativeGqlTransport.use(
-    (ptr) async => proceedAsync(
+    (ptr) => proceedAsync(
       (port) => nativeLibraryInstance.bindings.get_participant_info(
         port,
         ptr,
@@ -40,7 +40,7 @@ Future<DePoolInfo> getDePoolInfo(String address) async {
   final transport = connectionController.transport as GqlTransport;
 
   final result = await transport.nativeGqlTransport.use(
-    (ptr) async => proceedAsync(
+    (ptr) => proceedAsync(
       (port) => nativeLibraryInstance.bindings.get_depool_info(
         port,
         ptr,

@@ -25,6 +25,7 @@ class Nekoton {
   static final _lock = Lock();
   static final _keysStreamSubscriptionLock = Lock();
   static final _accountsStreamSubscriptionLock = Lock();
+  static final _accountsPermissionsStreamSubscriptionLock = Lock();
   static final _subscriptionsUpdateStreamSubscriptionLock = Lock();
   late final KeystoreController keystoreController;
   late final AccountsStorageController accountsStorageController;
@@ -43,7 +44,7 @@ class Nekoton {
 
   static Future<Nekoton> getInstance({
     Logger? logger,
-  }) async =>
+  }) =>
       _lock.synchronized<Nekoton>(() async {
         nekotonLogger ??= logger;
 
@@ -199,7 +200,7 @@ class Nekoton {
     _previousKeys = keystoreController.keys;
     _keysStreamSubscription = keystoreController.keysStream
         .skip(1)
-        .listen((e) => _keysStreamSubscriptionLock.synchronized(() async => _keysStreamListener(e)));
+        .listen((e) => _keysStreamSubscriptionLock.synchronized(() => _keysStreamListener(e)));
 
     _previousAccounts = accountsStorageController.accounts;
     _accountsStreamSubscription =
@@ -207,20 +208,21 @@ class Nekoton {
       keystoreController.currentKeyStream,
       accountsStorageController.accountsStream.skip(1),
       (a, b) => Tuple2(a, b),
-    ).listen((e) => _accountsStreamSubscriptionLock.synchronized(() async => _accountsStreamListener(e)));
+    ).listen((e) => _accountsStreamSubscriptionLock.synchronized(() => _accountsStreamListener(e)));
 
     _accountsPermissionsStreamSubscription =
         Rx.combineLatest2<KeyStoreEntry?, List<AssetsList>, Tuple2<KeyStoreEntry?, List<AssetsList>>>(
       keystoreController.currentKeyStream,
       accountsStorageController.accountsStream.skip(1),
       (a, b) => Tuple2(a, b),
-    ).listen((e) => _accountsStreamSubscriptionLock.synchronized(() async => _accountsPermissionsStreamListener(e)));
+    ).listen((e) =>
+            _accountsPermissionsStreamSubscriptionLock.synchronized(() => _accountsPermissionsStreamListener(e)));
 
     _subscriptionsUpdateStreamSubscription = Rx.combineLatest2<KeyStoreEntry?, Transport, KeyStoreEntry?>(
       keystoreController.currentKeyStream,
       connectionController.transportStream,
       (a, b) => a,
-    ).listen((e) =>
-        _subscriptionsUpdateStreamSubscriptionLock.synchronized(() async => _subscriptionsUpdateStreamListener(e)));
+    ).listen(
+        (e) => _subscriptionsUpdateStreamSubscriptionLock.synchronized(() => _subscriptionsUpdateStreamListener(e)));
   }
 }

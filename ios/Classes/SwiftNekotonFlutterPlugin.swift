@@ -91,8 +91,6 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         get_token_wallet_contract_state(0, nil);
 
-        token_wallet_prepare_deploy(0, nil, nil, nil, nil);
-
         token_wallet_prepare_transfer(0, nil, nil, nil, nil, nil, nil, 0);
 
         token_wallet_refresh(0, nil);
@@ -167,17 +165,13 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         free_adnl_connection(0, nil);
 
-        get_gql_connection(0);
+        get_gql_connection(nil);
 
         free_gql_connection(0, nil);
 
-        resolve_gql_request(nil, 0, nil);
-
-        get_storage(0);
+        get_storage(nil);
 
         free_storage(0, nil);
-
-        resolve_storage_request(nil, 0, nil);
 
         pack_std_smc_addr(0, nil, 0);
 
