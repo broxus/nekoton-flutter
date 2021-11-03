@@ -9,7 +9,6 @@ part 'ton_wallet_transaction_with_data.g.dart';
 
 @freezed
 class TonWalletTransactionWithData with _$TonWalletTransactionWithData {
-  @JsonSerializable()
   const factory TonWalletTransactionWithData({
     required Transaction transaction,
     TransactionAdditionalInfo? data,

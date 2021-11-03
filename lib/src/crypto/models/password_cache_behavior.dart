@@ -12,7 +12,6 @@ class PasswordCacheBehavior with _$PasswordCacheBehavior {
     required int duration,
   }) = _Store;
 
-  @JsonSerializable()
   const factory PasswordCacheBehavior.remove() = _Remove;
 
   factory PasswordCacheBehavior.fromJson(Map<String, dynamic> json) => _$PasswordCacheBehaviorFromJson(json);

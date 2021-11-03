@@ -5,7 +5,6 @@ part 'gen_timings.g.dart';
 
 @freezed
 class GenTimings with _$GenTimings {
-  @JsonSerializable()
   const factory GenTimings({
     required String genLt,
     required int genUtime,

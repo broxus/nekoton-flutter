@@ -7,7 +7,6 @@ import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:recase/recase.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:tuple/tuple.dart';
 
 import '../../constants.dart';
 import '../../ffi_utils.dart';
@@ -25,6 +24,7 @@ import '../ton_wallet/ton_wallet.dart';
 import 'models/native_token_wallet.dart';
 import 'models/on_balance_changed_payload.dart';
 import 'models/on_token_wallet_transactions_found_payload.dart';
+import 'models/root_token_contract_info.dart';
 import 'models/symbol.dart';
 import 'models/token_wallet_transaction_with_data.dart';
 import 'models/token_wallet_version.dart';
@@ -361,74 +361,25 @@ class TokenWallet implements Comparable<TokenWallet> {
   int compareTo(TokenWallet other) => symbol.name.compareTo(other.symbol.name);
 }
 
-Future<bool> checkTokenWalletValidity({
+Future<RootTokenContractInfo> getRootTokenContractInfo({
   required GqlTransport transport,
   required String owner,
   required String rootTokenContract,
 }) async {
-  final receivePort = ReceivePort();
-
-  try {
-    final result = await transport.nativeGqlTransport.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.token_wallet_subscribe(
-          port,
-          receivePort.sendPort.nativePort,
-          ptr,
-          owner.toNativeUtf8().cast<Int8>(),
-          rootTokenContract.toNativeUtf8().cast<Int8>(),
-        ),
-      ),
-    );
-    final ptr = Pointer.fromAddress(result).cast<Void>();
-
-    await proceedAsync(
-      (port) => nativeLibraryInstance.bindings.free_token_wallet(
-        port,
-        ptr,
-      ),
-    );
-
-    return true;
-  } catch (_) {
-    return false;
-  }
-}
-
-Future<Tuple2<Symbol, TokenWalletVersion>> loadTokenWalletInfo({
-  required GqlTransport transport,
-  required String owner,
-  required String rootTokenContract,
-}) async {
-  final tokenWallet = TokenWallet._();
-
-  tokenWallet._transport = transport;
-  tokenWallet._subscription = tokenWallet._receivePort.listen(tokenWallet._subscriptionListener);
-
-  final result = await tokenWallet._transport.nativeGqlTransport.use(
+  final result = await transport.nativeGqlTransport.use(
     (ptr) => proceedAsync(
-      (port) => nativeLibraryInstance.bindings.token_wallet_subscribe(
+      (port) => nativeLibraryInstance.bindings.get_root_token_contract_info(
         port,
-        tokenWallet._receivePort.sendPort.nativePort,
         ptr,
         owner.toNativeUtf8().cast<Int8>(),
         rootTokenContract.toNativeUtf8().cast<Int8>(),
       ),
     ),
   );
-  final ptr = Pointer.fromAddress(result).cast<Void>();
 
-  tokenWallet._nativeTokenWallet = NativeTokenWallet(ptr);
+  final string = cStringToDart(result);
+  final json = jsonDecode(string) as Map<String, dynamic>;
+  final info = RootTokenContractInfo.fromJson(json);
 
-  final symbol = await tokenWallet._symbol;
-  final version = await tokenWallet._version;
-
-  tokenWallet._timer = Timer.periodic(
-    kGqlRefreshPeriod,
-    tokenWallet._refreshTimer,
-  );
-
-  await tokenWallet.free();
-
-  return Tuple2(symbol, version);
+  return info;
 }

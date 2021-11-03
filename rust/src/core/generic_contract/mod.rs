@@ -76,7 +76,7 @@ async fn internal_generic_contract_subscribe(
 ) -> Result<u64, NativeError> {
     let address = parse_address(&address)?;
 
-    let handler = GenericContractSubscriptionHandlerImpl { port };
+    let handler = GenericContractSubscriptionHandlerImpl { port: Some(port) };
     let handler = Arc::new(handler);
 
     let generic_contract = GenericContract::subscribe(transport, address, handler)

@@ -105,6 +105,11 @@ void token_wallet_subscribe(long long result_port,
                             char *owner,
                             char *root_token_contract);
 
+void get_root_token_contract_info(long long result_port,
+                                  void *transport,
+                                  char *owner,
+                                  char *root_token_contract);
+
 void get_token_wallet_owner(long long result_port, void *token_wallet);
 
 void get_token_wallet_address(long long result_port, void *token_wallet);

@@ -7,7 +7,6 @@ part 'get_expected_address_input.g.dart';
 
 @freezed
 class GetExpectedAddressInput with _$GetExpectedAddressInput {
-  @JsonSerializable()
   const factory GetExpectedAddressInput({
     required String tvc,
     required String abi,

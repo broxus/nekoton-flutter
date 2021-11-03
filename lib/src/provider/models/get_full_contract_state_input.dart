@@ -5,7 +5,6 @@ part 'get_full_contract_state_input.g.dart';
 
 @freezed
 class GetFullContractStateInput with _$GetFullContractStateInput {
-  @JsonSerializable()
   const factory GetFullContractStateInput({
     required String address,
   }) = _GetFullContractStateInput;

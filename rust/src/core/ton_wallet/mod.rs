@@ -96,7 +96,7 @@ async fn internal_ton_wallet_subscribe(
         .handle_error(NativeStatus::ConversionError)?;
     let contract = WalletType::to_core(contract);
 
-    let handler = TonWalletSubscriptionHandlerImpl { port };
+    let handler = TonWalletSubscriptionHandlerImpl { port: Some(port) };
     let handler = Arc::new(handler);
 
     let ton_wallet = TonWallet::subscribe(transport, workchain, public_key, contract, handler)
@@ -156,7 +156,7 @@ async fn internal_ton_wallet_subscribe_by_address(
 ) -> Result<u64, NativeError> {
     let address = parse_address(&address)?;
 
-    let handler = TonWalletSubscriptionHandlerImpl { port };
+    let handler = TonWalletSubscriptionHandlerImpl { port: Some(port) };
     let handler = Arc::new(handler);
 
     let ton_wallet = TonWallet::subscribe_by_address(transport, address, handler)
@@ -218,7 +218,7 @@ async fn internal_ton_wallet_subscribe_by_existing(
     let existing_wallet = serde_json::from_str::<ExistingWalletInfo>(&existing_wallet)
         .handle_error(NativeStatus::ConversionError)?;
 
-    let handler = TonWalletSubscriptionHandlerImpl { port };
+    let handler = TonWalletSubscriptionHandlerImpl { port: Some(port) };
     let handler = Arc::new(handler);
 
     let ton_wallet =

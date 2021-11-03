@@ -24,17 +24,14 @@ class TokenWalletTransaction with _$TokenWalletTransaction {
     required TokenSwapBack tokenSwapBack,
   }) = _SwapBack;
 
-  @JsonSerializable()
   const factory TokenWalletTransaction.accept({
     required String value,
   }) = _Accept;
 
-  @JsonSerializable()
   const factory TokenWalletTransaction.transferBounced({
     required String value,
   }) = _TransferBounced;
 
-  @JsonSerializable()
   const factory TokenWalletTransaction.swapBackBounced({
     required String value,
   }) = _SwapBackBounced;

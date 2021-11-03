@@ -5,7 +5,6 @@ part 'get_expected_address_output.g.dart';
 
 @freezed
 class GetExpectedAddressOutput with _$GetExpectedAddressOutput {
-  @JsonSerializable()
   const factory GetExpectedAddressOutput({
     required String address,
   }) = _GetExpectedAddressOutput;

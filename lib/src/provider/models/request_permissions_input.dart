@@ -7,7 +7,6 @@ part 'request_permissions_input.g.dart';
 
 @freezed
 class RequestPermissionsInput with _$RequestPermissionsInput {
-  @JsonSerializable()
   const factory RequestPermissionsInput({
     required List<Permission> permissions,
   }) = _RequestPermissionsInput;

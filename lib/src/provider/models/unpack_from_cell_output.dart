@@ -7,7 +7,6 @@ part 'unpack_from_cell_output.g.dart';
 
 @freezed
 class UnpackFromCellOutput with _$UnpackFromCellOutput {
-  @JsonSerializable()
   const factory UnpackFromCellOutput({
     required TokensObject data,
   }) = _UnpackFromCellOutput;

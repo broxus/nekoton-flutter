@@ -79,6 +79,8 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         token_wallet_subscribe(0, 0, nil, nil, nil);
 
+        get_root_token_contract_info(0, nil, nil, nil);
+
         get_token_wallet_owner(0, nil);
 
         get_token_wallet_address(0, nil);

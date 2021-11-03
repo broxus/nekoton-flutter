@@ -7,7 +7,6 @@ part 'decode_transaction_events_output.g.dart';
 
 @freezed
 class DecodeTransactionEventsOutput with _$DecodeTransactionEventsOutput {
-  @JsonSerializable()
   const factory DecodeTransactionEventsOutput({
     required List<DecodedTransactionEvent> events,
   }) = _DecodeTransactionEventsOutput;

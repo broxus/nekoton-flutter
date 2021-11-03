@@ -1,9 +1,8 @@
 import 'dart:async';
 import 'dart:ffi';
 
-import 'package:nekoton_flutter/src/models/nekoton_exception.dart';
-
 import '../../../ffi_utils.dart';
+import '../../../models/nekoton_exception.dart';
 import '../../../nekoton.dart';
 
 class NativeAccountsStorage {

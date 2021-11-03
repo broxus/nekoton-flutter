@@ -9,7 +9,6 @@ part 'token_wallet_transaction_with_data.g.dart';
 
 @freezed
 class TokenWalletTransactionWithData with _$TokenWalletTransactionWithData {
-  @JsonSerializable()
   const factory TokenWalletTransactionWithData({
     required Transaction transaction,
     TokenWalletTransaction? data,

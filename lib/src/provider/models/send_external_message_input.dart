@@ -7,7 +7,6 @@ part 'send_external_message_input.g.dart';
 
 @freezed
 class SendExternalMessageInput with _$SendExternalMessageInput {
-  @JsonSerializable()
   const factory SendExternalMessageInput({
     required String publicKey,
     required String recipient,

@@ -5,7 +5,6 @@ part 'last_transaction_id.g.dart';
 
 @freezed
 class LastTransactionId with _$LastTransactionId {
-  @JsonSerializable()
   const factory LastTransactionId({
     required bool isExact,
     required String lt,

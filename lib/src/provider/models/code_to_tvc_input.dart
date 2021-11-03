@@ -5,7 +5,6 @@ part 'code_to_tvc_input.g.dart';
 
 @freezed
 class CodeToTvcInput with _$CodeToTvcInput {
-  @JsonSerializable()
   const factory CodeToTvcInput({
     required String code,
   }) = _CodeToTvcInput;

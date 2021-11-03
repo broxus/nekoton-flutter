@@ -5,7 +5,6 @@ part 'extract_public_key_output.g.dart';
 
 @freezed
 class ExtractPublicKeyOutput with _$ExtractPublicKeyOutput {
-  @JsonSerializable()
   const factory ExtractPublicKeyOutput({
     required String publicKey,
   }) = _ExtractPublicKeyOutput;

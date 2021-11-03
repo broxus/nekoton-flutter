@@ -8,12 +8,17 @@ use nekoton::core::{
 use nekoton_abi::num_bigint::BigUint;
 
 pub struct TokenWalletSubscriptionHandlerImpl {
-    pub port: i64,
+    pub port: Option<i64>,
 }
 
 #[async_trait]
 impl TokenWalletSubscriptionHandler for TokenWalletSubscriptionHandlerImpl {
     fn on_balance_changed(&self, balance: BigUint) {
+        let port = match self.port {
+            Some(port) => port,
+            None => return,
+        };
+
         let payload = OnBalanceChangedPayload {
             balance: balance.to_string(),
         };
@@ -25,7 +30,7 @@ impl TokenWalletSubscriptionHandler for TokenWalletSubscriptionHandlerImpl {
             };
 
             if let Ok(message) = serde_json::to_string(&message) {
-                post_subscription_data(self.port, message);
+                post_subscription_data(port, message);
             };
         };
     }
@@ -35,6 +40,11 @@ impl TokenWalletSubscriptionHandler for TokenWalletSubscriptionHandlerImpl {
         transactions: Vec<TransactionWithData<models::TokenWalletTransaction>>,
         batch_info: TransactionsBatchInfo,
     ) {
+        let port = match self.port {
+            Some(port) => port,
+            None => return,
+        };
+
         let transactions = transactions
             .iter()
             .map(
@@ -62,7 +72,7 @@ impl TokenWalletSubscriptionHandler for TokenWalletSubscriptionHandlerImpl {
             };
 
             if let Ok(message) = serde_json::to_string(&message) {
-                post_subscription_data(self.port, message);
+                post_subscription_data(port, message);
             };
         };
     }

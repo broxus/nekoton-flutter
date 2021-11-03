@@ -81,7 +81,7 @@ async fn internal_token_wallet_subscribe(
     let owner = parse_address(&owner)?;
     let root_token_contract = parse_address(&root_token_contract)?;
 
-    let handler = TokenWalletSubscriptionHandlerImpl { port };
+    let handler = TokenWalletSubscriptionHandlerImpl { port: Some(port) };
     let handler = Arc::new(handler);
 
     let token_wallet = TokenWallet::subscribe(transport, owner, root_token_contract, handler)
@@ -94,6 +94,77 @@ async fn internal_token_wallet_subscribe(
     let token_wallet = Arc::into_raw(token_wallet) as c_ulonglong;
 
     Ok(token_wallet)
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn get_root_token_contract_info(
+    result_port: c_longlong,
+    transport: *mut c_void,
+    owner: *mut c_char,
+    root_token_contract: *mut c_char,
+) {
+    let transport = transport as *mut MutexGqlTransport;
+    let transport = &(*transport);
+
+    let owner = owner.from_ptr();
+    let root_token_contract = root_token_contract.from_ptr();
+
+    let rt = runtime!();
+    rt.spawn(async move {
+        let mut transport_guard = transport.lock().await;
+        let transport = transport_guard.take();
+        let transport = match transport {
+            Some(transport) => transport,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
+                }));
+
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
+
+        let result =
+            internal_get_root_token_contract_info(transport.clone(), owner, root_token_contract)
+                .await;
+        let result = match_result(result);
+
+        *transport_guard = Some(transport);
+
+        send_to_result_port(result_port, result);
+    });
+}
+
+async fn internal_get_root_token_contract_info(
+    transport: Arc<GqlTransport>,
+    owner: String,
+    root_token_contract: String,
+) -> Result<u64, NativeError> {
+    let owner = parse_address(&owner)?;
+    let root_token_contract = parse_address(&root_token_contract)?;
+
+    let handler = TokenWalletSubscriptionHandlerImpl { port: None };
+    let handler = Arc::new(handler);
+
+    let token_wallet =
+        TokenWallet::subscribe(transport, owner, root_token_contract.clone(), handler)
+            .await
+            .handle_error(NativeStatus::TokenWalletError)?;
+
+    let symbol = token_wallet.symbol().clone();
+    let version = token_wallet.version();
+    let info = models::RootTokenContractInfo {
+        name: symbol.full_name,
+        symbol: symbol.name,
+        decimals: symbol.decimals,
+        address: root_token_contract,
+        version,
+    };
+    let info = serde_json::to_string(&info).handle_error(NativeStatus::ConversionError)?;
+
+    Ok(info.to_ptr() as c_ulonglong)
 }
 
 #[no_mangle]

@@ -5,7 +5,6 @@ part 'contract_updates_subscription.g.dart';
 
 @freezed
 class ContractUpdatesSubscription with _$ContractUpdatesSubscription {
-  @JsonSerializable()
   const factory ContractUpdatesSubscription({
     bool? state,
     bool? transactions,

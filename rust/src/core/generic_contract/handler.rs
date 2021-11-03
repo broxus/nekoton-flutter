@@ -10,7 +10,7 @@ use nekoton::core::{
 };
 
 pub struct GenericContractSubscriptionHandlerImpl {
-    pub port: i64,
+    pub port: Option<i64>,
 }
 
 #[async_trait]
@@ -20,6 +20,11 @@ impl GenericContractSubscriptionHandler for GenericContractSubscriptionHandlerIm
         pending_transaction: PendingTransaction,
         transaction: Option<Transaction>,
     ) {
+        let port = match self.port {
+            Some(port) => port,
+            None => return,
+        };
+
         let payload = OnMessageSentPayload {
             pending_transaction,
             transaction,
@@ -32,12 +37,17 @@ impl GenericContractSubscriptionHandler for GenericContractSubscriptionHandlerIm
             };
 
             if let Ok(message) = serde_json::to_string(&message) {
-                post_subscription_data(self.port, message);
+                post_subscription_data(port, message);
             };
         };
     }
 
     fn on_message_expired(&self, pending_transaction: PendingTransaction) {
+        let port = match self.port {
+            Some(port) => port,
+            None => return,
+        };
+
         let payload = OnMessageExpiredPayload {
             pending_transaction,
         };
@@ -49,12 +59,17 @@ impl GenericContractSubscriptionHandler for GenericContractSubscriptionHandlerIm
             };
 
             if let Ok(message) = serde_json::to_string(&message) {
-                post_subscription_data(self.port, message);
+                post_subscription_data(port, message);
             };
         };
     }
 
     fn on_state_changed(&self, new_state: models::ContractState) {
+        let port = match self.port {
+            Some(port) => port,
+            None => return,
+        };
+
         let payload = OnStateChangedPayload { new_state };
 
         if let Ok(payload) = serde_json::to_string(&payload) {
@@ -64,7 +79,7 @@ impl GenericContractSubscriptionHandler for GenericContractSubscriptionHandlerIm
             };
 
             if let Ok(message) = serde_json::to_string(&message) {
-                post_subscription_data(self.port, message);
+                post_subscription_data(port, message);
             };
         };
     }
@@ -74,6 +89,11 @@ impl GenericContractSubscriptionHandler for GenericContractSubscriptionHandlerIm
         transactions: Vec<Transaction>,
         batch_info: TransactionsBatchInfo,
     ) {
+        let port = match self.port {
+            Some(port) => port,
+            None => return,
+        };
+
         let payload = OnTransactionsFoundPayload {
             transactions,
             batch_info,
@@ -86,7 +106,7 @@ impl GenericContractSubscriptionHandler for GenericContractSubscriptionHandlerIm
             };
 
             if let Ok(message) = serde_json::to_string(&message) {
-                post_subscription_data(self.port, message);
+                post_subscription_data(port, message);
             };
         };
     }

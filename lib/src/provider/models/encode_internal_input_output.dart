@@ -5,7 +5,6 @@ part 'encode_internal_input_output.g.dart';
 
 @freezed
 class EncodeInternalInputOutput with _$EncodeInternalInputOutput {
-  @JsonSerializable()
   const factory EncodeInternalInputOutput({
     required String boc,
   }) = _EncodeInternalInputOutput;

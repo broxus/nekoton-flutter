@@ -8,7 +8,6 @@ part 'token_outgoing_transfer.g.dart';
 
 @freezed
 class TokenOutgoingTransfer with _$TokenOutgoingTransfer {
-  @JsonSerializable()
   const factory TokenOutgoingTransfer({
     required TransferRecipient to,
     required String tokens,

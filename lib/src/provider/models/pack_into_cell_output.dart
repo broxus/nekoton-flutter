@@ -5,7 +5,6 @@ part 'pack_into_cell_output.g.dart';
 
 @freezed
 class PackIntoCellOutput with _$PackIntoCellOutput {
-  @JsonSerializable()
   const factory PackIntoCellOutput({
     required String boc,
   }) = _PackIntoCellOutput;

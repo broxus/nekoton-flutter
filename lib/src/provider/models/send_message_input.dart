@@ -7,7 +7,6 @@ part 'send_message_input.g.dart';
 
 @freezed
 class SendMessageInput with _$SendMessageInput {
-  @JsonSerializable()
   const factory SendMessageInput({
     required String sender,
     required String recipient,

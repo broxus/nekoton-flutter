@@ -5,7 +5,6 @@ part 'estimate_fees_output.g.dart';
 
 @freezed
 class EstimateFeesOutput with _$EstimateFeesOutput {
-  @JsonSerializable()
   const factory EstimateFeesOutput({
     required String fees,
   }) = _EstimateFeesOutput;

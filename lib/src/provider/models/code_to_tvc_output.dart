@@ -5,7 +5,6 @@ part 'code_to_tvc_output.g.dart';
 
 @freezed
 class CodeToTvcOutput with _$CodeToTvcOutput {
-  @JsonSerializable()
   const factory CodeToTvcOutput({
     required String tvc,
   }) = _CodeToTvcOutput;

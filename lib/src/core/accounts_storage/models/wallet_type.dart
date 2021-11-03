@@ -12,7 +12,6 @@ class WalletType with _$WalletType {
     required MultisigType multisigType,
   }) = _Multisig;
 
-  @JsonSerializable()
   const factory WalletType.walletV3() = _WalletV3;
 
   factory WalletType.fromJson(Map<String, dynamic> json) => _$WalletTypeFromJson(json);

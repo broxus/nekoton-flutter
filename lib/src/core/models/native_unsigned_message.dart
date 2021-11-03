@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:ffi';
 
-import 'package:nekoton_flutter/src/models/nekoton_exception.dart';
+import '../../models/nekoton_exception.dart';
 
 class NativeUnsignedMessage {
   Completer<void>? _completer;

@@ -8,7 +8,6 @@ part 'derived_key_export_output.g.dart';
 
 @freezed
 class DerivedKeyExportOutput with _$DerivedKeyExportOutput implements ExportKeyOutput {
-  @JsonSerializable()
   const factory DerivedKeyExportOutput({
     required String phrase,
   }) = _DerivedKeyExportOutput;

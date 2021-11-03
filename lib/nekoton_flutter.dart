@@ -36,6 +36,7 @@ export 'src/core/models/transactions_batch_info.dart';
 export 'src/core/models/unsigned_message.dart';
 export 'src/core/token_wallet/models/on_balance_changed_payload.dart';
 export 'src/core/token_wallet/models/on_token_wallet_transactions_found_payload.dart';
+export 'src/core/token_wallet/models/root_token_contract_info.dart';
 export 'src/core/token_wallet/models/symbol.dart';
 export 'src/core/token_wallet/models/token_incoming_transfer.dart';
 export 'src/core/token_wallet/models/token_outgoing_transfer.dart';

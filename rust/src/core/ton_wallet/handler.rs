@@ -9,7 +9,7 @@ use nekoton::core::{
 };
 
 pub struct TonWalletSubscriptionHandlerImpl {
-    pub port: i64,
+    pub port: Option<i64>,
 }
 
 #[async_trait]
@@ -19,6 +19,11 @@ impl TonWalletSubscriptionHandler for TonWalletSubscriptionHandlerImpl {
         pending_transaction: PendingTransaction,
         transaction: Option<Transaction>,
     ) {
+        let port = match self.port {
+            Some(port) => port,
+            None => return,
+        };
+
         let payload = OnMessageSentPayload {
             pending_transaction,
             transaction,
@@ -31,12 +36,17 @@ impl TonWalletSubscriptionHandler for TonWalletSubscriptionHandlerImpl {
             };
 
             if let Ok(message) = serde_json::to_string(&message) {
-                post_subscription_data(self.port, message);
+                post_subscription_data(port, message);
             };
         };
     }
 
     fn on_message_expired(&self, pending_transaction: PendingTransaction) {
+        let port = match self.port {
+            Some(port) => port,
+            None => return,
+        };
+
         let payload = OnMessageExpiredPayload {
             pending_transaction,
         };
@@ -48,12 +58,17 @@ impl TonWalletSubscriptionHandler for TonWalletSubscriptionHandlerImpl {
             };
 
             if let Ok(message) = serde_json::to_string(&message) {
-                post_subscription_data(self.port, message);
+                post_subscription_data(port, message);
             };
         };
     }
 
     fn on_state_changed(&self, new_state: models::ContractState) {
+        let port = match self.port {
+            Some(port) => port,
+            None => return,
+        };
+
         let payload = OnStateChangedPayload { new_state };
 
         if let Ok(payload) = serde_json::to_string(&payload) {
@@ -63,7 +78,7 @@ impl TonWalletSubscriptionHandler for TonWalletSubscriptionHandlerImpl {
             };
 
             if let Ok(message) = serde_json::to_string(&message) {
-                post_subscription_data(self.port, message);
+                post_subscription_data(port, message);
             };
         };
     }
@@ -73,6 +88,11 @@ impl TonWalletSubscriptionHandler for TonWalletSubscriptionHandlerImpl {
         transactions: Vec<TransactionWithData<models::TransactionAdditionalInfo>>,
         batch_info: TransactionsBatchInfo,
     ) {
+        let port = match self.port {
+            Some(port) => port,
+            None => return,
+        };
+
         let transactions = transactions
             .iter()
             .map(
@@ -100,7 +120,7 @@ impl TonWalletSubscriptionHandler for TonWalletSubscriptionHandlerImpl {
             };
 
             if let Ok(message) = serde_json::to_string(&message) {
-                post_subscription_data(self.port, message);
+                post_subscription_data(port, message);
             };
         };
     }

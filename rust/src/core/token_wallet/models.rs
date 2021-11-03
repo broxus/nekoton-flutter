@@ -101,3 +101,14 @@ impl TransferRecipient {
         }
     }
 }
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RootTokenContractInfo {
+    pub name: String,
+    pub symbol: String,
+    pub decimals: u8,
+    #[serde(with = "serde_address")]
+    pub address: MsgAddressInt,
+    pub version: models::TokenWalletVersion,
+}

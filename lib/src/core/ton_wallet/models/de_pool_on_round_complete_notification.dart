@@ -6,7 +6,6 @@ part 'de_pool_on_round_complete_notification.g.dart';
 
 @freezed
 class DePoolOnRoundCompleteNotification with _$DePoolOnRoundCompleteNotification {
-  @JsonSerializable()
   const factory DePoolOnRoundCompleteNotification({
     required String roundId,
     required String reward,

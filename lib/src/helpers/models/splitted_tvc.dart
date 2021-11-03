@@ -5,7 +5,6 @@ part 'splitted_tvc.g.dart';
 
 @freezed
 class SplittedTvc with _$SplittedTvc {
-  @JsonSerializable()
   const factory SplittedTvc({
     String? data,
     String? code,

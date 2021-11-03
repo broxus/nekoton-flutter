@@ -7,7 +7,6 @@ part 'send_message_output.g.dart';
 
 @freezed
 class SendMessageOutput with _$SendMessageOutput {
-  @JsonSerializable()
   const factory SendMessageOutput({
     required Transaction transaction,
   }) = _SendMessageOutput;

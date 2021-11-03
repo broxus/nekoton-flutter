@@ -5,7 +5,6 @@ part 'unsubscribe_input.g.dart';
 
 @freezed
 class UnsubscribeInput with _$UnsubscribeInput {
-  @JsonSerializable()
   const factory UnsubscribeInput({
     required String address,
   }) = _UnsubscribeInput;

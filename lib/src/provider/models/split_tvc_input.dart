@@ -5,7 +5,6 @@ part 'split_tvc_input.g.dart';
 
 @freezed
 class SplitTvcInput with _$SplitTvcInput {
-  @JsonSerializable()
   const factory SplitTvcInput({
     required String tvc,
   }) = _SplitTvcInput;

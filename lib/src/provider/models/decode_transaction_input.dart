@@ -8,7 +8,6 @@ part 'decode_transaction_input.g.dart';
 
 @freezed
 class DecodeTransactionInput with _$DecodeTransactionInput {
-  @JsonSerializable()
   const factory DecodeTransactionInput({
     required Transaction transaction,
     required String abi,

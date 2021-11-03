@@ -6,7 +6,6 @@ part 'message_body.g.dart';
 
 @freezed
 class MessageBody with _$MessageBody {
-  @JsonSerializable()
   const factory MessageBody({
     required String hash,
     required String data,

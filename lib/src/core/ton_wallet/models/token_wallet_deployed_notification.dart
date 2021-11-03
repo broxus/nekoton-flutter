@@ -6,7 +6,6 @@ part 'token_wallet_deployed_notification.g.dart';
 
 @freezed
 class TokenWalletDeployedNotification with _$TokenWalletDeployedNotification {
-  @JsonSerializable()
   const factory TokenWalletDeployedNotification({
     required String rootTokenContract,
   }) = _TokenWalletDeployedNotification;

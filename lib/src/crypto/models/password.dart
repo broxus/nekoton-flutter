@@ -16,7 +16,6 @@ class Password with _$Password {
     required PasswordCacheBehavior cacheBehavior,
   }) = _Explicit;
 
-  @JsonSerializable()
   const factory Password.fromCache() = _FromCache;
 
   factory Password.fromJson(Map<String, dynamic> json) => _$PasswordFromJson(json);

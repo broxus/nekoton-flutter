@@ -6,7 +6,6 @@ part 'transaction_id.g.dart';
 
 @freezed
 class TransactionId with _$TransactionId {
-  @JsonSerializable()
   const factory TransactionId({
     required String lt,
     required String hash,

@@ -5,7 +5,6 @@ part 'message.g.dart';
 
 @freezed
 class Message with _$Message {
-  @JsonSerializable()
   const factory Message({
     String? src,
     String? dst,

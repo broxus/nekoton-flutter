@@ -5,7 +5,6 @@ part 'error.g.dart';
 
 @freezed
 class Error with _$Error {
-  @JsonSerializable()
   const factory Error({
     required String name,
     required String message,

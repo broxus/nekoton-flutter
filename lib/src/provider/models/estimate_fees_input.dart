@@ -7,7 +7,6 @@ part 'estimate_fees_input.g.dart';
 
 @freezed
 class EstimateFeesInput with _$EstimateFeesInput {
-  @JsonSerializable()
   const factory EstimateFeesInput({
     required String sender,
     required String recipient,

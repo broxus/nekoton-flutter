@@ -7,7 +7,6 @@ part 'execution_output.g.dart';
 
 @freezed
 class ExecutionOutput with _$ExecutionOutput {
-  @JsonSerializable()
   const factory ExecutionOutput({
     required TokensObject output,
     required int code,

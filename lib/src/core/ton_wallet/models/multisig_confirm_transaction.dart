@@ -6,7 +6,6 @@ part 'multisig_confirm_transaction.g.dart';
 
 @freezed
 class MultisigConfirmTransaction with _$MultisigConfirmTransaction {
-  @JsonSerializable()
   const factory MultisigConfirmTransaction({
     required String custodian,
     required String transactionId,

@@ -5,7 +5,6 @@ part 'network_changed_event.g.dart';
 
 @freezed
 class NetworkChangedEvent with _$NetworkChangedEvent {
-  @JsonSerializable()
   const factory NetworkChangedEvent({
     required String selectedConnection,
   }) = _NetworkChangedEvent;

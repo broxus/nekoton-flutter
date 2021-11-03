@@ -6,7 +6,6 @@ part 'depool_asset.g.dart';
 
 @freezed
 class DePoolAsset with _$DePoolAsset {
-  @JsonSerializable()
   const factory DePoolAsset({
     required String address,
   }) = _DePoolAsset;

@@ -7,7 +7,6 @@ part 'wallet_interaction_method.g.dart';
 
 @Freezed(unionValueCase: FreezedUnionCase.pascal)
 class WalletInteractionMethod with _$WalletInteractionMethod {
-  @JsonSerializable()
   const factory WalletInteractionMethod.walletV3Transfer() = _WalletV3Transfer;
 
   @JsonSerializable(

@@ -9,7 +9,6 @@ part 'account_interaction.g.dart';
 @freezed
 @HiveType(typeId: 222)
 class AccountInteraction with _$AccountInteraction {
-  @JsonSerializable()
   const factory AccountInteraction({
     @HiveField(0) required String address,
     @HiveField(1) required String publicKey,

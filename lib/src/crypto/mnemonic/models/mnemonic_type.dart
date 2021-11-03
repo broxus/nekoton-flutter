@@ -6,10 +6,8 @@ part 'mnemonic_type.g.dart';
 
 @Freezed(unionValueCase: FreezedUnionCase.pascal)
 class MnemonicType with _$MnemonicType {
-  @JsonSerializable()
   const factory MnemonicType.legacy() = _Legacy;
 
-  @JsonSerializable()
   const factory MnemonicType.labs({
     required int id,
   }) = _Labs;

@@ -7,7 +7,6 @@ part 'decoded_output.g.dart';
 
 @freezed
 class DecodedOutput with _$DecodedOutput {
-  @JsonSerializable()
   const factory DecodedOutput({
     required String method,
     required TokensObject output,

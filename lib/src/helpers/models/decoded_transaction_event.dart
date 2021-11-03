@@ -7,7 +7,6 @@ part 'decoded_transaction_event.g.dart';
 
 @freezed
 class DecodedTransactionEvent with _$DecodedTransactionEvent {
-  @JsonSerializable()
   const factory DecodedTransactionEvent({
     required String event,
     required TokensObject data,

@@ -6,7 +6,6 @@ part 'multisig_send_transaction.g.dart';
 
 @freezed
 class MultisigSendTransaction with _$MultisigSendTransaction {
-  @JsonSerializable()
   const factory MultisigSendTransaction({
     required String dest,
     required String value,

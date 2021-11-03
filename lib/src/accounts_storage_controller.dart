@@ -132,13 +132,13 @@ class AccountsStorageController {
   }) async {
     final transport = _connectionController.transport as GqlTransport;
 
-    final isValid = await checkTokenWalletValidity(
-      transport: transport,
-      owner: address,
-      rootTokenContract: rootTokenContract,
-    );
-
-    if (!isValid) {
+    try {
+      await getRootTokenContractInfo(
+        transport: transport,
+        owner: address,
+        rootTokenContract: rootTokenContract,
+      );
+    } catch (_) {
       throw InvalidRootTokenContractException();
     }
 

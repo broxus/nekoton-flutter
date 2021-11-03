@@ -6,7 +6,6 @@ part 'subscription_handler_message.g.dart';
 
 @freezed
 class SubscriptionHandlerMessage with _$SubscriptionHandlerMessage {
-  @JsonSerializable()
   const factory SubscriptionHandlerMessage({
     required String event,
     required String payload,

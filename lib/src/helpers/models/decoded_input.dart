@@ -7,7 +7,6 @@ part 'decoded_input.g.dart';
 
 @freezed
 class DecodedInput with _$DecodedInput {
-  @JsonSerializable()
   const factory DecodedInput({
     required String method,
     required TokensObject input,

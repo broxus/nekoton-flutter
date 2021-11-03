@@ -7,7 +7,6 @@ part 'function_call.g.dart';
 
 @freezed
 class FunctionCall with _$FunctionCall {
-  @JsonSerializable()
   const factory FunctionCall({
     required String abi,
     required String method,

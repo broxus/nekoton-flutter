@@ -2,15 +2,13 @@ import 'dart:async';
 
 import 'package:collection/collection.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:tuple/tuple.dart';
 
 import 'connection_controller.dart';
 import 'core/accounts_storage/models/assets_list.dart';
 import 'core/accounts_storage/models/token_wallet_asset.dart';
 import 'core/accounts_storage/models/ton_wallet_asset.dart';
 import 'core/generic_contract/generic_contract.dart';
-import 'core/token_wallet/models/symbol.dart';
-import 'core/token_wallet/models/token_wallet_version.dart';
+import 'core/token_wallet/models/root_token_contract_info.dart';
 import 'core/token_wallet/token_wallet.dart';
 import 'core/ton_wallet/ton_wallet.dart';
 import 'provider/models/contract_updates_subscription.dart';
@@ -122,13 +120,13 @@ class SubscriptionsController {
     return tonWallet;
   }
 
-  Future<Tuple2<Symbol, TokenWalletVersion>> getTokenWalletInfo({
+  Future<RootTokenContractInfo> getTokenWalletInfo({
     required String address,
     required String rootTokenContract,
   }) async {
     final transport = _connectionController.transport as GqlTransport;
 
-    return loadTokenWalletInfo(
+    return getRootTokenContractInfo(
       transport: transport,
       owner: address,
       rootTokenContract: rootTokenContract,

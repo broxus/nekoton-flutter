@@ -6,7 +6,6 @@ part 'on_balance_changed_payload.g.dart';
 
 @freezed
 class OnBalanceChangedPayload with _$OnBalanceChangedPayload {
-  @JsonSerializable()
   const factory OnBalanceChangedPayload({
     required String balance,
   }) = _OnBalanceChangedPayload;

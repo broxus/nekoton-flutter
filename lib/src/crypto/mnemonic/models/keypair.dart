@@ -6,7 +6,6 @@ part 'keypair.g.dart';
 
 @freezed
 class Keypair with _$Keypair {
-  @JsonSerializable()
   const factory Keypair({
     required String secret,
     required String public,
