@@ -6,9 +6,7 @@ import '../provider/models/transactions_list.dart';
 abstract class Transport {
   late final ConnectionData connectionData;
 
-  Future<FullContractState?> getFullAccountState({
-    required String address,
-  });
+  Future<FullContractState?> getFullAccountState(String address);
 
   Future<TransactionsList> getTransactions({
     required String address,

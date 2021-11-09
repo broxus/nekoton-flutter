@@ -9,19 +9,14 @@ import 'models/connection_data.dart';
 import 'models/native_gql_connection.dart';
 
 class GqlConnection {
-  static GqlConnection? _instance;
   late final NativeGqlConnection nativeGqlConnection;
 
   GqlConnection._();
 
-  static Future<GqlConnection> getInstance(ConnectionData connectionData) async {
-    if (_instance == null) {
-      final instance = GqlConnection._();
-      await instance._initialize(connectionData);
-      _instance = instance;
-    }
-
-    return _instance!;
+  static Future<GqlConnection> create(ConnectionData connectionData) async {
+    final gqlConnection = GqlConnection._();
+    await gqlConnection._initialize(connectionData);
+    return gqlConnection;
   }
 
   Future<void> free() => nativeGqlConnection.free();

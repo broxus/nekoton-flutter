@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:nekoton_flutter/nekoton_flutter.dart';
 
 import 'provider/models/account_interaction.dart';
 import 'provider/models/permissions.dart';
@@ -11,6 +12,7 @@ class Preferences {
   static const _preferencesBoxName = 'nekoton_preferences';
   static const _permissionsBoxName = 'nekoton_permissions';
   static const _currentPublicKeyKey = 'current_public_key';
+  static const _currentConnectionKey = 'current_connection';
   static Preferences? _instance;
   late final Box<dynamic> _preferencesBox;
   late final Box<Permissions> _permissionsBox;
@@ -32,6 +34,13 @@ class Preferences {
   Future<void> setCurrentPublicKey(String? currentPublicKey) => _preferencesBox.put(
         _currentPublicKeyKey,
         currentPublicKey,
+      );
+
+  String? getCurrentConnection() => _preferencesBox.get(_currentConnectionKey) as String?;
+
+  Future<void> setCurrentConnection(String? currentConnection) => _preferencesBox.put(
+        _currentConnectionKey,
+        currentConnection,
       );
 
   Permissions getPermissions(String origin) => _permissionsBox.get(origin) ?? const Permissions();

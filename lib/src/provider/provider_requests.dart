@@ -159,7 +159,7 @@ Future<GetFullContractStateOutput> getFullContractState({
     requiredPermissions: [Permission.tonClient],
   );
 
-  final state = await instance.connectionController.getFullAccountState(address: input.address);
+  final state = await instance.connectionController.getFullAccountState(input.address);
 
   return GetFullContractStateOutput(
     state: state,
@@ -200,7 +200,7 @@ Future<RunLocalOutput> runLocal({
   FullContractState? contractState = input.cachedState;
 
   if (input.cachedState == null) {
-    contractState = await instance.connectionController.transport.getFullAccountState(address: input.address);
+    contractState = await instance.connectionController.getFullAccountState(input.address);
   }
 
   if (contractState == null) {

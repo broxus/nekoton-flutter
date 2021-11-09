@@ -15,7 +15,6 @@ import 'models/native_gql_transport.dart';
 import 'transport.dart';
 
 class GqlTransport implements Transport {
-  static GqlTransport? _instance;
   late final GqlConnection _gqlConnection;
   late final NativeGqlTransport nativeGqlTransport;
   @override
@@ -23,20 +22,14 @@ class GqlTransport implements Transport {
 
   GqlTransport._();
 
-  static Future<GqlTransport> getInstance(ConnectionData connectionData) async {
-    if (_instance == null) {
-      final instance = GqlTransport._();
-      await instance._initialize(connectionData);
-      _instance = instance;
-    }
-
-    return _instance!;
+  static Future<GqlTransport> create(ConnectionData connectionData) async {
+    final gqlTransport = GqlTransport._();
+    await gqlTransport._initialize(connectionData);
+    return gqlTransport;
   }
 
   @override
-  Future<FullContractState?> getFullAccountState({
-    required String address,
-  }) async {
+  Future<FullContractState?> getFullAccountState(String address) async {
     final result = await nativeGqlTransport.use(
       (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.get_full_account_state(
@@ -127,7 +120,7 @@ class GqlTransport implements Transport {
   Future<void> _initialize(ConnectionData connectionData) async {
     this.connectionData = connectionData;
 
-    _gqlConnection = await GqlConnection.getInstance(connectionData);
+    _gqlConnection = await GqlConnection.create(connectionData);
 
     final transportResult = await _gqlConnection.nativeGqlConnection.use(
       (ptr) => proceedAsync(

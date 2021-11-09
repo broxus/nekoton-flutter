@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'package:nekoton_flutter/src/preferences.dart';
 import 'package:rxdart/rxdart.dart';
 
+import 'constants.dart';
 import 'core/models/transaction_id.dart';
 import 'external/models/connection_data.dart';
 import 'provider/models/full_contract_state.dart';
@@ -12,44 +14,8 @@ import 'transport/gql_transport.dart';
 import 'transport/transport.dart';
 
 class ConnectionController {
-  static const networkPresets = <ConnectionData>[
-    ConnectionData(
-      name: 'Mainnet (GQL 1)',
-      group: 'mainnet',
-      type: 'graphql',
-      endpoint: 'https://main.ton.dev/',
-      timeout: 60000,
-    ),
-    ConnectionData(
-      name: 'Mainnet (GQL 2)',
-      group: 'mainnet',
-      type: 'graphql',
-      endpoint: 'https://main2.ton.dev/',
-      timeout: 60000,
-    ),
-    ConnectionData(
-      name: 'Mainnet (GQL 3)',
-      group: 'mainnet',
-      type: 'graphql',
-      endpoint: 'https://main3.ton.dev/',
-      timeout: 60000,
-    ),
-    ConnectionData(
-      name: 'Testnet',
-      group: 'testnet',
-      type: 'graphql',
-      endpoint: 'https://net.ton.dev/',
-      timeout: 60000,
-    ),
-    ConnectionData(
-      name: 'fld.ton.dev',
-      group: 'fld',
-      type: 'graphql',
-      endpoint: 'https://gql.custler.net/',
-      timeout: 60000,
-    ),
-  ];
   static ConnectionController? _instance;
+  late final Preferences _preferences;
   final _transportSubject = BehaviorSubject<Transport>();
 
   ConnectionController._();
@@ -69,15 +35,18 @@ class ConnectionController {
   Transport get transport => _transportSubject.value;
 
   Future<void> updateTransport(ConnectionData connectionData) async {
-    final transport = await GqlTransport.getInstance(connectionData);
+    final old = _transportSubject.valueOrNull;
+
+    final transport = await GqlTransport.create(connectionData);
 
     _transportSubject.add(transport);
+
+    _preferences.setCurrentConnection(connectionData.name);
+
+    await (old as GqlTransport?)?.free();
   }
 
-  Future<FullContractState?> getFullAccountState({
-    required String address,
-  }) =>
-      transport.getFullAccountState(address: address);
+  Future<FullContractState?> getFullAccountState(String address) => transport.getFullAccountState(address);
 
   Future<TransactionsList> getTransactions({
     required String address,
@@ -91,7 +60,14 @@ class ConnectionController {
       );
 
   Future<void> _initialize() async {
-    await updateTransport(networkPresets[1]);
+    _preferences = await Preferences.getInstance();
+
+    final currentConnection = kNetworkPresets.firstWhere(
+      (e) => e.name == _preferences.getCurrentConnection(),
+      orElse: () => kNetworkPresets.first,
+    );
+
+    await updateTransport(currentConnection);
 
     transportStream
         .transform<String>(
