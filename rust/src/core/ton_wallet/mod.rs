@@ -299,6 +299,45 @@ async fn internal_find_existing_wallets(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn get_ton_wallet_workchain(
+    result_port: c_longlong,
+    ton_wallet: *mut c_void,
+) {
+    let ton_wallet = ton_wallet as *mut MutexTonWallet;
+    let ton_wallet = &(*ton_wallet);
+
+    let rt = runtime!();
+    rt.spawn(async move {
+        let mut ton_wallet_guard = ton_wallet.lock().await;
+        let ton_wallet = ton_wallet_guard.take();
+        let mut ton_wallet = match ton_wallet {
+            Some(ton_wallet) => ton_wallet,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: TON_WALLET_NOT_FOUND.to_owned(),
+                }));
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
+
+        let result = internal_get_ton_wallet_workchain(&mut ton_wallet).await;
+        let result = match_result(result);
+
+        *ton_wallet_guard = Some(ton_wallet);
+
+        send_to_result_port(result_port, result);
+    });
+}
+
+async fn internal_get_ton_wallet_workchain(ton_wallet: &mut TonWallet) -> Result<u64, NativeError> {
+    let workchain = ton_wallet.workchain();
+
+    Ok(workchain as c_ulonglong)
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn get_ton_wallet_address(result_port: c_longlong, ton_wallet: *mut c_void) {
     let ton_wallet = ton_wallet as *mut MutexTonWallet;
     let ton_wallet = &(*ton_wallet);

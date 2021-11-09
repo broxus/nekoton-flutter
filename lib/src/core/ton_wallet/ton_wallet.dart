@@ -44,6 +44,7 @@ class TonWallet implements Comparable<TonWallet> {
   late final NativeTonWallet nativeTonWallet;
   late final StreamSubscription _subscription;
   late final Timer _timer;
+  late final int workchain;
   late final String address;
   late final String publicKey;
   late final WalletType walletType;
@@ -111,6 +112,19 @@ class TonWallet implements Comparable<TonWallet> {
   Stream<ContractState> get onStateChangedStream => _onStateChangedSubject.stream;
 
   Stream<List<TonWalletTransactionWithData>> get onTransactionsFoundStream => _onTransactionsFoundSubject.stream;
+
+  Future<int> get _workchain async {
+    final result = await nativeTonWallet.use(
+      (ptr) => proceedAsync(
+        (port) => nativeLibraryInstance.bindings.get_ton_wallet_workchain(
+          port,
+          ptr,
+        ),
+      ),
+    );
+
+    return result;
+  }
 
   Future<String> get _address async {
     final result = await nativeTonWallet.use(
@@ -621,6 +635,7 @@ class TonWallet implements Comparable<TonWallet> {
 
     nativeTonWallet = NativeTonWallet(ptr);
 
+    this.workchain = await _workchain;
     address = await _address;
     this.publicKey = await _publicKey;
     this.walletType = await _walletType;
@@ -654,6 +669,7 @@ class TonWallet implements Comparable<TonWallet> {
 
     nativeTonWallet = NativeTonWallet(ptr);
 
+    workchain = await _workchain;
     this.address = await _address;
     publicKey = await _publicKey;
     walletType = await _walletType;
@@ -691,6 +707,7 @@ class TonWallet implements Comparable<TonWallet> {
 
     nativeTonWallet = NativeTonWallet(ptr);
 
+    workchain = await _workchain;
     address = await _address;
     publicKey = await _publicKey;
     walletType = await _walletType;

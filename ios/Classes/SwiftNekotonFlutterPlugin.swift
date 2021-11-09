@@ -111,6 +111,8 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         find_existing_wallets(0, nil, nil, 0);
 
+        get_ton_wallet_workchain(0, nil);
+
         get_ton_wallet_address(0, nil);
 
         get_ton_wallet_public_key(0, nil);

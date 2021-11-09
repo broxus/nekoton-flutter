@@ -164,6 +164,8 @@ void find_existing_wallets(long long result_port,
                            char *public_key,
                            signed char workchain_id);
 
+void get_ton_wallet_workchain(long long result_port, void *ton_wallet);
+
 void get_ton_wallet_address(long long result_port, void *ton_wallet);
 
 void get_ton_wallet_public_key(long long result_port, void *ton_wallet);
