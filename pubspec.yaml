@@ -12,10 +12,10 @@ dependencies:
   ffi: ^1.0.0
   flutter:
     sdk: flutter
-  freezed_annotation: ^0.14.2
+  freezed_annotation: ^1.0.0
   hive: ^2.0.4
   hive_flutter: ^1.0.0
-  json_annotation: ^4.0.0
+  json_annotation: ^4.3.0
   logger: ^1.0.0
   path_provider: ^2.0.6
   recase: ^4.0.0
@@ -28,9 +28,9 @@ dev_dependencies:
   ffigen: ^3.0.0
   flutter_test:
     sdk: flutter
-  freezed: ^0.14.2
+  freezed: ^1.0.0
   hive_generator: ^1.1.1
-  json_serializable: ^4.1.2
+  json_serializable: ^6.0.1
   lint: ^1.5.3
 
 flutter:
