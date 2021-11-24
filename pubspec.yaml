@@ -8,7 +8,6 @@ environment:
   flutter: '>=2.2.0'
 
 dependencies:
-  dio: ^4.0.0
   ffi: ^1.0.0
   flutter:
     sdk: flutter
