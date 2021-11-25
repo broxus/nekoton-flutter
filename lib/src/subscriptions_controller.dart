@@ -175,7 +175,8 @@ class SubscriptionsController {
     required TokenWalletAsset tokenWalletAsset,
   }) async {
     final tokenWallet = _tokenWalletsSubject.value.firstWhereOrNull(
-        (e) => e.owner == tonWalletAsset.address && e.symbol.rootTokenContract == tokenWalletAsset.rootTokenContract);
+      (e) => e.owner == tonWalletAsset.address && e.symbol.rootTokenContract == tokenWalletAsset.rootTokenContract,
+    );
 
     if (tokenWallet == null) {
       return;

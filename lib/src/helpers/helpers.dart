@@ -28,11 +28,13 @@ String packStdSmcAddr({
   required String addr,
   required bool bounceable,
 }) {
-  final result = proceedSync(() => nativeLibraryInstance.bindings.pack_std_smc_addr(
-        base64Url ? 1 : 0,
-        addr.toNativeUtf8().cast<Int8>(),
-        bounceable ? 1 : 0,
-      ));
+  final result = proceedSync(
+    () => nativeLibraryInstance.bindings.pack_std_smc_addr(
+      base64Url ? 1 : 0,
+      addr.toNativeUtf8().cast<Int8>(),
+      bounceable ? 1 : 0,
+    ),
+  );
 
   final string = cStringToDart(result);
 
@@ -43,10 +45,12 @@ String unpackStdSmcAddr({
   required String packed,
   required bool base64Url,
 }) {
-  final result = proceedSync(() => nativeLibraryInstance.bindings.unpack_std_smc_addr(
-        packed.toNativeUtf8().cast<Int8>(),
-        base64Url ? 1 : 0,
-      ));
+  final result = proceedSync(
+    () => nativeLibraryInstance.bindings.unpack_std_smc_addr(
+      packed.toNativeUtf8().cast<Int8>(),
+      base64Url ? 1 : 0,
+    ),
+  );
 
   final string = cStringToDart(result);
 
@@ -97,14 +101,16 @@ ExecutionOutput runLocal({
   final lastTransactionIdStr = jsonEncode(lastTransactionId);
   final inputStr = jsonEncode(input);
 
-  final result = proceedSync(() => nativeLibraryInstance.bindings.run_local(
-        genTimingsStr.toNativeUtf8().cast<Int8>(),
-        lastTransactionIdStr.toNativeUtf8().cast<Int8>(),
-        accountStuffBoc.toNativeUtf8().cast<Int8>(),
-        contractAbi.toNativeUtf8().cast<Int8>(),
-        method.toNativeUtf8().cast<Int8>(),
-        inputStr.toNativeUtf8().cast<Int8>(),
-      ));
+  final result = proceedSync(
+    () => nativeLibraryInstance.bindings.run_local(
+      genTimingsStr.toNativeUtf8().cast<Int8>(),
+      lastTransactionIdStr.toNativeUtf8().cast<Int8>(),
+      accountStuffBoc.toNativeUtf8().cast<Int8>(),
+      contractAbi.toNativeUtf8().cast<Int8>(),
+      method.toNativeUtf8().cast<Int8>(),
+      inputStr.toNativeUtf8().cast<Int8>(),
+    ),
+  );
 
   final string = cStringToDart(result);
   final json = jsonDecode(string) as Map<String, dynamic>;
@@ -123,13 +129,15 @@ String getExpectedAddress({
   final publicKeyPtr = publicKey?.toNativeUtf8().cast<Int8>() ?? nullptr;
   final initDataStr = jsonEncode(initData);
 
-  final result = proceedSync(() => nativeLibraryInstance.bindings.get_expected_address(
-        tvc.toNativeUtf8().cast<Int8>(),
-        contractAbi.toNativeUtf8().cast<Int8>(),
-        workchainId ?? 0,
-        publicKeyPtr,
-        initDataStr.toNativeUtf8().cast<Int8>(),
-      ));
+  final result = proceedSync(
+    () => nativeLibraryInstance.bindings.get_expected_address(
+      tvc.toNativeUtf8().cast<Int8>(),
+      contractAbi.toNativeUtf8().cast<Int8>(),
+      workchainId ?? 0,
+      publicKeyPtr,
+      initDataStr.toNativeUtf8().cast<Int8>(),
+    ),
+  );
 
   final string = cStringToDart(result);
 
@@ -143,10 +151,12 @@ String packIntoCell({
   final paramsStr = jsonEncode(params);
   final tokensStr = jsonEncode(tokens);
 
-  final result = proceedSync(() => nativeLibraryInstance.bindings.pack_into_cell(
-        paramsStr.toNativeUtf8().cast<Int8>(),
-        tokensStr.toNativeUtf8().cast<Int8>(),
-      ));
+  final result = proceedSync(
+    () => nativeLibraryInstance.bindings.pack_into_cell(
+      paramsStr.toNativeUtf8().cast<Int8>(),
+      tokensStr.toNativeUtf8().cast<Int8>(),
+    ),
+  );
 
   final string = cStringToDart(result);
 
@@ -160,11 +170,13 @@ TokensObject unpackFromCell({
 }) {
   final paramsStr = jsonEncode(params);
 
-  final result = proceedSync(() => nativeLibraryInstance.bindings.unpack_from_cell(
-        paramsStr.toNativeUtf8().cast<Int8>(),
-        boc.toNativeUtf8().cast<Int8>(),
-        allowPartial ? 1 : 0,
-      ));
+  final result = proceedSync(
+    () => nativeLibraryInstance.bindings.unpack_from_cell(
+      paramsStr.toNativeUtf8().cast<Int8>(),
+      boc.toNativeUtf8().cast<Int8>(),
+      allowPartial ? 1 : 0,
+    ),
+  );
 
   final string = cStringToDart(result);
   final json = jsonDecode(string) as dynamic;
@@ -174,9 +186,11 @@ TokensObject unpackFromCell({
 }
 
 String extractPublicKey(String boc) {
-  final result = proceedSync(() => nativeLibraryInstance.bindings.extract_public_key(
-        boc.toNativeUtf8().cast<Int8>(),
-      ));
+  final result = proceedSync(
+    () => nativeLibraryInstance.bindings.extract_public_key(
+      boc.toNativeUtf8().cast<Int8>(),
+    ),
+  );
 
   final string = cStringToDart(result);
 
@@ -184,9 +198,11 @@ String extractPublicKey(String boc) {
 }
 
 String codeToTvc(String code) {
-  final result = proceedSync(() => nativeLibraryInstance.bindings.code_to_tvc(
-        code.toNativeUtf8().cast<Int8>(),
-      ));
+  final result = proceedSync(
+    () => nativeLibraryInstance.bindings.code_to_tvc(
+      code.toNativeUtf8().cast<Int8>(),
+    ),
+  );
 
   final string = cStringToDart(result);
 
@@ -194,9 +210,11 @@ String codeToTvc(String code) {
 }
 
 SplittedTvc splitTvc(String tvc) {
-  final result = proceedSync(() => nativeLibraryInstance.bindings.split_tvc(
-        tvc.toNativeUtf8().cast<Int8>(),
-      ));
+  final result = proceedSync(
+    () => nativeLibraryInstance.bindings.split_tvc(
+      tvc.toNativeUtf8().cast<Int8>(),
+    ),
+  );
 
   final string = cStringToDart(result);
   final json = jsonDecode(string) as Map<String, dynamic>;
@@ -212,11 +230,13 @@ String encodeInternalInput({
 }) {
   final inputStr = jsonEncode(input);
 
-  final result = proceedSync(() => nativeLibraryInstance.bindings.encode_internal_input(
-        contractAbi.toNativeUtf8().cast<Int8>(),
-        method.toNativeUtf8().cast<Int8>(),
-        inputStr.toNativeUtf8().cast<Int8>(),
-      ));
+  final result = proceedSync(
+    () => nativeLibraryInstance.bindings.encode_internal_input(
+      contractAbi.toNativeUtf8().cast<Int8>(),
+      method.toNativeUtf8().cast<Int8>(),
+      inputStr.toNativeUtf8().cast<Int8>(),
+    ),
+  );
 
   final string = cStringToDart(result);
 
@@ -231,12 +251,14 @@ DecodedInput? decodeInput({
 }) {
   final methodStr = jsonEncode(method);
 
-  final result = proceedSync(() => nativeLibraryInstance.bindings.decode_input(
-        messageBody.toNativeUtf8().cast<Int8>(),
-        contractAbi.toNativeUtf8().cast<Int8>(),
-        methodStr.toNativeUtf8().cast<Int8>(),
-        internal ? 1 : 0,
-      ));
+  final result = proceedSync(
+    () => nativeLibraryInstance.bindings.decode_input(
+      messageBody.toNativeUtf8().cast<Int8>(),
+      contractAbi.toNativeUtf8().cast<Int8>(),
+      methodStr.toNativeUtf8().cast<Int8>(),
+      internal ? 1 : 0,
+    ),
+  );
 
   final string = cStringToDart(result);
   final json = jsonDecode(string) as Map<String, dynamic>?;
@@ -257,11 +279,13 @@ DecodedOutput? decodeOutput({
 }) {
   final methodStr = jsonEncode(method);
 
-  final result = proceedSync(() => nativeLibraryInstance.bindings.decode_output(
-        messageBody.toNativeUtf8().cast<Int8>(),
-        contractAbi.toNativeUtf8().cast<Int8>(),
-        methodStr.toNativeUtf8().cast<Int8>(),
-      ));
+  final result = proceedSync(
+    () => nativeLibraryInstance.bindings.decode_output(
+      messageBody.toNativeUtf8().cast<Int8>(),
+      contractAbi.toNativeUtf8().cast<Int8>(),
+      methodStr.toNativeUtf8().cast<Int8>(),
+    ),
+  );
 
   final string = cStringToDart(result);
   final json = jsonDecode(string) as Map<String, dynamic>?;
@@ -282,11 +306,13 @@ DecodedEvent? decodeEvent({
 }) {
   final eventStr = jsonEncode(event);
 
-  final result = proceedSync(() => nativeLibraryInstance.bindings.decode_event(
-        messageBody.toNativeUtf8().cast<Int8>(),
-        contractAbi.toNativeUtf8().cast<Int8>(),
-        eventStr.toNativeUtf8().cast<Int8>(),
-      ));
+  final result = proceedSync(
+    () => nativeLibraryInstance.bindings.decode_event(
+      messageBody.toNativeUtf8().cast<Int8>(),
+      contractAbi.toNativeUtf8().cast<Int8>(),
+      eventStr.toNativeUtf8().cast<Int8>(),
+    ),
+  );
 
   final string = cStringToDart(result);
   final json = jsonDecode(string) as Map<String, dynamic>?;
@@ -308,11 +334,13 @@ DecodedTransaction? decodeTransaction({
   final transactionStr = jsonEncode(transaction);
   final methodStr = jsonEncode(method);
 
-  final result = proceedSync(() => nativeLibraryInstance.bindings.decode_transaction(
-        transactionStr.toNativeUtf8().cast<Int8>(),
-        contractAbi.toNativeUtf8().cast<Int8>(),
-        methodStr.toNativeUtf8().cast<Int8>(),
-      ));
+  final result = proceedSync(
+    () => nativeLibraryInstance.bindings.decode_transaction(
+      transactionStr.toNativeUtf8().cast<Int8>(),
+      contractAbi.toNativeUtf8().cast<Int8>(),
+      methodStr.toNativeUtf8().cast<Int8>(),
+    ),
+  );
 
   final string = cStringToDart(result);
   final json = jsonDecode(string) as Map<String, dynamic>?;
@@ -332,10 +360,12 @@ List<DecodedTransactionEvent> decodeTransactionEvents({
 }) {
   final transactionStr = jsonEncode(transaction);
 
-  final result = proceedSync(() => nativeLibraryInstance.bindings.decode_transaction_events(
-        transactionStr.toNativeUtf8().cast<Int8>(),
-        contractAbi.toNativeUtf8().cast<Int8>(),
-      ));
+  final result = proceedSync(
+    () => nativeLibraryInstance.bindings.decode_transaction_events(
+      transactionStr.toNativeUtf8().cast<Int8>(),
+      contractAbi.toNativeUtf8().cast<Int8>(),
+    ),
+  );
 
   final string = cStringToDart(result);
   final list = jsonDecode(string) as List<dynamic>;
@@ -346,9 +376,11 @@ List<DecodedTransactionEvent> decodeTransactionEvents({
 }
 
 KnownPayload? parseKnownPayload(String payload) {
-  final result = proceedSync(() => nativeLibraryInstance.bindings.parse_known_payload(
-        payload.toNativeUtf8().cast<Int8>(),
-      ));
+  final result = proceedSync(
+    () => nativeLibraryInstance.bindings.parse_known_payload(
+      payload.toNativeUtf8().cast<Int8>(),
+    ),
+  );
 
   final string = cStringToDart(result);
   final json = jsonDecode(string) as Map<String, dynamic>?;
@@ -374,15 +406,17 @@ UnsignedMessage createExternalMessage({
   final inputStr = jsonEncode(input);
   final stateInitPtr = stateInit?.toNativeUtf8().cast<Int8>() ?? nullptr;
 
-  final result = proceedSync(() => nativeLibraryInstance.bindings.create_external_message(
-        dst.toNativeUtf8().cast<Int8>(),
-        contractAbi.toNativeUtf8().cast<Int8>(),
-        method.toNativeUtf8().cast<Int8>(),
-        stateInitPtr,
-        inputStr.toNativeUtf8().cast<Int8>(),
-        publicKey.toNativeUtf8().cast<Int8>(),
-        timeout,
-      ));
+  final result = proceedSync(
+    () => nativeLibraryInstance.bindings.create_external_message(
+      dst.toNativeUtf8().cast<Int8>(),
+      contractAbi.toNativeUtf8().cast<Int8>(),
+      method.toNativeUtf8().cast<Int8>(),
+      stateInitPtr,
+      inputStr.toNativeUtf8().cast<Int8>(),
+      publicKey.toNativeUtf8().cast<Int8>(),
+      timeout,
+    ),
+  );
 
   final ptr = Pointer.fromAddress(result).cast<Void>();
   final nativeUnsignedMessage = NativeUnsignedMessage(ptr);

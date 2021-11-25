@@ -7,9 +7,9 @@ part 'permissions.freezed.dart';
 part 'permissions.g.dart';
 
 @freezed
-@HiveType(typeId: 223)
 class Permissions with _$Permissions {
   @JsonSerializable(explicitToJson: true)
+  @HiveType(typeId: 223)
   const factory Permissions({
     @HiveField(0) @JsonKey(includeIfNull: false) bool? tonClient,
     @HiveField(1) @JsonKey(includeIfNull: false) AccountInteraction? accountInteraction,

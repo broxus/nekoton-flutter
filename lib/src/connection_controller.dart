@@ -1,11 +1,11 @@
 import 'dart:async';
 
-import 'package:nekoton_flutter/src/preferences.dart';
 import 'package:rxdart/rxdart.dart';
 
 import 'constants.dart';
 import 'core/models/transaction_id.dart';
 import 'external/models/connection_data.dart';
+import 'preferences.dart';
 import 'provider/models/full_contract_state.dart';
 import 'provider/models/network_changed_event.dart';
 import 'provider/models/transactions_list.dart';

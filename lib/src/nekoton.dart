@@ -129,9 +129,11 @@ class Nekoton {
     final removedTokenWallets = ([...previousTokenWallets]..removeWhere((e) => currentTokenWallets.contains(e)));
 
     for (final tokenWallet in addedTokenWallets) {
-      if (subscriptionsController.tokenWallets.firstWhereOrNull((e) =>
-              e.owner == tokenWallet.item1.address &&
-              e.symbol.rootTokenContract == tokenWallet.item2.rootTokenContract) !=
+      if (subscriptionsController.tokenWallets.firstWhereOrNull(
+            (e) =>
+                e.owner == tokenWallet.item1.address &&
+                e.symbol.rootTokenContract == tokenWallet.item2.rootTokenContract,
+          ) !=
           null) {
         continue;
       }
@@ -215,14 +217,16 @@ class Nekoton {
       keystoreController.currentKeyStream,
       accountsStorageController.accountsStream.skip(1),
       (a, b) => Tuple2(a, b),
-    ).listen((e) =>
-            _accountsPermissionsStreamSubscriptionLock.synchronized(() => _accountsPermissionsStreamListener(e)));
+    ).listen(
+      (e) => _accountsPermissionsStreamSubscriptionLock.synchronized(() => _accountsPermissionsStreamListener(e)),
+    );
 
     _subscriptionsUpdateStreamSubscription = Rx.combineLatest2<KeyStoreEntry?, Transport, KeyStoreEntry?>(
       keystoreController.currentKeyStream,
       connectionController.transportStream,
       (a, b) => a,
     ).listen(
-        (e) => _subscriptionsUpdateStreamSubscriptionLock.synchronized(() => _subscriptionsUpdateStreamListener(e)));
+      (e) => _subscriptionsUpdateStreamSubscriptionLock.synchronized(() => _subscriptionsUpdateStreamListener(e)),
+    );
   }
 }

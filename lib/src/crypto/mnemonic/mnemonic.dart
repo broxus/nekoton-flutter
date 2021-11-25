@@ -38,10 +38,12 @@ Keypair deriveFromPhrase({
   final phraseStr = phrase.join(' ');
   final mnemonicTypeStr = jsonEncode(mnemonicType);
 
-  final result = proceedSync(() => nativeLibraryInstance.bindings.derive_from_phrase(
-        phraseStr.toNativeUtf8().cast<Int8>(),
-        mnemonicTypeStr.toNativeUtf8().cast<Int8>(),
-      ));
+  final result = proceedSync(
+    () => nativeLibraryInstance.bindings.derive_from_phrase(
+      phraseStr.toNativeUtf8().cast<Int8>(),
+      mnemonicTypeStr.toNativeUtf8().cast<Int8>(),
+    ),
+  );
 
   final string = cStringToDart(result);
   final json = jsonDecode(string) as Map<String, dynamic>;

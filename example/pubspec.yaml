@@ -8,7 +8,7 @@ environment:
   flutter: '>=2.2.0'
 
 dependencies:
-  cupertino_icons: ^1.0.2
+  cupertino_icons: ^1.0.4
   flutter:
     sdk: flutter
   nekoton_flutter:
@@ -17,7 +17,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  lint: ^1.5.3
+  lint: ^1.7.2
 
 flutter:
   uses-material-design: true

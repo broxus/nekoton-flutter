@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:nekoton_flutter/nekoton_flutter.dart';
 
 import 'provider/models/account_interaction.dart';
 import 'provider/models/permissions.dart';
