@@ -430,6 +430,7 @@ pub unsafe extern "C" fn token_wallet_prepare_transfer(
     destination: *mut c_char,
     tokens: *mut c_char,
     notify_receiver: c_uint,
+    payload: *mut c_char,
 ) {
     let token_wallet = token_wallet as *mut MutexTokenWallet;
     let token_wallet = &(*token_wallet);
@@ -444,6 +445,11 @@ pub unsafe extern "C" fn token_wallet_prepare_transfer(
     let destination = destination.from_ptr();
     let tokens = tokens.from_ptr();
     let notify_receiver = notify_receiver != 0;
+    let payload = if !payload.is_null() {
+        Some(payload.from_ptr())
+    } else {
+        None
+    };
 
     let rt = runtime!();
     rt.spawn(async move {
@@ -502,6 +508,7 @@ pub unsafe extern "C" fn token_wallet_prepare_transfer(
             destination,
             tokens,
             notify_receiver,
+            payload,
         )
         .await;
         let result = match_result(result);
@@ -522,22 +529,29 @@ async fn internal_token_wallet_prepare_transfer(
     destination: String,
     tokens: String,
     notify_receiver: bool,
+    payload: Option<String>,
 ) -> Result<u64, NativeError> {
     let expiration = serde_json::from_str::<Expiration>(&expiration)
         .handle_error(NativeStatus::ConversionError)?;
     let expiration = expiration.to_core();
 
     let destination = parse_address(&destination)?;
+    let destination = TransferRecipient::OwnerWallet(destination);
 
     let tokens = BigUint::from_str(&tokens).handle_error(NativeStatus::ConversionError)?;
 
+    let payload = match payload {
+        Some(payload) => {
+            let payload = nekoton_abi::create_comment_payload(&payload)
+                .handle_error(NativeStatus::AbiError)?;
+            let payload = payload.into_cell();
+            payload
+        }
+        None => ton_types::Cell::default(),
+    };
+
     let message = token_wallet
-        .prepare_transfer(
-            TransferRecipient::OwnerWallet(destination),
-            tokens,
-            notify_receiver,
-            ton_types::Cell::default(),
-        )
+        .prepare_transfer(destination, tokens, notify_receiver, payload)
         .handle_error(NativeStatus::TokenWalletError)?;
 
     let message = internal_ton_wallet_prepare_transfer(

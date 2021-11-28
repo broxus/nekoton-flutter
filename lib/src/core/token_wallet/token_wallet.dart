@@ -164,6 +164,7 @@ class TokenWallet implements Comparable<TokenWallet> {
     required String destination,
     required String tokens,
     required bool notifyReceiver,
+    String? payload,
   }) async {
     final expirationStr = jsonEncode(expiration);
 
@@ -180,6 +181,7 @@ class TokenWallet implements Comparable<TokenWallet> {
               destination.toNativeUtf8().cast<Int8>(),
               tokens.toNativeUtf8().cast<Int8>(),
               notifyReceiver ? 1 : 0,
+              payload?.toNativeUtf8().cast<Int8>() ?? Pointer.fromAddress(0).cast<Int8>(),
             ),
           ),
         ),
