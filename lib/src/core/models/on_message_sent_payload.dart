@@ -15,7 +15,7 @@ class OnMessageSentPayload with _$OnMessageSentPayload {
   )
   const factory OnMessageSentPayload({
     required PendingTransaction pendingTransaction,
-    required Transaction transaction,
+    Transaction? transaction,
   }) = _OnMessageSentPayload;
 
   factory OnMessageSentPayload.fromJson(Map<String, dynamic> json) => _$OnMessageSentPayloadFromJson(json);

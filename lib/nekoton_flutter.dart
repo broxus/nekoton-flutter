@@ -52,6 +52,7 @@ export 'src/core/ton_wallet/models/eth_event_status.dart';
 export 'src/core/ton_wallet/models/existing_wallet_info.dart';
 export 'src/core/ton_wallet/models/known_payload.dart';
 export 'src/core/ton_wallet/models/multisig_confirm_transaction.dart';
+export 'src/core/ton_wallet/models/multisig_pending_transaction.dart';
 export 'src/core/ton_wallet/models/multisig_send_transaction.dart';
 export 'src/core/ton_wallet/models/multisig_submit_transaction.dart';
 export 'src/core/ton_wallet/models/multisig_transaction.dart';

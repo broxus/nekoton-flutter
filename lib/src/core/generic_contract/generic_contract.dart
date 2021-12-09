@@ -44,8 +44,8 @@ class GenericContract {
   late final StreamSubscription _onTransactionsFoundSubscription;
   late final Timer _timer;
   late final String address;
-  final _onMessageSentSubject = BehaviorSubject<Map<PendingTransaction, Transaction>>.seeded({});
-  final _onMessageExpiredSubject = BehaviorSubject<List<Transaction>>.seeded([]);
+  final _onMessageSentSubject = BehaviorSubject<List<Tuple2<PendingTransaction, Transaction?>>>.seeded([]);
+  final _onMessageExpiredSubject = BehaviorSubject<List<PendingTransaction>>.seeded([]);
   final _onStateChangedSubject = BehaviorSubject<ContractState>();
   final _onTransactionsFoundSubject = BehaviorSubject<List<Transaction>>.seeded([]);
   final _onTransactionsFoundRawSubject = BehaviorSubject<Tuple2<List<Transaction>, TransactionsBatchInfo>>();
@@ -64,15 +64,9 @@ class GenericContract {
     return genericContract;
   }
 
-  Stream<List<Transaction>> get onMessageSentStream => _onMessageSentSubject.stream.transform<List<Transaction>>(
-        StreamTransformer.fromHandlers(
-          handleData: (Map<PendingTransaction, Transaction> data, EventSink<List<Transaction>> sink) => sink.add(
-            data.values.toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt)),
-          ),
-        ),
-      );
+  Stream<List<Tuple2<PendingTransaction, Transaction?>>> get onMessageSentStream => _onMessageSentSubject.stream;
 
-  Stream<List<Transaction>> get onMessageExpiredStream => _onMessageExpiredSubject.stream;
+  Stream<List<PendingTransaction>> get onMessageExpiredStream => _onMessageExpiredSubject.stream;
 
   Stream<ContractState> get onStateChangedStream => _onStateChangedSubject.stream;
 
@@ -169,6 +163,13 @@ class GenericContract {
     final string = cStringToDart(result);
     final json = jsonDecode(string) as Map<String, dynamic>;
     final transaction = PendingTransaction.fromJson(json);
+
+    final sent = [
+      Tuple2(transaction, null),
+      ..._onMessageSentSubject.value,
+    ];
+
+    _onMessageSentSubject.add(sent);
 
     _internalRefresh(currentBlockId);
 
@@ -275,36 +276,25 @@ class GenericContract {
   Future<Transaction> waitForTransaction(PendingTransaction pendingTransaction) async {
     final completer = Completer<Transaction>();
 
-    _onMessageSentSubject.firstWhere((e) => e.keys.contains(pendingTransaction)).then((value) async {
-      final transaction = value[pendingTransaction]!;
+    _onMessageSentSubject.stream.expand((e) => e).firstWhere((e) => e.item1 == pendingTransaction).then(
+      (value) async {
+        final pending = value.item2;
 
-      final tuple =
-          await Rx.combineLatest2<List<Transaction>, List<Transaction>, Tuple2<List<Transaction>, List<Transaction>>>(
-        _onTransactionsFoundSubject,
-        _onMessageExpiredSubject,
-        (a, b) => Tuple2(a, b),
-      ).firstWhere((e) => e.item1.contains(transaction) || e.item2.contains(transaction)).timeout(
-        kRequestTimeout,
-        onTimeout: () {
-          final exception = TransactionTimeoutException();
-          completer.completeError(exception);
-          throw exception;
-        },
-      );
-
-      if (tuple.item1.contains(transaction)) {
-        completer.complete(transaction);
-      } else {
-        completer.completeError(
-          TransactionNotFoundException(),
+        final found = await _onTransactionsFoundSubject.stream.expand((e) => e).firstWhere((e) => e == pending).timeout(
+          kRequestTimeout,
+          onTimeout: () {
+            final exception = TransactionTimeoutException();
+            completer.completeError(exception);
+            throw exception;
+          },
         );
-      }
-    }).timeout(
+
+        completer.complete(found);
+      },
+    ).timeout(
       kRequestTimeout,
       onTimeout: () {
-        completer.completeError(
-          TransactionTimeoutException(),
-        );
+        completer.completeError(TransactionTimeoutException());
       },
     );
 
@@ -408,10 +398,10 @@ class GenericContract {
           final json = jsonDecode(message.payload) as Map<String, dynamic>;
           final payload = OnMessageSentPayload.fromJson(json);
 
-          final sent = {
-            ..._onMessageSentSubject.value,
-            payload.pendingTransaction: payload.transaction,
-          };
+          final sent = [
+            Tuple2(payload.pendingTransaction, payload.transaction),
+            ..._onMessageSentSubject.value.where((e) => e.item1 != payload.pendingTransaction).toList(),
+          ];
 
           _onMessageSentSubject.add(sent);
           break;
@@ -419,22 +409,16 @@ class GenericContract {
           final json = jsonDecode(message.payload) as Map<String, dynamic>;
           final payload = OnMessageExpiredPayload.fromJson(json);
 
-          final sent = {..._onMessageSentSubject.value};
-          final transaction = sent.remove(payload.pendingTransaction);
+          final sent = _onMessageSentSubject.value.where((e) => e.item1 != payload.pendingTransaction).toList();
 
-          if (transaction != null) {
-            _onMessageSentSubject.add(sent);
+          _onMessageSentSubject.add(sent);
 
-            final expired = [
-              ..._onMessageExpiredSubject.value,
-              transaction,
-            ]..sort(
-                (a, b) => b.createdAt.compareTo(a.createdAt),
-              );
+          final expired = [
+            payload.pendingTransaction,
+            ..._onMessageExpiredSubject.value,
+          ];
 
-            _onMessageExpiredSubject.add(expired);
-          }
-
+          _onMessageExpiredSubject.add(expired);
           break;
         case 'on_state_changed':
           final json = jsonDecode(message.payload) as Map<String, dynamic>;
@@ -451,31 +435,17 @@ class GenericContract {
           );
 
           if (payload.batchInfo.batchType == TransactionsBatchType.newTransactions) {
-            final sent = {..._onMessageSentSubject.value};
+            final transactions = payload.transactions.toList();
 
-            final list = <Transaction>[];
+            final sent = _onMessageSentSubject.value.where((e) => transactions.any((el) => el != e.item2)).toList();
 
-            for (final transaction in sent.values) {
-              if (payload.transactions.firstWhereOrNull((e) => e == transaction) != null) {
-                list.add(transaction);
-              }
-            }
-
-            for (final transaction in list) {
-              sent.removeWhere((key, value) => value == transaction);
-            }
-
-            if (list.isNotEmpty) {
-              _onMessageSentSubject.add(sent);
-            }
+            _onMessageSentSubject.add(sent);
           }
 
           final transactions = [
-            ..._onTransactionsFoundSubject.value,
             ...payload.transactions,
-          ]..sort(
-              (a, b) => b.createdAt.compareTo(a.createdAt),
-            );
+            ..._onTransactionsFoundSubject.value,
+          ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
           _onTransactionsFoundSubject.add(transactions);
           break;
