@@ -1,5 +1,4 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:json_annotation/json_annotation.dart';
 
 import '../../models/transaction.dart';
 import 'transaction_additional_info.dart';

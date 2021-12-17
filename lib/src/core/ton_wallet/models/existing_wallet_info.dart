@@ -1,5 +1,4 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:json_annotation/json_annotation.dart';
 
 import '../../accounts_storage/models/wallet_type.dart';
 import '../../models/contract_state.dart';

@@ -8,8 +8,8 @@ import 'constants.dart';
 import 'core/accounts_storage/accounts_storage.dart';
 import 'core/accounts_storage/models/assets_list.dart';
 import 'core/accounts_storage/models/wallet_type.dart';
-import 'core/token_wallet/token_wallet.dart';
-import 'core/ton_wallet/ton_wallet.dart';
+import 'core/token_wallet/get_token_wallet_info.dart';
+import 'core/ton_wallet/find_existing_wallets.dart';
 import 'models/nekoton_exception.dart';
 import 'transport/gql_transport.dart';
 
@@ -133,7 +133,7 @@ class AccountsStorageController {
     final transport = _connectionController.transport as GqlTransport;
 
     try {
-      await getRootTokenContractInfo(
+      await getTokenWalletInfo(
         transport: transport,
         owner: address,
         rootTokenContract: rootTokenContract,

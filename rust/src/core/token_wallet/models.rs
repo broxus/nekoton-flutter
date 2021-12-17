@@ -104,11 +104,13 @@ impl TransferRecipient {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct RootTokenContractInfo {
-    pub name: String,
-    pub symbol: String,
-    pub decimals: u8,
+pub struct TokenWalletInfo {
+    #[serde(with = "serde_address")]
+    pub owner: MsgAddressInt,
     #[serde(with = "serde_address")]
     pub address: MsgAddressInt,
+    pub symbol: models::Symbol,
     pub version: models::TokenWalletVersion,
+    pub balance: String,
+    pub contract_state: models::ContractState,
 }

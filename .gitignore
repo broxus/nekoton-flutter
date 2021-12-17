@@ -9,6 +9,7 @@
 build/
 
 *.g.dart
+*.gen.dart
 *.gr.dart
 *.config.dart
 *.freezed.dart

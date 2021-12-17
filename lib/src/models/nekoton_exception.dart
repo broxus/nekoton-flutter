@@ -67,6 +67,10 @@ class AccountNotFoundException extends NekotonException {
   AccountNotFoundException([String? info]) : super(info);
 }
 
+class ExternalAccountNotFoundException extends NekotonException {
+  ExternalAccountNotFoundException([String? info]) : super(info);
+}
+
 class KeyNotFoundException extends NekotonException {
   KeyNotFoundException([String? info]) : super(info);
 }

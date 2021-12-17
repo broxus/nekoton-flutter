@@ -11,6 +11,7 @@ import 'approval_controller.dart';
 import 'connection_controller.dart';
 import 'core/accounts_storage/models/assets_list.dart';
 import 'core/keystore/models/key_store_entry.dart';
+import 'external_accounts_controller.dart';
 import 'keystore_controller.dart';
 import 'native_library.dart';
 import 'permissions_controller.dart';
@@ -25,10 +26,12 @@ class Nekoton {
   static final _lock = Lock();
   static final _keysStreamSubscriptionLock = Lock();
   static final _accountsStreamSubscriptionLock = Lock();
+  static final _externalAccountsStreamSubscriptionLock = Lock();
   static final _accountsPermissionsStreamSubscriptionLock = Lock();
   static final _subscriptionsUpdateStreamSubscriptionLock = Lock();
   late final KeystoreController keystoreController;
   late final AccountsStorageController accountsStorageController;
+  late final ExternalAccountsController externalAccountsController;
   late final SubscriptionsController subscriptionsController;
   late final ConnectionController connectionController;
   late final ApprovalController approvalController;
@@ -36,9 +39,11 @@ class Nekoton {
   late final StreamSubscription _keysStreamSubscription;
   late final StreamSubscription _subscriptionsUpdateStreamSubscription;
   late final StreamSubscription _accountsStreamSubscription;
+  late final StreamSubscription _externalAccountsStreamSubscription;
   late final StreamSubscription _accountsPermissionsStreamSubscription;
   late List<KeyStoreEntry> _previousKeys;
   late List<AssetsList> _previousAccounts;
+  List<AssetsList> _previousAssetsLists = [];
 
   Nekoton._();
 
@@ -62,6 +67,7 @@ class Nekoton {
     _subscriptionsUpdateStreamSubscription.cancel();
     _accountsStreamSubscription.cancel();
     _accountsPermissionsStreamSubscription.cancel();
+    _externalAccountsStreamSubscription.cancel();
   }
 
   Future<void> _keysStreamListener(List<KeyStoreEntry> event) async {
@@ -78,6 +84,8 @@ class Nekoton {
       for (final account in accounts) {
         await accountsStorageController.removeAccount(account.address);
       }
+
+      await externalAccountsController.removeExternalAccounts(key.publicKey);
     }
 
     _previousKeys = event;
@@ -111,7 +119,7 @@ class Nekoton {
     }
 
     for (final tonWallet in removedTonWallets) {
-      await subscriptionsController.removeTonWalletSubscription(tonWallet);
+      await subscriptionsController.removeTonWalletSubscription(tonWallet.address);
     }
 
     final networkGroup = connectionController.transport.connectionData.group;
@@ -152,6 +160,26 @@ class Nekoton {
     }
 
     _previousAccounts = currentAccounts;
+  }
+
+  Future<void> _externalAccountsStreamListener(Tuple2<KeyStoreEntry?, Map<String, List<AssetsList>>> event) async {
+    final currentKey = event.item1;
+    final currentAssetsLists = [...event.item2[currentKey?.publicKey] ?? <AssetsList>[]];
+
+    if (currentKey == null) {
+      _previousAssetsLists = currentAssetsLists;
+      return;
+    }
+
+    for (final externalAccount in _previousAssetsLists) {
+      await subscriptionsController.removeTonWalletSubscription(externalAccount.address);
+    }
+
+    for (final externalAccount in currentAssetsLists) {
+      await subscriptionsController.subscribeByAddressToTonWallet(externalAccount.address);
+    }
+
+    _previousAssetsLists = currentAssetsLists;
   }
 
   Future<void> _accountsPermissionsStreamListener(Tuple2<KeyStoreEntry?, List<AssetsList>> event) async {
@@ -197,6 +225,7 @@ class Nekoton {
     approvalController = ApprovalController.instance();
     keystoreController = await KeystoreController.getInstance();
     accountsStorageController = await AccountsStorageController.getInstance();
+    externalAccountsController = await ExternalAccountsController.getInstance();
     subscriptionsController = await SubscriptionsController.getInstance();
 
     _previousKeys = keystoreController.keys;
@@ -211,6 +240,13 @@ class Nekoton {
       accountsStorageController.accountsStream.skip(1),
       (a, b) => Tuple2(a, b),
     ).listen((e) => _accountsStreamSubscriptionLock.synchronized(() => _accountsStreamListener(e)));
+
+    _externalAccountsStreamSubscription = Rx.combineLatest2<KeyStoreEntry?, Map<String, List<AssetsList>>,
+        Tuple2<KeyStoreEntry?, Map<String, List<AssetsList>>>>(
+      keystoreController.currentKeyStream,
+      externalAccountsController.externalAccountsStream,
+      (a, b) => Tuple2(a, b),
+    ).listen((e) => _externalAccountsStreamSubscriptionLock.synchronized(() => _externalAccountsStreamListener(e)));
 
     _accountsPermissionsStreamSubscription =
         Rx.combineLatest2<KeyStoreEntry?, List<AssetsList>, Tuple2<KeyStoreEntry?, List<AssetsList>>>(

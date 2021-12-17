@@ -1,5 +1,4 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:json_annotation/json_annotation.dart';
 
 import '../mnemonic/models/mnemonic_type.dart';
 import 'export_key_output.dart';

@@ -1,12 +1,15 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
+part 'token_wallet_version.g.dart';
+
+@HiveType(typeId: 218)
 enum TokenWalletVersion {
-  @JsonValue('Tip3v1')
+  @HiveField(0)
   tip3v1,
-  @JsonValue('Tip3v2')
+  @HiveField(1)
   tip3v2,
-  @JsonValue('Tip3v3')
+  @HiveField(2)
   tip3v3,
-  @JsonValue('Tip3v4')
+  @HiveField(3)
   tip3v4,
 }

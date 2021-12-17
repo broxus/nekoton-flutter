@@ -1,5 +1,4 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:json_annotation/json_annotation.dart';
 
 part 'multisig_send_transaction.freezed.dart';
 part 'multisig_send_transaction.g.dart';

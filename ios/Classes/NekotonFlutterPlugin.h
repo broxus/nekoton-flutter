@@ -105,10 +105,10 @@ void token_wallet_subscribe(long long result_port,
                             char *owner,
                             char *root_token_contract);
 
-void get_root_token_contract_info(long long result_port,
-                                  void *transport,
-                                  char *owner,
-                                  char *root_token_contract);
+void get_token_wallet_info(long long result_port,
+                           void *transport,
+                           char *owner,
+                           char *root_token_contract);
 
 void get_token_wallet_owner(long long result_port, void *token_wallet);
 
@@ -129,7 +129,8 @@ void token_wallet_prepare_transfer(long long result_port,
                                    char *expiration,
                                    char *destination,
                                    char *tokens,
-                                   unsigned int notify_receiver);
+                                   unsigned int notify_receiver,
+                                   char *payload);
 
 void token_wallet_refresh(long long result_port, void *token_wallet);
 
@@ -163,6 +164,8 @@ void find_existing_wallets(long long result_port,
                            void *transport,
                            char *public_key,
                            signed char workchain_id);
+
+void get_ton_wallet_info(long long result_port, void *transport, char *address);
 
 void get_ton_wallet_workchain(long long result_port, void *ton_wallet);
 

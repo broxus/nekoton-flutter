@@ -800,27 +800,3 @@ class TonWallet implements Comparable<TonWallet> {
   @override
   int compareTo(TonWallet other) => walletType.toInt().compareTo(other.walletType.toInt());
 }
-
-Future<List<ExistingWalletInfo>> findExistingWallets({
-  required GqlTransport transport,
-  required String publicKey,
-  required int workchainId,
-}) async {
-  final result = await transport.nativeGqlTransport.use(
-    (ptr) => proceedAsync(
-      (port) => nativeLibraryInstance.bindings.find_existing_wallets(
-        port,
-        ptr,
-        publicKey.toNativeUtf8().cast<Int8>(),
-        workchainId,
-      ),
-    ),
-  );
-
-  final string = cStringToDart(result);
-  final json = jsonDecode(string) as List<dynamic>;
-  final jsonList = json.cast<Map<String, dynamic>>();
-  final existingWallets = jsonList.map((e) => ExistingWalletInfo.fromJson(e)).toList();
-
-  return existingWallets;
-}

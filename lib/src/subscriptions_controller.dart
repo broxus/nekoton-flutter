@@ -8,7 +8,6 @@ import 'core/accounts_storage/models/assets_list.dart';
 import 'core/accounts_storage/models/token_wallet_asset.dart';
 import 'core/accounts_storage/models/ton_wallet_asset.dart';
 import 'core/generic_contract/generic_contract.dart';
-import 'core/token_wallet/models/root_token_contract_info.dart';
 import 'core/token_wallet/token_wallet.dart';
 import 'core/ton_wallet/ton_wallet.dart';
 import 'provider/models/contract_updates_subscription.dart';
@@ -120,17 +119,23 @@ class SubscriptionsController {
     return tonWallet;
   }
 
-  Future<RootTokenContractInfo> getTokenWalletInfo({
-    required String address,
-    required String rootTokenContract,
-  }) async {
+  Future<TonWallet> subscribeByAddressToTonWallet(String address) async {
     final transport = _connectionController.transport as GqlTransport;
 
-    return getRootTokenContractInfo(
+    final tonWallet = await TonWallet.subscribeByAddress(
       transport: transport,
-      owner: address,
-      rootTokenContract: rootTokenContract,
+      address: address,
     );
+
+    final tonWallets = [..._tonWalletsSubject.value];
+
+    tonWallets
+      ..add(tonWallet)
+      ..sort();
+
+    _tonWalletsSubject.add(tonWallets);
+
+    return tonWallet;
   }
 
   Future<GenericContract> subscribeToGenericContract({
@@ -152,8 +157,8 @@ class SubscriptionsController {
     return genericContract;
   }
 
-  Future<void> removeTonWalletSubscription(TonWalletAsset tonWalletAsset) async {
-    final tonWallet = _tonWalletsSubject.value.firstWhereOrNull((e) => e.address == tonWalletAsset.address);
+  Future<void> removeTonWalletSubscription(String address) async {
+    final tonWallet = _tonWalletsSubject.value.firstWhereOrNull((e) => e.address == address);
 
     if (tonWallet == null) {
       return;

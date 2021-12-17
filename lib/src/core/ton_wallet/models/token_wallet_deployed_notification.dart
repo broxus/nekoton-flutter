@@ -1,5 +1,4 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:json_annotation/json_annotation.dart';
 
 part 'token_wallet_deployed_notification.freezed.dart';
 part 'token_wallet_deployed_notification.g.dart';

@@ -299,6 +299,81 @@ async fn internal_find_existing_wallets(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn get_ton_wallet_info(
+    result_port: c_longlong,
+    transport: *mut c_void,
+    address: *mut c_char,
+) {
+    let transport = transport as *mut MutexGqlTransport;
+    let transport = &(*transport);
+
+    let address = address.from_ptr();
+
+    let rt = runtime!();
+    rt.spawn(async move {
+        let mut transport_guard = transport.lock().await;
+        let transport = transport_guard.take();
+        let transport = match transport {
+            Some(transport) => transport,
+            None => {
+                let result = match_result(Err(NativeError {
+                    status: NativeStatus::MutexError,
+                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
+                }));
+
+                send_to_result_port(result_port, result);
+                return;
+            }
+        };
+
+        let result = internal_get_ton_wallet_info(transport.clone(), address).await;
+        let result = match_result(result);
+
+        *transport_guard = Some(transport);
+
+        send_to_result_port(result_port, result);
+    });
+}
+
+async fn internal_get_ton_wallet_info(
+    transport: Arc<GqlTransport>,
+    address: String,
+) -> Result<u64, NativeError> {
+    let address = parse_address(&address)?;
+
+    let handler = TonWalletSubscriptionHandlerImpl { port: None };
+    let handler = Arc::new(handler);
+
+    let ton_wallet = TonWallet::subscribe_by_address(transport, address, handler)
+        .await
+        .handle_error(NativeStatus::TokenWalletError)?;
+
+    let workchain = ton_wallet.workchain();
+    let address = ton_wallet.address().clone();
+    let public_key = ton_wallet.public_key().clone();
+    let wallet_type = WalletType::from_core(ton_wallet.wallet_type());
+    let contract_state = ton_wallet.contract_state().clone();
+    let details = ton_wallet.details();
+    let custodians = ton_wallet
+        .get_custodians()
+        .clone()
+        .map(|e| e.iter().map(|e| e.to_hex_string()).collect::<Vec<String>>());
+
+    let info = models::TonWalletInfo {
+        workchain,
+        address,
+        public_key,
+        wallet_type,
+        contract_state,
+        details,
+        custodians,
+    };
+    let info = serde_json::to_string(&info).handle_error(NativeStatus::ConversionError)?;
+
+    Ok(info.to_ptr() as c_ulonglong)
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn get_ton_wallet_workchain(
     result_port: c_longlong,
     ton_wallet: *mut c_void,

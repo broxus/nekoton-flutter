@@ -1,5 +1,4 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:json_annotation/json_annotation.dart';
 
 part 'token_incoming_transfer.freezed.dart';
 part 'token_incoming_transfer.g.dart';

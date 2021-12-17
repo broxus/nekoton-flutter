@@ -24,7 +24,6 @@ import '../ton_wallet/ton_wallet.dart';
 import 'models/native_token_wallet.dart';
 import 'models/on_balance_changed_payload.dart';
 import 'models/on_token_wallet_transactions_found_payload.dart';
-import 'models/root_token_contract_info.dart';
 import 'models/symbol.dart';
 import 'models/token_wallet_transaction_with_data.dart';
 import 'models/token_wallet_version.dart';
@@ -361,27 +360,4 @@ class TokenWallet implements Comparable<TokenWallet> {
 
   @override
   int compareTo(TokenWallet other) => symbol.name.compareTo(other.symbol.name);
-}
-
-Future<RootTokenContractInfo> getRootTokenContractInfo({
-  required GqlTransport transport,
-  required String owner,
-  required String rootTokenContract,
-}) async {
-  final result = await transport.nativeGqlTransport.use(
-    (ptr) => proceedAsync(
-      (port) => nativeLibraryInstance.bindings.get_root_token_contract_info(
-        port,
-        ptr,
-        owner.toNativeUtf8().cast<Int8>(),
-        rootTokenContract.toNativeUtf8().cast<Int8>(),
-      ),
-    ),
-  );
-
-  final string = cStringToDart(result);
-  final json = jsonDecode(string) as Map<String, dynamic>;
-  final info = RootTokenContractInfo.fromJson(json);
-
-  return info;
 }

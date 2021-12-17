@@ -244,3 +244,17 @@ impl ExistingWalletInfo {
         }
     }
 }
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TonWalletInfo {
+    pub workchain: i8,
+    #[serde(with = "serde_address")]
+    pub address: MsgAddressInt,
+    #[serde(with = "serde_public_key")]
+    pub public_key: ed25519_dalek::PublicKey,
+    pub wallet_type: WalletType,
+    pub contract_state: ContractState,
+    pub details: ton_wallet::TonWalletDetails,
+    pub custodians: Option<Vec<String>>,
+}

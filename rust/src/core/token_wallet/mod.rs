@@ -97,7 +97,7 @@ async fn internal_token_wallet_subscribe(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn get_root_token_contract_info(
+pub unsafe extern "C" fn get_token_wallet_info(
     result_port: c_longlong,
     transport: *mut c_void,
     owner: *mut c_char,
@@ -127,8 +127,7 @@ pub unsafe extern "C" fn get_root_token_contract_info(
         };
 
         let result =
-            internal_get_root_token_contract_info(transport.clone(), owner, root_token_contract)
-                .await;
+            internal_get_token_wallet_info(transport.clone(), owner, root_token_contract).await;
         let result = match_result(result);
 
         *transport_guard = Some(transport);
@@ -137,7 +136,7 @@ pub unsafe extern "C" fn get_root_token_contract_info(
     });
 }
 
-async fn internal_get_root_token_contract_info(
+async fn internal_get_token_wallet_info(
     transport: Arc<GqlTransport>,
     owner: String,
     root_token_contract: String,
@@ -153,14 +152,21 @@ async fn internal_get_root_token_contract_info(
             .await
             .handle_error(NativeStatus::TokenWalletError)?;
 
-    let symbol = token_wallet.symbol().clone();
-    let version = token_wallet.version();
-    let info = models::RootTokenContractInfo {
-        name: symbol.full_name,
-        symbol: symbol.name,
-        decimals: symbol.decimals,
-        address: root_token_contract,
+    let owner: ton_block::MsgAddressInt = token_wallet.owner().clone();
+    let address: ton_block::MsgAddressInt = token_wallet.address().clone();
+    let symbol: nekoton::core::models::Symbol = token_wallet.symbol().clone();
+    let version: nekoton::core::models::TokenWalletVersion = token_wallet.version();
+    let balance: String = token_wallet.balance().to_string();
+    let contract_state: nekoton::core::models::ContractState =
+        token_wallet.contract_state().clone();
+
+    let info = models::TokenWalletInfo {
+        owner,
+        address,
+        symbol,
         version,
+        balance,
+        contract_state,
     };
     let info = serde_json::to_string(&info).handle_error(NativeStatus::ConversionError)?;
 

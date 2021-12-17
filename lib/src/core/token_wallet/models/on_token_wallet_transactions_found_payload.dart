@@ -1,5 +1,4 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:json_annotation/json_annotation.dart';
 
 import '../../models/transactions_batch_info.dart';
 import 'token_wallet_transaction_with_data.dart';

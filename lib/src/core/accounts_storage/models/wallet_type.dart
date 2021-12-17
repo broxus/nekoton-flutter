@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import 'multisig_type.dart';
 
@@ -8,10 +9,12 @@ part 'wallet_type.g.dart';
 @Freezed(unionValueCase: FreezedUnionCase.pascal)
 class WalletType with _$WalletType {
   @JsonSerializable(fieldRename: FieldRename.snake)
+  @HiveType(typeId: 214)
   const factory WalletType.multisig({
-    required MultisigType multisigType,
+    @HiveField(0) required MultisigType multisigType,
   }) = _Multisig;
 
+  @HiveType(typeId: 213)
   const factory WalletType.walletV3() = _WalletV3;
 
   factory WalletType.fromJson(Map<String, dynamic> json) => _$WalletTypeFromJson(json);

@@ -4,6 +4,10 @@ import 'package:rxdart/rxdart.dart';
 
 import 'constants.dart';
 import 'core/models/transaction_id.dart';
+import 'core/token_wallet/get_token_wallet_info.dart' as token_wallet_info;
+import 'core/token_wallet/models/token_wallet_info.dart';
+import 'core/ton_wallet/get_ton_wallet_info.dart' as ton_wallet_info;
+import 'core/ton_wallet/models/ton_wallet_info.dart';
 import 'external/models/connection_data.dart';
 import 'preferences.dart';
 import 'provider/models/full_contract_state.dart';
@@ -57,6 +61,21 @@ class ConnectionController {
         address: address,
         continuation: continuation,
         limit: limit,
+      );
+
+  Future<TonWalletInfo> getTonWalletInfo(String address) async => ton_wallet_info.getTonWalletInfo(
+        transport: transport as GqlTransport,
+        address: address,
+      );
+
+  Future<TokenWalletInfo> getTokenWalletInfo({
+    required String address,
+    required String rootTokenContract,
+  }) async =>
+      token_wallet_info.getTokenWalletInfo(
+        transport: transport as GqlTransport,
+        owner: address,
+        rootTokenContract: rootTokenContract,
       );
 
   Future<void> _initialize() async {
