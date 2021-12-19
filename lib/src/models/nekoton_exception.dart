@@ -71,6 +71,14 @@ class ExternalAccountNotFoundException extends NekotonException {
   ExternalAccountNotFoundException([String? info]) : super(info);
 }
 
+class ExternalAccountTokenWalletAlreadyAddedException extends NekotonException {
+  ExternalAccountTokenWalletAlreadyAddedException([String? info]) : super(info);
+}
+
+class ExternalAccountTokenWalletNotFoundException extends NekotonException {
+  ExternalAccountTokenWalletNotFoundException([String? info]) : super(info);
+}
+
 class KeyNotFoundException extends NekotonException {
   KeyNotFoundException([String? info]) : super(info);
 }

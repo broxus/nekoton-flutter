@@ -1102,7 +1102,8 @@ pub unsafe extern "C" fn ton_wallet_prepare_confirm_transaction(
     result_port: c_longlong,
     ton_wallet: *mut c_void,
     transport: *mut c_void,
-    transaction_id: c_ulonglong,
+    public_key: *mut c_char,
+    transaction_id: *mut c_char,
     expiration: *mut c_char,
 ) {
     let ton_wallet = ton_wallet as *mut MutexTonWallet;
@@ -1111,6 +1112,8 @@ pub unsafe extern "C" fn ton_wallet_prepare_confirm_transaction(
     let transport = transport as *mut MutexGqlTransport;
     let transport = &(*transport);
 
+    let public_key = public_key.from_ptr();
+    let transaction_id = transaction_id.from_ptr();
     let expiration = expiration.from_ptr();
 
     let rt = runtime!();
@@ -1149,6 +1152,7 @@ pub unsafe extern "C" fn ton_wallet_prepare_confirm_transaction(
         let result = internal_ton_wallet_prepare_confirm_transaction(
             &mut ton_wallet,
             transport.clone(),
+            public_key,
             transaction_id,
             expiration,
         )
@@ -1165,16 +1169,21 @@ pub unsafe extern "C" fn ton_wallet_prepare_confirm_transaction(
 pub async fn internal_ton_wallet_prepare_confirm_transaction(
     ton_wallet: &mut TonWallet,
     transport: Arc<GqlTransport>,
-    transaction_id: u64,
+    public_key: String,
+    transaction_id: String,
     expiration: String,
 ) -> Result<u64, NativeError> {
+    let public_key = parse_public_key(&public_key)?;
+
+    let transaction_id = transaction_id
+        .parse::<u64>()
+        .handle_error(NativeStatus::ConversionError)?;
+
     let expiration = serde_json::from_str::<Expiration>(&expiration)
         .handle_error(NativeStatus::ConversionError)?;
     let expiration = expiration.to_core();
 
     let address = ton_wallet.address();
-    let public_key = ton_wallet.public_key();
-    let public_key = public_key.clone();
 
     let account_state = transport
         .get_contract_state(address)

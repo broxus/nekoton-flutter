@@ -198,12 +198,14 @@ class TokenWallet implements Comparable<TokenWallet> {
 
   Future<PendingTransaction> send({
     required UnsignedMessage message,
+    required String publicKey,
     required String password,
   }) async {
     final currentBlockId = await _transport.getLatestBlockId(address);
 
     final result = await _tonWallet.send(
       message: message,
+      publicKey: publicKey,
       password: password,
     );
 

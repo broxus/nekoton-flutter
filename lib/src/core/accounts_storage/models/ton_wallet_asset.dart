@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import 'wallet_type.dart';
 
@@ -11,10 +12,11 @@ class TonWalletAsset with _$TonWalletAsset {
     fieldRename: FieldRename.snake,
     explicitToJson: true,
   )
+  @HiveType(typeId: 208)
   const factory TonWalletAsset({
-    required String address,
-    required String publicKey,
-    required WalletType contract,
+    @HiveField(0) required String address,
+    @HiveField(1) required String publicKey,
+    @HiveField(2) required WalletType contract,
   }) = _TonWalletAsset;
 
   factory TonWalletAsset.fromJson(Map<String, dynamic> json) => _$TonWalletAssetFromJson(json);

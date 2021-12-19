@@ -139,7 +139,7 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         ton_wallet_prepare_transfer(0, nil, nil, nil, nil, 0, nil, 0);
 
-        ton_wallet_prepare_confirm_transaction(0, nil, nil, 0, nil);
+        ton_wallet_prepare_confirm_transaction(0, nil, nil, nil, nil, nil);
 
         prepare_add_ordinary_stake(0, nil, nil, nil, nil, 0, 0);
 

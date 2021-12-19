@@ -138,7 +138,7 @@ class AccountsStorageController {
         owner: address,
         rootTokenContract: rootTokenContract,
       );
-    } catch (_) {
+    } catch (err) {
       throw InvalidRootTokenContractException();
     }
 

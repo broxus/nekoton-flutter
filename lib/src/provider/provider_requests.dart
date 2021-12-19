@@ -563,6 +563,7 @@ Future<SendMessageOutput> sendMessage({
 
   final pendingTransaction = await tonWallet.send(
     message: message,
+    publicKey: tonWallet.publicKey,
     password: password,
   );
 

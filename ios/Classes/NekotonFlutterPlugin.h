@@ -207,7 +207,8 @@ void ton_wallet_prepare_transfer(long long result_port,
 void ton_wallet_prepare_confirm_transaction(long long result_port,
                                             void *ton_wallet,
                                             void *transport,
-                                            unsigned long long transaction_id,
+                                            char *public_key,
+                                            char *transaction_id,
                                             char *expiration);
 
 void prepare_add_ordinary_stake(long long result_port,

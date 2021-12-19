@@ -350,7 +350,8 @@ class TonWallet implements Comparable<TonWallet> {
   }
 
   Future<UnsignedMessage> prepareConfirmTransaction({
-    required int transactionId,
+    required String publicKey,
+    required String transactionId,
     required Expiration expiration,
   }) async {
     final expirationStr = jsonEncode(expiration);
@@ -362,7 +363,8 @@ class TonWallet implements Comparable<TonWallet> {
             port,
             ptr,
             nativeGqlTransportPtr,
-            transactionId,
+            publicKey.toNativeUtf8().cast<Int8>(),
+            transactionId.toNativeUtf8().cast<Int8>(),
             expirationStr.toNativeUtf8().cast<Int8>(),
           ),
         ),
@@ -452,6 +454,7 @@ class TonWallet implements Comparable<TonWallet> {
 
   Future<PendingTransaction> send({
     required UnsignedMessage message,
+    required String publicKey,
     required String password,
   }) async {
     final list = await _keystore.entries;
@@ -651,6 +654,7 @@ class TonWallet implements Comparable<TonWallet> {
     required String address,
   }) async {
     _transport = transport;
+    _keystore = await Keystore.getInstance();
     _subscription = _receivePort.listen(_subscriptionListener);
 
     final result = await _transport.nativeGqlTransport.use(

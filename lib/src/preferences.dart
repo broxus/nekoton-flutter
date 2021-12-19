@@ -4,17 +4,7 @@ import 'package:collection/collection.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import 'core/accounts_storage/models/assets_list.dart';
-import 'core/accounts_storage/models/wallet_type.dart';
-import 'core/models/contract_state.dart';
-import 'core/models/gen_timings.dart';
-import 'core/models/last_transaction_id.dart';
-import 'core/token_wallet/models/symbol.dart';
-import 'core/token_wallet/models/token_wallet_version.dart';
-import 'core/ton_wallet/models/ton_wallet_details.dart';
-import 'core/ton_wallet/models/ton_wallet_info.dart';
-import 'provider/models/account_interaction.dart';
 import 'provider/models/permissions.dart';
-import 'provider/models/wallet_contract_type.dart';
 
 class Preferences {
   static const _preferencesBoxName = 'nekoton_preferences';
@@ -134,23 +124,6 @@ class Preferences {
   Future<void> clearExternalAccounts() => _externalAccountsBox.clear();
 
   Future<void> _initialize() async {
-    await Hive.initFlutter();
-    Hive
-      ..registerAdapter(WalletContractTypeAdapter())
-      ..registerAdapter(PermissionsAdapter())
-      ..registerAdapter(AccountInteractionAdapter())
-      ..registerAdapter(TonWalletInfoAdapter())
-      ..registerAdapter(TonWalletDetailsAdapter())
-      ..registerAdapter(TokenWalletVersionAdapter())
-      ..registerAdapter(SymbolAdapter())
-      ..registerAdapter(LastTransactionIdAdapter())
-      ..registerAdapter(GenTimingsAdapter())
-      ..registerAdapter(ContractStateAdapter())
-      ..registerAdapter(WalletV3Adapter())
-      ..registerAdapter(MultisigAdapter());
-
-    await Hive.deleteBoxFromDisk(_externalAccountsBoxName);
-
     _preferencesBox = await Hive.openBox(_preferencesBoxName);
     _permissionsBox = await Hive.openBox(_permissionsBoxName);
     _externalAccountsBox = await Hive.openBox(_externalAccountsBoxName);

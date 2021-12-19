@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import 'additional_assets.dart';
 import 'ton_wallet_asset.dart';
@@ -13,10 +14,11 @@ class AssetsList with _$AssetsList implements Comparable<AssetsList> {
     fieldRename: FieldRename.snake,
     explicitToJson: true,
   )
+  @HiveType(typeId: 209)
   const factory AssetsList({
-    required String name,
-    required TonWalletAsset tonWallet,
-    required Map<String, AdditionalAssets> additionalAssets,
+    @HiveField(0) required String name,
+    @HiveField(1) required TonWalletAsset tonWallet,
+    @HiveField(2) required Map<String, AdditionalAssets> additionalAssets,
   }) = _AssetsList;
 
   factory AssetsList.fromJson(Map<String, dynamic> json) => _$AssetsListFromJson(json);
