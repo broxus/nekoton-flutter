@@ -315,26 +315,6 @@ class Nekoton {
     externalAccountsController = await ExternalAccountsController.getInstance();
     subscriptionsController = await SubscriptionsController.getInstance();
 
-    keystoreController.keysStream.listen((event) {
-      nekotonLogger?.i(event.map((e) => e.publicKey).toList(), 'keysStream');
-    });
-
-    accountsStorageController.accountsStream.listen((event) {
-      nekotonLogger?.i(event.map((e) => e.address).toList(), 'accountsStream');
-    });
-
-    externalAccountsController.externalAccountsStream.listen((event) {
-      nekotonLogger?.i(event, 'externalAccountsStream');
-    });
-
-    subscriptionsController.tonWalletsStream.listen((event) {
-      nekotonLogger?.i(event.map((e) => e.address).toList(), 'tonWalletsStream');
-    });
-
-    subscriptionsController.tokenWalletsStream.listen((event) {
-      nekotonLogger?.i(event.map((e) => e.address).toList(), 'tokenWalletsStream');
-    });
-
     _keysStreamSubscription =
         keystoreController.keysStream.skip(1).startWith(keystoreController.keys).pairwise().listen(
               (e) => _keysStreamSubscriptionLock.synchronized(
