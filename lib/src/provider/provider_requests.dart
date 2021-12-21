@@ -491,6 +491,7 @@ Future<EstimateFeesOutput> estimateFees({
   }
 
   final unsignedMessage = await tonWallet.prepareTransfer(
+    publicKey: tonWallet.publicKey,
     expiration: kDefaultMessageExpiration,
     destination: repackedRecipient,
     amount: int.parse(input.amount),
@@ -554,6 +555,7 @@ Future<SendMessageOutput> sendMessage({
   }
 
   final message = await tonWallet.prepareTransfer(
+    publicKey: tonWallet.publicKey,
     expiration: kDefaultMessageExpiration,
     destination: repackedRecipient,
     amount: int.parse(input.amount),

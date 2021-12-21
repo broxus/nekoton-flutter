@@ -432,6 +432,7 @@ pub unsafe extern "C" fn token_wallet_prepare_transfer(
     token_wallet: *mut c_void,
     ton_wallet: *mut c_void,
     transport: *mut c_void,
+    public_key: *mut c_char,
     expiration: *mut c_char,
     destination: *mut c_char,
     tokens: *mut c_char,
@@ -447,6 +448,7 @@ pub unsafe extern "C" fn token_wallet_prepare_transfer(
     let transport = transport as *mut MutexGqlTransport;
     let transport = &(*transport);
 
+    let public_key = public_key.from_ptr();
     let expiration = expiration.from_ptr();
     let destination = destination.from_ptr();
     let tokens = tokens.from_ptr();
@@ -510,6 +512,7 @@ pub unsafe extern "C" fn token_wallet_prepare_transfer(
             &mut token_wallet,
             &mut ton_wallet,
             transport.clone(),
+            public_key,
             expiration,
             destination,
             tokens,
@@ -531,6 +534,7 @@ async fn internal_token_wallet_prepare_transfer(
     token_wallet: &mut TokenWallet,
     ton_wallet: &mut TonWallet,
     transport: Arc<GqlTransport>,
+    public_key: String,
     expiration: String,
     destination: String,
     tokens: String,
@@ -563,6 +567,7 @@ async fn internal_token_wallet_prepare_transfer(
     let message = internal_ton_wallet_prepare_transfer(
         ton_wallet,
         transport,
+        public_key,
         expiration,
         message.destination,
         message.amount,

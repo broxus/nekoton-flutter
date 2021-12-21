@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import 'multisig_confirm_transaction.dart';
 import 'multisig_send_transaction.dart';
@@ -13,24 +14,27 @@ class MultisigTransaction with _$MultisigTransaction {
     fieldRename: FieldRename.snake,
     explicitToJson: true,
   )
+  @HiveType(typeId: 35)
   const factory MultisigTransaction.send({
-    required MultisigSendTransaction multisigSendTransaction,
+    @HiveField(0) required MultisigSendTransaction multisigSendTransaction,
   }) = _Send;
 
   @JsonSerializable(
     fieldRename: FieldRename.snake,
     explicitToJson: true,
   )
+  @HiveType(typeId: 36)
   const factory MultisigTransaction.submit({
-    required MultisigSubmitTransaction multisigSubmitTransaction,
+    @HiveField(0) required MultisigSubmitTransaction multisigSubmitTransaction,
   }) = _Submit;
 
   @JsonSerializable(
     fieldRename: FieldRename.snake,
     explicitToJson: true,
   )
+  @HiveType(typeId: 37)
   const factory MultisigTransaction.confirm({
-    required MultisigConfirmTransaction multisigConfirmTransaction,
+    @HiveField(0) required MultisigConfirmTransaction multisigConfirmTransaction,
   }) = _Confirm;
 
   factory MultisigTransaction.fromJson(Map<String, dynamic> json) => _$MultisigTransactionFromJson(json);

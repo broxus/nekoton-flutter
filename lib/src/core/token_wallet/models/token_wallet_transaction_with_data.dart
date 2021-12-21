@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../models/transaction.dart';
 import 'token_wallet_transaction.dart';
@@ -8,9 +9,10 @@ part 'token_wallet_transaction_with_data.g.dart';
 
 @freezed
 class TokenWalletTransactionWithData with _$TokenWalletTransactionWithData {
+  @HiveType(typeId: 21)
   const factory TokenWalletTransactionWithData({
-    required Transaction transaction,
-    TokenWalletTransaction? data,
+    @HiveField(0) required Transaction transaction,
+    @HiveField(1) TokenWalletTransaction? data,
   }) = _TokenWalletTransactionWithData;
 
   factory TokenWalletTransactionWithData.fromJson(Map<String, dynamic> json) =>

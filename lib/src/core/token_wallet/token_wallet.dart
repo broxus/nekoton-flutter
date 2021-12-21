@@ -159,6 +159,7 @@ class TokenWallet implements Comparable<TokenWallet> {
   Future<ContractState> get ownerContractState => _tonWallet.contractState;
 
   Future<UnsignedMessage> prepareTransfer({
+    required String publicKey,
     required Expiration expiration,
     required String destination,
     required String tokens,
@@ -176,6 +177,7 @@ class TokenWallet implements Comparable<TokenWallet> {
               ptr,
               nativeTonWalletPtr,
               nativeGqlTransportPtr,
+              publicKey.toNativeUtf8().cast<Int8>(),
               expirationStr.toNativeUtf8().cast<Int8>(),
               destination.toNativeUtf8().cast<Int8>(),
               tokens.toNativeUtf8().cast<Int8>(),

@@ -4,9 +4,7 @@ import 'package:collection/collection.dart';
 import 'package:rxdart/rxdart.dart';
 
 import 'connection_controller.dart';
-import 'core/accounts_storage/models/assets_list.dart';
-import 'core/accounts_storage/models/token_wallet_asset.dart';
-import 'core/accounts_storage/models/ton_wallet_asset.dart';
+import 'core/accounts_storage/models/wallet_type.dart';
 import 'core/generic_contract/generic_contract.dart';
 import 'core/token_wallet/token_wallet.dart';
 import 'core/ton_wallet/ton_wallet.dart';
@@ -44,44 +42,26 @@ class SubscriptionsController {
 
   Map<String, List<GenericContract>> get genericContracts => _genericContractsSubject.value;
 
-  Future<void> updateCurrentSubscriptions({
-    required String publicKey,
-    required List<AssetsList> accounts,
-  }) async {
-    await clearTonWalletsSubscriptions();
-    await clearTokenWalletsSubscriptions();
-
-    for (final account in accounts) {
-      await subscribeToTonWallet(
-        publicKey: publicKey,
-        tonWalletAsset: account.tonWallet,
-      );
-
-      final networkGroup = _connectionController.transport.connectionData.group;
-
-      final tokenWalletAssets = [...account.additionalAssets[networkGroup]?.tokenWallets ?? []];
-
-      for (final tokenWalletAsset in tokenWalletAssets) {
-        await subscribeToTokenWallet(
-          tonWalletAsset: account.tonWallet,
-          tokenWalletAsset: tokenWalletAsset,
-        );
-      }
-    }
-  }
-
   Future<TokenWallet> subscribeToTokenWallet({
-    required TonWalletAsset tonWalletAsset,
-    required TokenWalletAsset tokenWalletAsset,
+    required String owner,
+    required String rootTokenContract,
   }) async {
+    final existingTokenWallet = _tokenWalletsSubject.value.firstWhereOrNull(
+      (e) => e.owner == owner && e.symbol.rootTokenContract == rootTokenContract,
+    );
+
+    if (existingTokenWallet != null) {
+      return existingTokenWallet;
+    }
+
     final transport = _connectionController.transport as GqlTransport;
 
-    final tonWallet = tonWallets.firstWhere((e) => e.address == tonWalletAsset.address);
+    final tonWallet = tonWallets.firstWhere((e) => e.address == owner);
 
     final tokenWallet = await TokenWallet.subscribe(
       transport: transport,
       tonWallet: tonWallet,
-      rootTokenContract: tokenWalletAsset.rootTokenContract,
+      rootTokenContract: rootTokenContract,
     );
 
     final tokenWallets = [..._tokenWalletsSubject.value];
@@ -96,16 +76,24 @@ class SubscriptionsController {
   }
 
   Future<TonWallet> subscribeToTonWallet({
+    required String address,
+    required int workchain,
     required String publicKey,
-    required TonWalletAsset tonWalletAsset,
+    required WalletType walletType,
   }) async {
+    final existingTonWallet = _tonWalletsSubject.value.firstWhereOrNull((e) => e.address == address);
+
+    if (existingTonWallet != null) {
+      return existingTonWallet;
+    }
+
     final transport = _connectionController.transport as GqlTransport;
 
     final tonWallet = await TonWallet.subscribe(
       transport: transport,
-      workchain: tonWalletAsset.workchain,
+      workchain: workchain,
       publicKey: publicKey,
-      walletType: tonWalletAsset.contract,
+      walletType: walletType,
     );
 
     final tonWallets = [..._tonWalletsSubject.value];
@@ -120,6 +108,12 @@ class SubscriptionsController {
   }
 
   Future<TonWallet> subscribeByAddressToTonWallet(String address) async {
+    final existingTonWallet = _tonWalletsSubject.value.firstWhereOrNull((e) => e.address == address);
+
+    if (existingTonWallet != null) {
+      return existingTonWallet;
+    }
+
     final transport = _connectionController.transport as GqlTransport;
 
     final tonWallet = await TonWallet.subscribeByAddress(
@@ -176,11 +170,11 @@ class SubscriptionsController {
   }
 
   Future<void> removeTokenWalletSubscription({
-    required TonWalletAsset tonWalletAsset,
-    required TokenWalletAsset tokenWalletAsset,
+    required String owner,
+    required String rootTokenContract,
   }) async {
     final tokenWallet = _tokenWalletsSubject.value.firstWhereOrNull(
-      (e) => e.owner == tonWalletAsset.address && e.symbol.rootTokenContract == tokenWalletAsset.rootTokenContract,
+      (e) => e.owner == owner && e.symbol.rootTokenContract == rootTokenContract,
     );
 
     if (tokenWallet == null) {

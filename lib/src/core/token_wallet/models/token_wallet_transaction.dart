@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:hive/hive.dart';
 
 import 'token_incoming_transfer.dart';
 import 'token_outgoing_transfer.dart';
@@ -10,30 +11,36 @@ part 'token_wallet_transaction.g.dart';
 @Freezed(unionValueCase: FreezedUnionCase.pascal)
 class TokenWalletTransaction with _$TokenWalletTransaction {
   @JsonSerializable(fieldRename: FieldRename.snake)
+  @HiveType(typeId: 15)
   const factory TokenWalletTransaction.incomingTransfer({
-    required TokenIncomingTransfer tokenIncomingTransfer,
+    @HiveField(0) required TokenIncomingTransfer tokenIncomingTransfer,
   }) = _IncomingTransfer;
 
   @JsonSerializable(fieldRename: FieldRename.snake)
+  @HiveType(typeId: 16)
   const factory TokenWalletTransaction.outgoingTransfer({
-    required TokenOutgoingTransfer tokenOutgoingTransfer,
+    @HiveField(0) required TokenOutgoingTransfer tokenOutgoingTransfer,
   }) = _OutgoingTransfer;
 
   @JsonSerializable(fieldRename: FieldRename.snake)
+  @HiveType(typeId: 17)
   const factory TokenWalletTransaction.swapBack({
-    required TokenSwapBack tokenSwapBack,
+    @HiveField(0) required TokenSwapBack tokenSwapBack,
   }) = _SwapBack;
 
+  @HiveType(typeId: 18)
   const factory TokenWalletTransaction.accept({
-    required String value,
+    @HiveField(0) required String value,
   }) = _Accept;
 
+  @HiveType(typeId: 19)
   const factory TokenWalletTransaction.transferBounced({
-    required String value,
+    @HiveField(0) required String value,
   }) = _TransferBounced;
 
+  @HiveType(typeId: 20)
   const factory TokenWalletTransaction.swapBackBounced({
-    required String value,
+    @HiveField(0) required String value,
   }) = _SwapBackBounced;
 
   factory TokenWalletTransaction.fromJson(Map<String, dynamic> json) => _$TokenWalletTransactionFromJson(json);

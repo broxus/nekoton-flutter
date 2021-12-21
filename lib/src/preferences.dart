@@ -1,9 +1,7 @@
 import 'dart:async';
 
-import 'package:collection/collection.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
-import 'core/accounts_storage/models/assets_list.dart';
 import 'provider/models/permissions.dart';
 
 class Preferences {
@@ -60,66 +58,34 @@ class Preferences {
     await _permissionsBox.addAll(newValues);
   }
 
-  Map<String, List<AssetsList>> getExternalAccounts() =>
-      _externalAccountsBox.toMap().map((key, value) => MapEntry(key as String, value.cast<AssetsList>()));
+  Map<String, List<String>> getExternalAccounts() =>
+      _externalAccountsBox.toMap().map((key, value) => MapEntry(key as String, value.cast<String>()));
 
-  Future<AssetsList> addExternalAccount({
-    required String publicKey,
-    required AssetsList assetsList,
-  }) async {
-    final list = _externalAccountsBox
-            .get(publicKey)
-            ?.cast<AssetsList>()
-            .where((e) => e.address != assetsList.address)
-            .toList() ??
-        [];
-
-    list.add(assetsList);
-
-    await _externalAccountsBox.put(publicKey, list);
-
-    return _externalAccountsBox.get(publicKey)!.cast<AssetsList>().firstWhere((e) => e == assetsList);
-  }
-
-  Future<AssetsList> renameExternalAccount({
-    required String publicKey,
-    required String address,
-    required String name,
-  }) async {
-    final list = _externalAccountsBox.get(publicKey)!.cast<AssetsList>();
-
-    final assetsList = list.firstWhere((e) => e.address == address);
-
-    list
-      ..remove(assetsList)
-      ..add(assetsList.copyWith(name: name));
-
-    await _externalAccountsBox.put(publicKey, list);
-
-    return assetsList;
-  }
-
-  Future<AssetsList?> removeExternalAccount({
+  Future<void> addExternalAccount({
     required String publicKey,
     required String address,
   }) async {
-    final assetsList =
-        _externalAccountsBox.get(publicKey)?.cast<AssetsList>().firstWhereOrNull((e) => e.address == address);
+    final list = _externalAccountsBox.get(publicKey)?.cast<String>().where((e) => e != address).toList() ?? [];
 
-    if (assetsList == null) return null;
+    list.add(address);
 
-    final list = _externalAccountsBox.get(publicKey)!.cast<AssetsList>().where((e) => e.address != address).toList();
+    await _externalAccountsBox.put(publicKey, list);
+  }
+
+  Future<void> removeExternalAccount({
+    required String publicKey,
+    required String address,
+  }) async {
+    final list = _externalAccountsBox.get(publicKey)?.cast<String>().where((e) => e != address).toList();
+
+    if (list == null) return;
 
     if (list.isNotEmpty) {
       await _externalAccountsBox.put(publicKey, list);
     } else {
       await _externalAccountsBox.delete(publicKey);
     }
-
-    return assetsList;
   }
-
-  Future<void> removeExternalAccounts(String publicKey) => _externalAccountsBox.delete(publicKey);
 
   Future<void> clearExternalAccounts() => _externalAccountsBox.clear();
 

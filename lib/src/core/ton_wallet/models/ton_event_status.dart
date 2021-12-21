@@ -1,10 +1,13 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:hive/hive.dart';
 
+part 'ton_event_status.g.dart';
+
+@HiveType(typeId: 39)
 enum TonEventStatus {
-  @JsonValue('InProcess')
+  @HiveField(0)
   inProcess,
-  @JsonValue('Confirmed')
+  @HiveField(1)
   confirmed,
-  @JsonValue('Rejected')
+  @HiveField(2)
   rejected,
 }

@@ -1,12 +1,15 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:hive/hive.dart';
 
+part 'eth_event_status.g.dart';
+
+@HiveType(typeId: 28)
 enum EthEventStatus {
-  @JsonValue('InProcess')
+  @HiveField(0)
   inProcess,
-  @JsonValue('Confirmed')
+  @HiveField(1)
   confirmed,
-  @JsonValue('Executed')
+  @HiveField(2)
   executed,
-  @JsonValue('Rejected')
+  @HiveField(3)
   rejected,
 }

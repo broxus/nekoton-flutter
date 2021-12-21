@@ -924,6 +924,7 @@ pub unsafe extern "C" fn ton_wallet_prepare_transfer(
     result_port: c_longlong,
     ton_wallet: *mut c_void,
     transport: *mut c_void,
+    public_key: *mut c_char,
     expiration: *mut c_char,
     destination: *mut c_char,
     amount: c_ulonglong,
@@ -936,6 +937,7 @@ pub unsafe extern "C" fn ton_wallet_prepare_transfer(
     let transport = transport as *mut MutexGqlTransport;
     let transport = &(*transport);
 
+    let public_key = public_key.from_ptr();
     let is_comment = is_comment != 0;
     let expiration = expiration.from_ptr();
     let destination = destination.from_ptr();
@@ -994,6 +996,7 @@ pub unsafe extern "C" fn ton_wallet_prepare_transfer(
         let result = internal_ton_wallet_prepare_transfer(
             &mut ton_wallet,
             transport.clone(),
+            public_key,
             expiration,
             destination,
             amount,
@@ -1044,14 +1047,15 @@ pub async fn internal_ton_wallet_prepare_transfer_params(
 pub async fn internal_ton_wallet_prepare_transfer(
     ton_wallet: &mut TonWallet,
     transport: Arc<GqlTransport>,
+    public_key: String,
     expiration: nekoton::core::models::Expiration,
     destination: MsgAddressInt,
     amount: u64,
     body: Option<SliceData>,
 ) -> Result<u64, NativeError> {
+    let public_key = parse_public_key(&public_key)?;
+
     let address = ton_wallet.address();
-    let public_key = ton_wallet.public_key();
-    let public_key = public_key.clone();
 
     let account_state = transport
         .get_contract_state(address)
@@ -1216,6 +1220,7 @@ pub unsafe extern "C" fn prepare_add_ordinary_stake(
     result_port: c_longlong,
     ton_wallet: *mut c_void,
     transport: *mut c_void,
+    public_key: *mut c_char,
     expiration: *mut c_char,
     depool: *mut c_char,
     depool_fee: c_ulonglong,
@@ -1227,6 +1232,7 @@ pub unsafe extern "C" fn prepare_add_ordinary_stake(
     let transport = transport as *mut MutexGqlTransport;
     let transport = &(*transport);
 
+    let public_key = public_key.from_ptr();
     let expiration = expiration.from_ptr();
     let depool = depool.from_ptr();
 
@@ -1266,6 +1272,7 @@ pub unsafe extern "C" fn prepare_add_ordinary_stake(
         let result = internal_prepare_add_ordinary_stake(
             &mut ton_wallet,
             transport.clone(),
+            public_key,
             expiration,
             depool,
             depool_fee,
@@ -1284,6 +1291,7 @@ pub unsafe extern "C" fn prepare_add_ordinary_stake(
 async fn internal_prepare_add_ordinary_stake(
     ton_wallet: &mut TonWallet,
     transport: Arc<GqlTransport>,
+    public_key: String,
     expiration: String,
     depool: String,
     depool_fee: c_ulonglong,
@@ -1300,6 +1308,7 @@ async fn internal_prepare_add_ordinary_stake(
     let result = internal_ton_wallet_prepare_transfer(
         ton_wallet,
         transport,
+        public_key,
         expiration,
         internal_message.destination,
         internal_message.amount,
@@ -1315,6 +1324,7 @@ pub unsafe extern "C" fn prepare_withdraw_part(
     result_port: c_longlong,
     ton_wallet: *mut c_void,
     transport: *mut c_void,
+    public_key: *mut c_char,
     expiration: *mut c_char,
     depool: *mut c_char,
     depool_fee: c_ulonglong,
@@ -1326,6 +1336,7 @@ pub unsafe extern "C" fn prepare_withdraw_part(
     let transport = transport as *mut MutexGqlTransport;
     let transport = &(*transport);
 
+    let public_key = public_key.from_ptr();
     let expiration = expiration.from_ptr();
     let depool = depool.from_ptr();
 
@@ -1365,6 +1376,7 @@ pub unsafe extern "C" fn prepare_withdraw_part(
         let result = internal_prepare_withdraw_part(
             &mut ton_wallet,
             transport.clone(),
+            public_key,
             expiration,
             depool,
             depool_fee,
@@ -1383,6 +1395,7 @@ pub unsafe extern "C" fn prepare_withdraw_part(
 async fn internal_prepare_withdraw_part(
     ton_wallet: &mut TonWallet,
     transport: Arc<GqlTransport>,
+    public_key: String,
     expiration: String,
     depool: String,
     depool_fee: c_ulonglong,
@@ -1400,6 +1413,7 @@ async fn internal_prepare_withdraw_part(
     let result = internal_ton_wallet_prepare_transfer(
         ton_wallet,
         transport,
+        public_key,
         expiration,
         internal_message.destination,
         internal_message.amount,

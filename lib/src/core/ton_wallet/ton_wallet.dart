@@ -317,6 +317,7 @@ class TonWallet implements Comparable<TonWallet> {
   }
 
   Future<UnsignedMessage> prepareTransfer({
+    required String publicKey,
     required Expiration expiration,
     required String destination,
     required int amount,
@@ -332,6 +333,7 @@ class TonWallet implements Comparable<TonWallet> {
             port,
             ptr,
             nativeGqlTransportPtr,
+            publicKey.toNativeUtf8().cast<Int8>(),
             expirationStr.toNativeUtf8().cast<Int8>(),
             destination.toNativeUtf8().cast<Int8>(),
             amount,
@@ -379,6 +381,7 @@ class TonWallet implements Comparable<TonWallet> {
   }
 
   Future<UnsignedMessage> prepareAddOrdinaryStake({
+    required String publicKey,
     required Expiration expiration,
     required String depool,
     required int depoolFee,
@@ -393,6 +396,7 @@ class TonWallet implements Comparable<TonWallet> {
             port,
             ptr,
             nativeGqlTransportPtr,
+            publicKey.toNativeUtf8().cast<Int8>(),
             expirationStr.toNativeUtf8().cast<Int8>(),
             depool.toNativeUtf8().cast<Int8>(),
             depoolFee,
@@ -410,6 +414,7 @@ class TonWallet implements Comparable<TonWallet> {
   }
 
   Future<UnsignedMessage> prepareWithdrawPart({
+    required String publicKey,
     required Expiration expiration,
     required String depool,
     required int depoolFee,
@@ -424,6 +429,7 @@ class TonWallet implements Comparable<TonWallet> {
             port,
             ptr,
             nativeGqlTransportPtr,
+            publicKey.toNativeUtf8().cast<Int8>(),
             expirationStr.toNativeUtf8().cast<Int8>(),
             depool.toNativeUtf8().cast<Int8>(),
             depoolFee,

@@ -1,12 +1,15 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
+part 'account_status.g.dart';
+
+@HiveType(typeId: 10)
 enum AccountStatus {
-  @JsonValue('uninit')
+  @HiveField(0)
   uninit,
-  @JsonValue('frozen')
+  @HiveField(1)
   frozen,
-  @JsonValue('active')
+  @HiveField(2)
   active,
-  @JsonValue('nonexist')
+  @HiveField(3)
   nonexist,
 }

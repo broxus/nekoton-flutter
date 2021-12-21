@@ -12,7 +12,7 @@ class WalletType with _$WalletType {
   @HiveType(typeId: 214)
   const factory WalletType.multisig({
     @HiveField(0) required MultisigType multisigType,
-  }) = _Multisig;
+  }) = _WalletTypeMultisig;
 
   @HiveType(typeId: 213)
   const factory WalletType.walletV3() = _WalletV3;

@@ -4,12 +4,10 @@ import 'package:collection/collection.dart';
 import 'package:rxdart/rxdart.dart';
 
 import 'connection_controller.dart';
-import 'constants.dart';
 import 'core/accounts_storage/accounts_storage.dart';
 import 'core/accounts_storage/models/assets_list.dart';
 import 'core/accounts_storage/models/wallet_type.dart';
 import 'core/token_wallet/get_token_wallet_info.dart';
-import 'core/ton_wallet/find_existing_wallets.dart';
 import 'models/nekoton_exception.dart';
 import 'transport/gql_transport.dart';
 
@@ -57,32 +55,6 @@ class AccountsStorageController {
     _accountsSubject.add(accounts);
 
     return account;
-  }
-
-  Future<List<AssetsList>> findExistingAccounts(String publicKey) async {
-    final transport = _connectionController.transport as GqlTransport;
-
-    final wallets = await findExistingWallets(
-      transport: transport,
-      publicKey: publicKey,
-      workchainId: kDefaultWorkchain,
-    );
-
-    final activeWallets = wallets.where((e) => e.contractState.isDeployed || e.contractState.balance != '0');
-
-    final accounts = <AssetsList>[];
-
-    for (final activeWallet in activeWallets) {
-      final account = await addAccount(
-        name: activeWallet.walletType.describe(),
-        publicKey: publicKey,
-        walletType: activeWallet.walletType,
-        workchain: kDefaultWorkchain,
-      );
-      accounts.add(account);
-    }
-
-    return accounts;
   }
 
   Future<AssetsList> renameAccount({

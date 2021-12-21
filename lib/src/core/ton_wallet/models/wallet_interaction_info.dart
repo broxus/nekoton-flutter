@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import 'known_payload.dart';
 import 'wallet_interaction_method.dart';
@@ -12,10 +13,11 @@ class WalletInteractionInfo with _$WalletInteractionInfo {
     fieldRename: FieldRename.snake,
     explicitToJson: true,
   )
+  @HiveType(typeId: 48)
   const factory WalletInteractionInfo({
-    required String? recipient,
-    required KnownPayload? knownPayload,
-    required WalletInteractionMethod method,
+    @HiveField(0) required String? recipient,
+    @HiveField(1) required KnownPayload? knownPayload,
+    @HiveField(2) required WalletInteractionMethod method,
   }) = _WalletInteractionInfo;
 
   factory WalletInteractionInfo.fromJson(Map<String, dynamic> json) => _$WalletInteractionInfoFromJson(json);
