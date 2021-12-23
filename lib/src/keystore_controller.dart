@@ -32,47 +32,35 @@ class KeystoreController {
     return _instance!;
   }
 
-  Stream<List<KeyStoreEntry>> get keysStream => _keysSubject.stream.distinct();
+  Stream<List<KeyStoreEntry>> get keysStream => _keysSubject.stream;
 
   List<KeyStoreEntry> get keys => _keysSubject.value;
 
-  Stream<KeyStoreEntry?> get currentKeyStream => _currentKeySubject.stream.distinct();
+  Stream<KeyStoreEntry?> get currentKeyStream => _currentKeySubject.stream;
 
   KeyStoreEntry? get currentKey => _currentKeySubject.value;
 
-  set currentKey(KeyStoreEntry? currentKey) {
+  Future<void> setCurrentKey(KeyStoreEntry? currentKey) async {
     _currentKeySubject.add(currentKey);
-    _preferences.setCurrentPublicKey(currentKey?.publicKey);
+    await _preferences.setCurrentPublicKey(currentKey?.publicKey);
   }
 
   Future<KeyStoreEntry> addKey(CreateKeyInput createKeyInput) async {
     final key = await _keystore.addKey(createKeyInput);
 
-    final keys = [..._keysSubject.value];
+    _keysSubject.add(await _keystore.entries);
 
-    keys
-      ..removeWhere((e) => e.publicKey == key.publicKey)
-      ..add(key)
-      ..sort();
-
-    _keysSubject.add(keys);
-
-    currentKey ??= _keysSubject.value.firstOrNull;
+    if (currentKey == null) {
+      await setCurrentKey(key);
+    }
 
     return key;
   }
 
   Future<KeyStoreEntry> updateKey(UpdateKeyInput updateKeyInput) async {
-    final keys = [..._keysSubject.value];
-
     final key = await _keystore.updateKey(updateKeyInput);
 
-    keys
-      ..removeWhere((e) => e.publicKey == key.publicKey)
-      ..add(key)
-      ..sort();
-
-    _keysSubject.add(keys);
+    _keysSubject.add(await _keystore.entries);
 
     return key;
   }
@@ -81,70 +69,50 @@ class KeystoreController {
 
   Future<bool> checkKeyPassword(SignInput signInput) => _keystore.checkKeyPassword(signInput);
 
+  Future<SignInput> getSignInput({
+    required String publicKey,
+    required String password,
+  }) =>
+      _keystore.getSignInput(
+        publicKey: publicKey,
+        password: password,
+      );
+
   Future<KeyStoreEntry?> removeKey(String publicKey) async {
-    final key = _keysSubject.value.firstWhereOrNull((e) => e.publicKey == publicKey);
+    final key = await _keystore.removeKey(publicKey);
 
-    if (key == null) {
-      return null;
-    }
+    _keysSubject.add(await _keystore.entries);
 
-    if (currentKey == key) {
-      final newCurrentKey = _keysSubject.value.firstWhereOrNull((e) => e != key);
-      currentKey = newCurrentKey;
-    }
-
-    final keys = [..._keysSubject.value];
-
-    keys
-      ..remove(key)
-      ..sort();
-
-    _keysSubject.add(keys);
-
-    await _keystore.removeKey(key.publicKey);
-
-    final derivedKeys = _keysSubject.value.where((e) => e.masterKey == key.publicKey);
+    final derivedKeys = _keysSubject.value.where((e) => e.masterKey == publicKey).map((e) => e.publicKey);
 
     for (final key in derivedKeys) {
-      await removeKey(key.publicKey);
+      await removeKey(key);
     }
 
     return key;
   }
 
   Future<void> clearKeystore() async {
-    currentKey = null;
-
-    _keysSubject.add([]);
-
     await _keystore.clear();
+
+    _keysSubject.add(await _keystore.entries);
+
+    await setCurrentKey(await _keystore.entries.then((e) => e.firstOrNull));
   }
 
   Future<void> _initialize() async {
     _keystore = await Keystore.getInstance();
     _preferences = await Preferences.getInstance();
 
-    final entries = await _keystore.entries;
-
-    _keysSubject.add([
-      ..._keysSubject.value,
-      ...entries..sort(),
-    ]);
+    _keysSubject.add(await _keystore.entries);
 
     final currentPublicKey = _preferences.getCurrentPublicKey();
 
     final key = keys.firstWhereOrNull((e) => e.publicKey == currentPublicKey);
 
-    currentKey = key ?? keys.firstOrNull;
+    await setCurrentKey(key ?? keys.firstOrNull);
 
-    keysStream
-        .transform<bool>(
-          StreamTransformer.fromHandlers(
-            handleData: (data, sink) => sink.add(data.isNotEmpty),
-          ),
-        )
-        .distinct()
-        .listen((event) {
+    keysStream.map((e) => e.isNotEmpty).listen((event) {
       if (!event) {
         loggedOutSubject.add(Object());
       }

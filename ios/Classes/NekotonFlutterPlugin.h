@@ -124,10 +124,7 @@ void get_token_wallet_contract_state(long long result_port, void *token_wallet);
 
 void token_wallet_prepare_transfer(long long result_port,
                                    void *token_wallet,
-                                   void *ton_wallet,
                                    void *transport,
-                                   char *public_key,
-                                   char *expiration,
                                    char *destination,
                                    char *tokens,
                                    unsigned int notify_receiver,
@@ -200,11 +197,11 @@ void ton_wallet_prepare_transfer(long long result_port,
                                  void *ton_wallet,
                                  void *transport,
                                  char *public_key,
-                                 char *expiration,
                                  char *destination,
                                  unsigned long long amount,
                                  char *body,
-                                 unsigned int is_comment);
+                                 unsigned int is_comment,
+                                 char *expiration);
 
 void ton_wallet_prepare_confirm_transaction(long long result_port,
                                             void *ton_wallet,
@@ -214,19 +211,11 @@ void ton_wallet_prepare_confirm_transaction(long long result_port,
                                             char *expiration);
 
 void prepare_add_ordinary_stake(long long result_port,
-                                void *ton_wallet,
-                                void *transport,
-                                char *public_key,
-                                char *expiration,
                                 char *depool,
                                 unsigned long long depool_fee,
                                 unsigned long long stake);
 
 void prepare_withdraw_part(long long result_port,
-                           void *ton_wallet,
-                           void *transport,
-                           char *public_key,
-                           char *expiration,
                            char *depool,
                            unsigned long long depool_fee,
                            unsigned long long withdraw_value);

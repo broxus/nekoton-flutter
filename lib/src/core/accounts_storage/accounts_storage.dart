@@ -40,10 +40,10 @@ class AccountsStorage {
 
     final string = cStringToDart(result);
     final json = jsonDecode(string) as List<dynamic>;
-    final jsonList = json.cast<Map<String, dynamic>>();
-    final list = jsonList.map((e) => AssetsList.fromJson(e)).toList();
+    final list = json.cast<Map<String, dynamic>>();
+    final accounts = list.map((e) => AssetsList.fromJson(e)).toList();
 
-    return list;
+    return accounts;
   }
 
   Future<AssetsList> addAccount({
@@ -69,9 +69,9 @@ class AccountsStorage {
 
     final string = cStringToDart(result);
     final json = jsonDecode(string) as Map<String, dynamic>;
-    final list = AssetsList.fromJson(json);
+    final account = AssetsList.fromJson(json);
 
-    return list;
+    return account;
   }
 
   Future<AssetsList> renameAccount({
@@ -91,9 +91,9 @@ class AccountsStorage {
 
     final string = cStringToDart(result);
     final json = jsonDecode(string) as Map<String, dynamic>;
-    final list = AssetsList.fromJson(json);
+    final account = AssetsList.fromJson(json);
 
-    return list;
+    return account;
   }
 
   Future<AssetsList?> removeAccount(String address) async {
@@ -109,9 +109,9 @@ class AccountsStorage {
 
     final string = cStringToDart(result);
     final json = jsonDecode(string) as Map<String, dynamic>?;
-    final list = json != null ? AssetsList.fromJson(json) : null;
+    final account = json != null ? AssetsList.fromJson(json) : null;
 
-    return list;
+    return account;
   }
 
   Future<AssetsList> addTokenWallet({
@@ -133,9 +133,9 @@ class AccountsStorage {
 
     final string = cStringToDart(result);
     final json = jsonDecode(string) as Map<String, dynamic>;
-    final list = AssetsList.fromJson(json);
+    final account = AssetsList.fromJson(json);
 
-    return list;
+    return account;
   }
 
   Future<AssetsList> removeTokenWallet({
@@ -157,9 +157,9 @@ class AccountsStorage {
 
     final string = cStringToDart(result);
     final json = jsonDecode(string) as Map<String, dynamic>;
-    final list = AssetsList.fromJson(json);
+    final account = AssetsList.fromJson(json);
 
-    return list;
+    return account;
   }
 
   Future<void> clear() => _nativeAccountsStorage.use(

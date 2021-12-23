@@ -10,6 +10,8 @@ class NativeGenericContract {
 
   NativeGenericContract(this._ptr);
 
+  bool get isNull => _ptr == null;
+
   Future<int> use(Future<int> Function(Pointer<Void> ptr) function) async {
     if (_ptr == null) {
       throw GenericContractNotFoundException();
@@ -22,14 +24,15 @@ class NativeGenericContract {
     if (_ptr == null) {
       throw GenericContractNotFoundException();
     } else {
+      final ptr = _ptr;
+      _ptr = null;
+
       await proceedAsync(
         (port) => nativeLibraryInstance.bindings.free_generic_contract(
           port,
-          _ptr!,
+          ptr!,
         ),
       );
-
-      _ptr = null;
     }
   }
 }

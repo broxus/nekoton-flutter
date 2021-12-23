@@ -10,6 +10,8 @@ class NativeGqlConnection {
 
   NativeGqlConnection(this._ptr);
 
+  bool get isNull => _ptr == null;
+
   Future<int> use(Future<int> Function(Pointer<Void> ptr) function) async {
     if (_ptr == null) {
       throw GqlConnectionNotFoundException();
@@ -22,14 +24,15 @@ class NativeGqlConnection {
     if (_ptr == null) {
       throw GqlConnectionNotFoundException();
     } else {
+      final ptr = _ptr;
+      _ptr = null;
+
       await proceedAsync(
         (port) => nativeLibraryInstance.bindings.free_gql_connection(
           port,
-          _ptr!,
+          ptr!,
         ),
       );
-
-      _ptr = null;
     }
   }
 }

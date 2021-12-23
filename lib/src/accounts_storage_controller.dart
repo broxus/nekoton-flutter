@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:collection/collection.dart';
 import 'package:rxdart/rxdart.dart';
 
 import 'connection_controller.dart';
@@ -29,7 +28,7 @@ class AccountsStorageController {
     return _instance!;
   }
 
-  Stream<List<AssetsList>> get accountsStream => _accountsSubject.stream.distinct();
+  Stream<List<AssetsList>> get accountsStream => _accountsSubject.stream;
 
   List<AssetsList> get accounts => _accountsSubject.value;
 
@@ -46,13 +45,7 @@ class AccountsStorageController {
       workchain: workchain,
     );
 
-    final accounts = [..._accountsSubject.value];
-
-    accounts
-      ..add(account)
-      ..sort();
-
-    _accountsSubject.add(accounts);
+    _accountsSubject.add(await _accountsStorage.accounts);
 
     return account;
   }
@@ -61,39 +54,20 @@ class AccountsStorageController {
     required String address,
     required String name,
   }) async {
-    final accounts = [..._accountsSubject.value];
-
     final account = await _accountsStorage.renameAccount(
       address: address,
       name: name,
     );
 
-    accounts
-      ..removeWhere((e) => e.address == account.address)
-      ..add(account)
-      ..sort();
-
-    _accountsSubject.add(accounts);
+    _accountsSubject.add(await _accountsStorage.accounts);
 
     return account;
   }
 
   Future<AssetsList?> removeAccount(String address) async {
-    final account = _accountsSubject.value.firstWhereOrNull((e) => e.address == address);
+    final account = await _accountsStorage.removeAccount(address);
 
-    if (account == null) {
-      return null;
-    }
-
-    final accounts = [..._accountsSubject.value];
-
-    accounts
-      ..removeWhere((e) => e.address == account.address)
-      ..sort();
-
-    _accountsSubject.add(accounts);
-
-    await _accountsStorage.removeAccount(account.address);
+    _accountsSubject.add(await _accountsStorage.accounts);
 
     return account;
   }
@@ -116,20 +90,13 @@ class AccountsStorageController {
 
     final networkGroup = _connectionController.transport.connectionData.group;
 
-    final accounts = [..._accountsSubject.value];
-
     final account = await _accountsStorage.addTokenWallet(
       address: address,
       rootTokenContract: rootTokenContract,
       networkGroup: networkGroup,
     );
 
-    accounts
-      ..removeWhere((e) => e.address == account.address)
-      ..add(account)
-      ..sort();
-
-    _accountsSubject.add(accounts);
+    _accountsSubject.add(await _accountsStorage.accounts);
 
     return account;
   }
@@ -140,39 +107,27 @@ class AccountsStorageController {
   }) async {
     final networkGroup = _connectionController.transport.connectionData.group;
 
-    final accounts = [..._accountsSubject.value];
-
     final account = await _accountsStorage.removeTokenWallet(
       address: address,
       rootTokenContract: rootTokenContract,
       networkGroup: networkGroup,
     );
 
-    accounts
-      ..removeWhere((e) => e.address == account.address)
-      ..add(account)
-      ..sort();
-
-    _accountsSubject.add(accounts);
+    _accountsSubject.add(await _accountsStorage.accounts);
 
     return account;
   }
 
   Future<void> clearAccountsStorage() async {
-    _accountsSubject.add([]);
-
     await _accountsStorage.clear();
+
+    _accountsSubject.add(await _accountsStorage.accounts);
   }
 
   Future<void> _initialize() async {
     _accountsStorage = await AccountsStorage.getInstance();
     _connectionController = await ConnectionController.getInstance();
 
-    final accounts = await _accountsStorage.accounts;
-
-    _accountsSubject.add([
-      ..._accountsSubject.value,
-      ...accounts..sort(),
-    ]);
+    _accountsSubject.add(await _accountsStorage.accounts);
   }
 }

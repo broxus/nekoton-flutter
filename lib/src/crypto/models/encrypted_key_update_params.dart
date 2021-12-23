@@ -1,13 +1,12 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'password.dart';
-import 'update_key_input.dart';
 
 part 'encrypted_key_update_params.freezed.dart';
 part 'encrypted_key_update_params.g.dart';
 
 @Freezed(unionValueCase: FreezedUnionCase.pascal)
-class EncryptedKeyUpdateParams with _$EncryptedKeyUpdateParams implements UpdateKeyInput {
+class EncryptedKeyUpdateParams with _$EncryptedKeyUpdateParams {
   @JsonSerializable(fieldRename: FieldRename.snake)
   const factory EncryptedKeyUpdateParams.rename({
     required String publicKey,

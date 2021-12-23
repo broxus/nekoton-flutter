@@ -1,13 +1,12 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'password.dart';
-import 'update_key_input.dart';
 
 part 'derived_key_update_params.freezed.dart';
 part 'derived_key_update_params.g.dart';
 
 @Freezed(unionValueCase: FreezedUnionCase.pascal)
-class DerivedKeyUpdateParams with _$DerivedKeyUpdateParams implements UpdateKeyInput {
+class DerivedKeyUpdateParams with _$DerivedKeyUpdateParams {
   @JsonSerializable(fieldRename: FieldRename.snake)
   const factory DerivedKeyUpdateParams.renameKey({
     required String masterKey,

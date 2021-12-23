@@ -563,10 +563,14 @@ Future<SendMessageOutput> sendMessage({
     isComment: false,
   );
 
-  final pendingTransaction = await tonWallet.send(
-    message: message,
+  final signInput = await instance.keystoreController.getSignInput(
     publicKey: tonWallet.publicKey,
     password: password,
+  );
+
+  final pendingTransaction = await tonWallet.send(
+    message: message,
+    signInput: signInput,
   );
 
   final transaction = await tonWallet.waitForTransaction(pendingTransaction);
@@ -624,18 +628,26 @@ Future<SendExternalMessageOutput> sendExternalMessage({
 
   Transaction transaction;
   if (input.local == true) {
-    transaction = await genericContract.executeTransactionLocally(
-      message: message,
+    final signInput = await instance.keystoreController.getSignInput(
       publicKey: selectedPublicKey,
       password: password,
+    );
+
+    transaction = await genericContract.executeTransactionLocally(
+      message: message,
+      signInput: signInput,
       options: const TransactionExecutionOptions(disableSignatureCheck: false),
     );
     message.nativeUnsignedMessage.free();
   } else {
-    final pendingTransaction = await genericContract.send(
-      message: message,
+    final signInput = await instance.keystoreController.getSignInput(
       publicKey: selectedPublicKey,
       password: password,
+    );
+
+    final pendingTransaction = await genericContract.send(
+      message: message,
+      signInput: signInput,
     );
     message.nativeUnsignedMessage.free();
 

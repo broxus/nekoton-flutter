@@ -10,6 +10,8 @@ class NativeTonWallet {
 
   NativeTonWallet(this._ptr);
 
+  bool get isNull => _ptr == null;
+
   Future<int> use(Future<int> Function(Pointer<Void> ptr) function) async {
     if (_ptr == null) {
       throw TonWalletNotFoundException();
@@ -22,14 +24,15 @@ class NativeTonWallet {
     if (_ptr == null) {
       throw TonWalletNotFoundException();
     } else {
+      final ptr = _ptr;
+      _ptr = null;
+
       await proceedAsync(
         (port) => nativeLibraryInstance.bindings.free_ton_wallet(
           port,
-          _ptr!,
+          ptr!,
         ),
       );
-
-      _ptr = null;
     }
   }
 }

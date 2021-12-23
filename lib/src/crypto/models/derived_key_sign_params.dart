@@ -1,13 +1,12 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import 'password.dart';
-import 'sign_input.dart';
 
 part 'derived_key_sign_params.freezed.dart';
 part 'derived_key_sign_params.g.dart';
 
 @Freezed(unionValueCase: FreezedUnionCase.pascal)
-class DerivedKeySignParams with _$DerivedKeySignParams implements SignInput {
+class DerivedKeySignParams with _$DerivedKeySignParams {
   @JsonSerializable(
     fieldRename: FieldRename.snake,
     explicitToJson: true,

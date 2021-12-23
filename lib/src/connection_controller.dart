@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:collection/collection.dart';
 import 'package:rxdart/rxdart.dart';
 
 import 'constants.dart';
@@ -34,7 +35,7 @@ class ConnectionController {
     return _instance!;
   }
 
-  Stream<Transport> get transportStream => _transportSubject.stream.distinct();
+  Stream<Transport> get transportStream => _transportSubject.stream;
 
   Transport get transport => _transportSubject.value;
 
@@ -81,21 +82,14 @@ class ConnectionController {
   Future<void> _initialize() async {
     _preferences = await Preferences.getInstance();
 
-    final currentConnection = kNetworkPresets.firstWhere(
+    final currentConnection = kNetworkPresets.firstWhereOrNull(
       (e) => e.name == _preferences.getCurrentConnection(),
-      orElse: () => kNetworkPresets.first,
     );
 
-    await updateTransport(currentConnection);
+    await updateTransport(currentConnection ?? kNetworkPresets.first);
 
     transportStream
-        .transform<String>(
-      StreamTransformer.fromHandlers(
-        handleData: (data, sink) => sink.add(data.connectionData.name),
-      ),
-    )
-        .listen((event) {
-      networkChangedSubject.add(NetworkChangedEvent(selectedConnection: event));
-    });
+        .map((e) => e.connectionData.name)
+        .listen((event) => networkChangedSubject.add(NetworkChangedEvent(selectedConnection: event)));
   }
 }

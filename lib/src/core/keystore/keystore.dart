@@ -2,11 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi';
 
+import 'package:collection/collection.dart';
 import 'package:ffi/ffi.dart';
 
 import '../../crypto/models/create_key_input.dart';
 import '../../crypto/models/derived_key_export_output.dart';
-import '../../crypto/models/derived_key_export_params.dart';
 import '../../crypto/models/derived_key_sign_params.dart';
 import '../../crypto/models/encrypted_key_export_output.dart';
 import '../../crypto/models/encrypted_key_password.dart';
@@ -52,14 +52,17 @@ class Keystore {
 
     final string = cStringToDart(result);
     final json = jsonDecode(string) as List<dynamic>;
-    final jsonList = json.cast<Map<String, dynamic>>();
-    final list = jsonList.map((e) => KeyStoreEntry.fromJson(e)).toList();
+    final list = json.cast<Map<String, dynamic>>();
+    final keys = list.map((e) => KeyStoreEntry.fromJson(e)).toList();
 
-    return list;
+    return keys;
   }
 
   Future<KeyStoreEntry> addKey(CreateKeyInput createKeyInput) async {
-    final createKeyInputStr = jsonEncode(createKeyInput);
+    final createKeyInputStr = createKeyInput.when(
+      derivedKeyCreateInput: (derivedKeyCreateInput) => jsonEncode(derivedKeyCreateInput),
+      encryptedKeyCreateInput: (encryptedKeyCreateInput) => jsonEncode(encryptedKeyCreateInput),
+    );
 
     final result = await nativeKeystore.use(
       (ptr) => proceedAsync(
@@ -73,13 +76,16 @@ class Keystore {
 
     final string = cStringToDart(result);
     final json = jsonDecode(string) as Map<String, dynamic>;
-    final entry = KeyStoreEntry.fromJson(json);
+    final key = KeyStoreEntry.fromJson(json);
 
-    return entry;
+    return key;
   }
 
   Future<KeyStoreEntry> updateKey(UpdateKeyInput updateKeyInput) async {
-    final updateKeyInputStr = jsonEncode(updateKeyInput);
+    final updateKeyInputStr = updateKeyInput.when(
+      derivedKeyUpdateParams: (derivedKeyUpdateParams) => jsonEncode(derivedKeyUpdateParams),
+      encryptedKeyUpdateParams: (encryptedKeyUpdateParams) => jsonEncode(encryptedKeyUpdateParams),
+    );
 
     final result = await nativeKeystore.use(
       (ptr) => proceedAsync(
@@ -93,13 +99,16 @@ class Keystore {
 
     final string = cStringToDart(result);
     final json = jsonDecode(string) as Map<String, dynamic>;
-    final entry = KeyStoreEntry.fromJson(json);
+    final key = KeyStoreEntry.fromJson(json);
 
-    return entry;
+    return key;
   }
 
   Future<ExportKeyOutput> exportKey(ExportKeyInput exportKeyInput) async {
-    final exportKeyInputStr = jsonEncode(exportKeyInput);
+    final exportKeyInputStr = exportKeyInput.when(
+      derivedKeyExportParams: (derivedKeyExportParams) => jsonEncode(derivedKeyExportParams),
+      encryptedKeyPassword: (encryptedKeyPassword) => jsonEncode(encryptedKeyPassword),
+    );
 
     final result = await nativeKeystore.use(
       (ptr) => proceedAsync(
@@ -114,17 +123,21 @@ class Keystore {
     final string = cStringToDart(result);
     final json = jsonDecode(string) as Map<String, dynamic>;
 
-    if (exportKeyInput is DerivedKeyExportParams) {
-      return DerivedKeyExportOutput.fromJson(json);
-    } else if (exportKeyInput is EncryptedKeyPassword) {
-      return EncryptedKeyExportOutput.fromJson(json);
-    } else {
-      throw UnknownSignerException();
-    }
+    return exportKeyInput.when(
+      derivedKeyExportParams: (_) => ExportKeyOutput.encryptedKeyExportOutput(
+        EncryptedKeyExportOutput.fromJson(json),
+      ),
+      encryptedKeyPassword: (_) => ExportKeyOutput.derivedKeyExportOutput(
+        DerivedKeyExportOutput.fromJson(json),
+      ),
+    );
   }
 
   Future<bool> checkKeyPassword(SignInput signInput) async {
-    final signInputStr = jsonEncode(signInput);
+    final signInputStr = signInput.when(
+      derivedKeySignParams: (derivedKeySignParams) => jsonEncode(derivedKeySignParams),
+      encryptedKeyPassword: (encryptedKeyPassword) => jsonEncode(encryptedKeyPassword),
+    );
 
     final result = await nativeKeystore.use(
       (ptr) => proceedAsync(
@@ -139,26 +152,37 @@ class Keystore {
     return result == 1;
   }
 
-  SignInput getSignInput({
-    required KeyStoreEntry entry,
+  Future<SignInput> getSignInput({
+    required String publicKey,
     required String password,
-  }) =>
-      entry.isLegacy
-          ? EncryptedKeyPassword(
-              publicKey: entry.publicKey,
+  }) async {
+    final key = await entries.then((e) => e.firstWhereOrNull((e) => e.publicKey == publicKey));
+
+    if (key == null) {
+      throw KeyNotFoundException();
+    }
+
+    return key.isLegacy
+        ? SignInput.encryptedKeyPassword(
+            EncryptedKeyPassword(
+              publicKey: key.publicKey,
               password: Password.explicit(
                 password: password,
                 cacheBehavior: const PasswordCacheBehavior.remove(),
               ),
-            )
-          : DerivedKeySignParams.byAccountId(
-              masterKey: entry.masterKey,
-              accountId: entry.accountId,
+            ),
+          )
+        : SignInput.derivedKeySignParams(
+            DerivedKeySignParams.byAccountId(
+              masterKey: key.masterKey,
+              accountId: key.accountId,
               password: Password.explicit(
                 password: password,
                 cacheBehavior: const PasswordCacheBehavior.remove(),
               ),
-            );
+            ),
+          );
+  }
 
   Future<KeyStoreEntry?> removeKey(String publicKey) async {
     final result = await nativeKeystore.use(
@@ -173,9 +197,9 @@ class Keystore {
 
     final string = cStringToDart(result);
     final json = jsonDecode(string) as Map<String, dynamic>?;
-    final entry = json != null ? KeyStoreEntry.fromJson(json) : null;
+    final key = json != null ? KeyStoreEntry.fromJson(json) : null;
 
-    return entry;
+    return key;
   }
 
   Future<void> clear() => nativeKeystore.use(

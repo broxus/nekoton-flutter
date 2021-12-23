@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:ffi';
 import 'dart:isolate';
 
-import 'package:collection/collection.dart';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:rxdart/rxdart.dart';
@@ -11,6 +10,7 @@ import 'package:tuple/tuple.dart';
 
 import '../../constants.dart';
 import '../../core/keystore/keystore.dart';
+import '../../crypto/models/sign_input.dart';
 import '../../ffi_utils.dart';
 import '../../models/nekoton_exception.dart';
 import '../../nekoton.dart';
@@ -126,22 +126,14 @@ class GenericContract {
 
   Future<PendingTransaction> send({
     required UnsignedMessage message,
-    required String publicKey,
-    required String password,
+    required SignInput signInput,
   }) async {
-    final list = await _keystore.entries;
-    final entry = list.firstWhereOrNull((e) => e.publicKey == publicKey);
-
-    if (entry == null) {
-      throw GenericContractReadOnlyException();
-    }
+    final signInputStr = signInput.when(
+      derivedKeySignParams: (derivedKeySignParams) => jsonEncode(derivedKeySignParams),
+      encryptedKeyPassword: (encryptedKeyPassword) => jsonEncode(encryptedKeyPassword),
+    );
 
     final currentBlockId = await _transport.getLatestBlockId(address);
-    final signInput = _keystore.getSignInput(
-      entry: entry,
-      password: password,
-    );
-    final signInputStr = jsonEncode(signInput);
 
     final result = await _nativeGenericContract.use(
       (ptr) => _keystore.nativeKeystore.use(
@@ -213,22 +205,14 @@ class GenericContract {
 
   Future<Transaction> executeTransactionLocally({
     required UnsignedMessage message,
-    required String publicKey,
-    required String password,
+    required SignInput signInput,
     required TransactionExecutionOptions options,
   }) async {
-    final list = await _keystore.entries;
-    final entry = list.firstWhereOrNull((e) => e.publicKey == publicKey);
-
-    if (entry == null) {
-      throw GenericContractReadOnlyException();
-    }
-
-    final signInput = _keystore.getSignInput(
-      entry: entry,
-      password: password,
+    final signInputStr = signInput.when(
+      derivedKeySignParams: (derivedKeySignParams) => jsonEncode(derivedKeySignParams),
+      encryptedKeyPassword: (encryptedKeyPassword) => jsonEncode(encryptedKeyPassword),
     );
-    final signInputStr = jsonEncode(signInput);
+
     final optionsStr = jsonEncode(options);
 
     final result = await _nativeGenericContract.use(
@@ -315,7 +299,7 @@ class GenericContract {
 
     _receivePort.close();
 
-    return _nativeGenericContract.free();
+    await _nativeGenericContract.free();
   }
 
   Future<void> _handleBlock(String id) => _nativeGenericContract.use(
@@ -334,6 +318,8 @@ class GenericContract {
   Future<void> _internalRefresh(String currentBlockId) async {
     for (var i = 0; 0 < 10; i++) {
       try {
+        if (_nativeGenericContract.isNull) break;
+
         final nextBlockId = await _transport.waitForNextBlockId(
           currentBlockId: currentBlockId,
           address: address,
@@ -342,11 +328,10 @@ class GenericContract {
         await _handleBlock(nextBlockId);
         await refresh();
 
-        if (await _pollingMethod == PollingMethod.manual) {
-          break;
-        }
+        if (await _pollingMethod == PollingMethod.manual) break;
       } catch (err, st) {
-        nekotonLogger?.e(err, err, st);
+        logger?.e(err, err, st);
+        break;
       }
     }
   }
@@ -386,73 +371,87 @@ class GenericContract {
 
   Future<void> _subscriptionListener(dynamic data) async {
     try {
-      if (data is! String) {
-        return;
-      }
+      if (data is! String) return;
 
       final json = jsonDecode(data) as Map<String, dynamic>;
       final message = SubscriptionHandlerMessage.fromJson(json);
 
       switch (message.event) {
         case 'on_message_sent':
-          final json = jsonDecode(message.payload) as Map<String, dynamic>;
-          final payload = OnMessageSentPayload.fromJson(json);
-
-          final sent = [
-            Tuple2(payload.pendingTransaction, payload.transaction),
-            ..._onMessageSentSubject.value.where((e) => e.item1 != payload.pendingTransaction).toList(),
-          ];
-
-          _onMessageSentSubject.add(sent);
+          await _onMessageSentHandler(message.payload);
           break;
         case 'on_message_expired':
-          final json = jsonDecode(message.payload) as Map<String, dynamic>;
-          final payload = OnMessageExpiredPayload.fromJson(json);
-
-          final sent = _onMessageSentSubject.value.where((e) => e.item1 != payload.pendingTransaction).toList();
-
-          _onMessageSentSubject.add(sent);
-
-          final expired = [
-            payload.pendingTransaction,
-            ..._onMessageExpiredSubject.value,
-          ];
-
-          _onMessageExpiredSubject.add(expired);
+          await _onMessageExpiredHandler(message.payload);
           break;
         case 'on_state_changed':
-          final json = jsonDecode(message.payload) as Map<String, dynamic>;
-          final payload = OnStateChangedPayload.fromJson(json);
-
-          _onStateChangedSubject.add(payload.newState);
+          await _onStateChangedHandler(message.payload);
           break;
         case 'on_transactions_found':
-          final json = jsonDecode(message.payload) as Map<String, dynamic>;
-          final payload = OnTransactionsFoundPayload.fromJson(json);
-
-          _onTransactionsFoundRawSubject.add(
-            Tuple2(payload.transactions, payload.batchInfo),
-          );
-
-          if (payload.batchInfo.batchType == TransactionsBatchType.newTransactions) {
-            final transactions = payload.transactions.toList();
-
-            final sent = _onMessageSentSubject.value.where((e) => transactions.any((el) => el != e.item2)).toList();
-
-            _onMessageSentSubject.add(sent);
-          }
-
-          final transactions = [
-            ...payload.transactions,
-            ..._onTransactionsFoundSubject.value,
-          ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-          _onTransactionsFoundSubject.add(transactions);
+          await _onTransactionsFoundHandler(message.payload);
           break;
       }
     } catch (err, st) {
-      nekotonLogger?.e(err, err, st);
+      logger?.e(err, err, st);
     }
+  }
+
+  Future<void> _onMessageSentHandler(String data) async {
+    final json = jsonDecode(data) as Map<String, dynamic>;
+    final payload = OnMessageSentPayload.fromJson(json);
+
+    final sent = [
+      Tuple2(payload.pendingTransaction, payload.transaction),
+      ..._onMessageSentSubject.value.where((e) => e.item1 != payload.pendingTransaction),
+    ];
+
+    _onMessageSentSubject.add(sent);
+  }
+
+  Future<void> _onMessageExpiredHandler(String data) async {
+    final json = jsonDecode(data) as Map<String, dynamic>;
+    final payload = OnMessageExpiredPayload.fromJson(json);
+
+    final sent = _onMessageSentSubject.value.where((e) => e.item1 != payload.pendingTransaction).toList();
+
+    _onMessageSentSubject.add(sent);
+
+    final expired = [
+      payload.pendingTransaction,
+      ..._onMessageExpiredSubject.value,
+    ];
+
+    _onMessageExpiredSubject.add(expired);
+  }
+
+  Future<void> _onStateChangedHandler(String data) async {
+    final json = jsonDecode(data) as Map<String, dynamic>;
+    final payload = OnStateChangedPayload.fromJson(json);
+
+    _onStateChangedSubject.add(payload.newState);
+  }
+
+  Future<void> _onTransactionsFoundHandler(String data) async {
+    final json = jsonDecode(data) as Map<String, dynamic>;
+    final payload = OnTransactionsFoundPayload.fromJson(json);
+
+    _onTransactionsFoundRawSubject.add(
+      Tuple2(payload.transactions, payload.batchInfo),
+    );
+
+    if (payload.batchInfo.batchType == TransactionsBatchType.newTransactions) {
+      final transactions = payload.transactions;
+
+      final sent = _onMessageSentSubject.value.where((e) => transactions.any((el) => el != e.item2)).toList();
+
+      _onMessageSentSubject.add(sent);
+    }
+
+    final transactions = [
+      ...payload.transactions,
+      ..._onTransactionsFoundSubject.value,
+    ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    _onTransactionsFoundSubject.add(transactions);
   }
 
   void _onContractStateChangedSubscriptionListener(ContractState event) => contractStateChangedSubject.add(
@@ -473,13 +472,16 @@ class GenericContract {
 
   Future<void> _refreshTimer(Timer timer) async {
     try {
-      if (await _pollingMethod == PollingMethod.reliable) {
+      if (_nativeGenericContract.isNull) {
+        timer.cancel();
         return;
       }
 
+      if (await _pollingMethod == PollingMethod.reliable) return;
+
       await refresh();
     } catch (err, st) {
-      nekotonLogger?.e(err, err, st);
+      logger?.e(err, err, st);
     }
   }
 }

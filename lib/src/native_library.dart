@@ -49,14 +49,14 @@ class NativeLibrary {
       try {
         return DynamicLibrary.open('libnekoton_flutter.so');
       } catch (err, st) {
-        nekotonLogger?.e(err, err, st);
+        logger?.e(err, err, st);
 
         try {
           final nativeLibraryDir = (await _methodChannel.invokeMethod<String>('getNativeLibraryDir'))!;
 
           return DynamicLibrary.open('$nativeLibraryDir/libnekoton_flutter.so');
         } catch (err, st) {
-          nekotonLogger?.e(err, err, st);
+          logger?.e(err, err, st);
 
           final appIdAsBytes = File('/proc/self/cmdline').readAsBytesSync();
           final endOfAppId = max(appIdAsBytes.indexOf(0), 0);
@@ -66,14 +66,14 @@ class NativeLibrary {
         }
       }
     } catch (err, st) {
-      nekotonLogger?.e(err, err, st);
+      logger?.e(err, err, st);
 
       try {
         await _methodChannel.invokeMethod('loadLibrary', 'nekoton_flutter');
 
         return DynamicLibrary.open('libnekoton_flutter.so');
       } catch (err, st) {
-        nekotonLogger?.e(err, err, st);
+        logger?.e(err, err, st);
         rethrow;
       }
     }

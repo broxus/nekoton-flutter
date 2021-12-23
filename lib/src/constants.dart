@@ -9,7 +9,7 @@ const kTonDecimals = 9;
 
 const kProviderVersion = '0.2.13';
 
-const kGqlRefreshPeriod = Duration(seconds: 15);
+const kGqlRefreshPeriod = Duration(seconds: 10);
 
 const kRequestTimeout = Duration(seconds: 30);
 

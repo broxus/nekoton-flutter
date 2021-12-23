@@ -1,12 +1,10 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import 'export_key_output.dart';
-
 part 'derived_key_export_output.freezed.dart';
 part 'derived_key_export_output.g.dart';
 
 @freezed
-class DerivedKeyExportOutput with _$DerivedKeyExportOutput implements ExportKeyOutput {
+class DerivedKeyExportOutput with _$DerivedKeyExportOutput {
   const factory DerivedKeyExportOutput({
     required String phrase,
   }) = _DerivedKeyExportOutput;

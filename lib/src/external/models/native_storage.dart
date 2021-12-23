@@ -10,6 +10,8 @@ class NativeStorage {
 
   NativeStorage(this._ptr);
 
+  bool get isNull => _ptr == null;
+
   Future<int> use(Future<int> Function(Pointer<Void> ptr) function) async {
     if (_ptr == null) {
       throw StorageNotFoundException();
@@ -22,14 +24,15 @@ class NativeStorage {
     if (_ptr == null) {
       throw StorageNotFoundException();
     } else {
+      final ptr = _ptr;
+      _ptr = null;
+
       await proceedAsync(
         (port) => nativeLibraryInstance.bindings.free_storage(
           port,
-          _ptr!,
+          ptr!,
         ),
       );
-
-      _ptr = null;
     }
   }
 }

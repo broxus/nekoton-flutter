@@ -6,6 +6,7 @@ part 'token_swap_back.g.dart';
 
 @freezed
 class TokenSwapBack with _$TokenSwapBack {
+  @JsonSerializable(fieldRename: FieldRename.snake)
   @HiveType(typeId: 14)
   const factory TokenSwapBack({
     @HiveField(0) required String tokens,

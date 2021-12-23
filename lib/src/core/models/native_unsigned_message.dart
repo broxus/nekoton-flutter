@@ -9,6 +9,8 @@ class NativeUnsignedMessage {
 
   NativeUnsignedMessage(this._ptr);
 
+  bool get isNull => _ptr == null;
+
   Future<int> use(Future<int> Function(Pointer<Void> ptr) function) async {
     await _completer?.future;
 

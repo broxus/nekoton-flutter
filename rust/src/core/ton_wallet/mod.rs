@@ -34,8 +34,6 @@ use std::{
     sync::Arc,
 };
 use tokio::sync::Mutex;
-use ton_block::MsgAddressInt;
-use ton_types::SliceData;
 
 pub const TON_WALLET_NOT_FOUND: &str = "Ton wallet not found";
 const NOT_EXISTS: &str = "Not exists";
@@ -925,11 +923,11 @@ pub unsafe extern "C" fn ton_wallet_prepare_transfer(
     ton_wallet: *mut c_void,
     transport: *mut c_void,
     public_key: *mut c_char,
-    expiration: *mut c_char,
     destination: *mut c_char,
     amount: c_ulonglong,
     body: *mut c_char,
     is_comment: c_uint,
+    expiration: *mut c_char,
 ) {
     let ton_wallet = ton_wallet as *mut MutexTonWallet;
     let ton_wallet = &(*ton_wallet);
@@ -938,14 +936,14 @@ pub unsafe extern "C" fn ton_wallet_prepare_transfer(
     let transport = &(*transport);
 
     let public_key = public_key.from_ptr();
-    let is_comment = is_comment != 0;
-    let expiration = expiration.from_ptr();
     let destination = destination.from_ptr();
     let body = if !body.is_null() {
         Some(body.from_ptr())
     } else {
         None
     };
+    let is_comment = is_comment != 0;
+    let expiration = expiration.from_ptr();
 
     let rt = runtime!();
     rt.spawn(async move {
@@ -980,27 +978,15 @@ pub unsafe extern "C" fn ton_wallet_prepare_transfer(
             }
         };
 
-        let result =
-            internal_ton_wallet_prepare_transfer_params(expiration, destination, body, is_comment)
-                .await;
-        let (expiration, destination, body) = match result {
-            Ok((expiration, destination, body)) => (expiration, destination, body),
-            Err(error) => {
-                *ton_wallet_guard = Some(ton_wallet);
-                let result = match_result(Err(error));
-                send_to_result_port(result_port, result);
-                return;
-            }
-        };
-
         let result = internal_ton_wallet_prepare_transfer(
             &mut ton_wallet,
             transport.clone(),
             public_key,
-            expiration,
             destination,
             amount,
             body,
+            is_comment,
+            expiration,
         )
         .await;
         let result = match_result(result);
@@ -1012,23 +998,20 @@ pub unsafe extern "C" fn ton_wallet_prepare_transfer(
     });
 }
 
-pub async fn internal_ton_wallet_prepare_transfer_params(
-    expiration: String,
+pub async fn internal_ton_wallet_prepare_transfer(
+    ton_wallet: &mut TonWallet,
+    transport: Arc<GqlTransport>,
+    public_key: String,
     destination: String,
+    amount: u64,
     body: Option<String>,
     is_comment: bool,
-) -> Result<
-    (
-        nekoton::core::models::Expiration,
-        MsgAddressInt,
-        Option<SliceData>,
-    ),
-    NativeError,
-> {
-    let expiration = serde_json::from_str::<Expiration>(&expiration)
-        .handle_error(NativeStatus::ConversionError)?;
-    let expiration = expiration.to_core();
+    expiration: String,
+) -> Result<u64, NativeError> {
+    let public_key = parse_public_key(&public_key)?;
+
     let destination = parse_address(&destination)?;
+
     let body = match body {
         Some(body) => {
             let body = if is_comment {
@@ -1041,19 +1024,9 @@ pub async fn internal_ton_wallet_prepare_transfer_params(
         None => None,
     };
 
-    Ok((expiration, destination, body))
-}
-
-pub async fn internal_ton_wallet_prepare_transfer(
-    ton_wallet: &mut TonWallet,
-    transport: Arc<GqlTransport>,
-    public_key: String,
-    expiration: nekoton::core::models::Expiration,
-    destination: MsgAddressInt,
-    amount: u64,
-    body: Option<SliceData>,
-) -> Result<u64, NativeError> {
-    let public_key = parse_public_key(&public_key)?;
+    let expiration = serde_json::from_str::<Expiration>(&expiration)
+        .handle_error(NativeStatus::ConversionError)?;
+    let expiration = expiration.to_core();
 
     let address = ton_wallet.address();
 
@@ -1218,210 +1191,67 @@ pub async fn internal_ton_wallet_prepare_confirm_transaction(
 #[no_mangle]
 pub unsafe extern "C" fn prepare_add_ordinary_stake(
     result_port: c_longlong,
-    ton_wallet: *mut c_void,
-    transport: *mut c_void,
-    public_key: *mut c_char,
-    expiration: *mut c_char,
     depool: *mut c_char,
     depool_fee: c_ulonglong,
     stake: c_ulonglong,
 ) {
-    let ton_wallet = ton_wallet as *mut MutexTonWallet;
-    let ton_wallet = &(*ton_wallet);
-
-    let transport = transport as *mut MutexGqlTransport;
-    let transport = &(*transport);
-
-    let public_key = public_key.from_ptr();
-    let expiration = expiration.from_ptr();
     let depool = depool.from_ptr();
 
     let rt = runtime!();
     rt.spawn(async move {
-        let mut ton_wallet_guard = ton_wallet.lock().await;
-        let ton_wallet = ton_wallet_guard.take();
-        let mut ton_wallet = match ton_wallet {
-            Some(ton_wallet) => ton_wallet,
-            None => {
-                let result = match_result(Err(NativeError {
-                    status: NativeStatus::MutexError,
-                    info: TON_WALLET_NOT_FOUND.to_owned(),
-                }));
-                send_to_result_port(result_port, result);
-                return;
-            }
-        };
-
-        let mut transport_guard = transport.lock().await;
-        let transport = transport_guard.take();
-        let transport = match transport {
-            Some(transport) => transport,
-            None => {
-                let result = match_result(Err(NativeError {
-                    status: NativeStatus::MutexError,
-                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
-                }));
-
-                *ton_wallet_guard = Some(ton_wallet);
-
-                send_to_result_port(result_port, result);
-                return;
-            }
-        };
-
-        let result = internal_prepare_add_ordinary_stake(
-            &mut ton_wallet,
-            transport.clone(),
-            public_key,
-            expiration,
-            depool,
-            depool_fee,
-            stake,
-        )
-        .await;
+        let result = internal_prepare_add_ordinary_stake(depool, depool_fee, stake).await;
         let result = match_result(result);
-
-        *ton_wallet_guard = Some(ton_wallet);
-        *transport_guard = Some(transport);
 
         send_to_result_port(result_port, result);
     });
 }
 
 async fn internal_prepare_add_ordinary_stake(
-    ton_wallet: &mut TonWallet,
-    transport: Arc<GqlTransport>,
-    public_key: String,
-    expiration: String,
     depool: String,
     depool_fee: c_ulonglong,
     stake: c_ulonglong,
 ) -> Result<u64, NativeError> {
-    let expiration = serde_json::from_str::<Expiration>(&expiration)
-        .handle_error(NativeStatus::ConversionError)?;
-    let expiration = expiration.to_core();
     let depool = parse_address(&depool)?;
 
-    let internal_message = nekoton_depool::prepare_add_ordinary_stake(depool, depool_fee, stake)
+    let message = nekoton_depool::prepare_add_ordinary_stake(depool, depool_fee, stake)
         .handle_error(NativeStatus::AbiError)?;
+    let message = super::InternalMessage::from_core(message);
+    let message = serde_json::to_string(&message).handle_error(NativeStatus::ConversionError)?;
 
-    let result = internal_ton_wallet_prepare_transfer(
-        ton_wallet,
-        transport,
-        public_key,
-        expiration,
-        internal_message.destination,
-        internal_message.amount,
-        Some(internal_message.body),
-    )
-    .await?;
-
-    Ok(result)
+    Ok(message.to_ptr() as c_ulonglong)
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn prepare_withdraw_part(
     result_port: c_longlong,
-    ton_wallet: *mut c_void,
-    transport: *mut c_void,
-    public_key: *mut c_char,
-    expiration: *mut c_char,
     depool: *mut c_char,
     depool_fee: c_ulonglong,
     withdraw_value: c_ulonglong,
 ) {
-    let ton_wallet = ton_wallet as *mut MutexTonWallet;
-    let ton_wallet = &(*ton_wallet);
-
-    let transport = transport as *mut MutexGqlTransport;
-    let transport = &(*transport);
-
-    let public_key = public_key.from_ptr();
-    let expiration = expiration.from_ptr();
     let depool = depool.from_ptr();
 
     let rt = runtime!();
     rt.spawn(async move {
-        let mut ton_wallet_guard = ton_wallet.lock().await;
-        let ton_wallet = ton_wallet_guard.take();
-        let mut ton_wallet = match ton_wallet {
-            Some(ton_wallet) => ton_wallet,
-            None => {
-                let result = match_result(Err(NativeError {
-                    status: NativeStatus::MutexError,
-                    info: TON_WALLET_NOT_FOUND.to_owned(),
-                }));
-                send_to_result_port(result_port, result);
-                return;
-            }
-        };
-
-        let mut transport_guard = transport.lock().await;
-        let transport = transport_guard.take();
-        let transport = match transport {
-            Some(transport) => transport,
-            None => {
-                let result = match_result(Err(NativeError {
-                    status: NativeStatus::MutexError,
-                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
-                }));
-
-                *ton_wallet_guard = Some(ton_wallet);
-
-                send_to_result_port(result_port, result);
-                return;
-            }
-        };
-
-        let result = internal_prepare_withdraw_part(
-            &mut ton_wallet,
-            transport.clone(),
-            public_key,
-            expiration,
-            depool,
-            depool_fee,
-            withdraw_value,
-        )
-        .await;
+        let result = internal_prepare_withdraw_part(depool, depool_fee, withdraw_value).await;
         let result = match_result(result);
-
-        *ton_wallet_guard = Some(ton_wallet);
-        *transport_guard = Some(transport);
 
         send_to_result_port(result_port, result);
     });
 }
 
 async fn internal_prepare_withdraw_part(
-    ton_wallet: &mut TonWallet,
-    transport: Arc<GqlTransport>,
-    public_key: String,
-    expiration: String,
     depool: String,
     depool_fee: c_ulonglong,
     withdraw_value: c_ulonglong,
 ) -> Result<u64, NativeError> {
-    let expiration = serde_json::from_str::<Expiration>(&expiration)
-        .handle_error(NativeStatus::ConversionError)?;
-    let expiration = expiration.to_core();
     let depool = parse_address(&depool)?;
 
-    let internal_message =
-        nekoton_depool::prepare_withdraw_part(depool, depool_fee, withdraw_value)
-            .handle_error(NativeStatus::AbiError)?;
+    let message = nekoton_depool::prepare_withdraw_part(depool, depool_fee, withdraw_value)
+        .handle_error(NativeStatus::AbiError)?;
+    let message = super::InternalMessage::from_core(message);
+    let message = serde_json::to_string(&message).handle_error(NativeStatus::ConversionError)?;
 
-    let result = internal_ton_wallet_prepare_transfer(
-        ton_wallet,
-        transport,
-        public_key,
-        expiration,
-        internal_message.destination,
-        internal_message.amount,
-        Some(internal_message.body),
-    )
-    .await?;
-
-    Ok(result)
+    Ok(message.to_ptr() as c_ulonglong)
 }
 
 #[no_mangle]

@@ -10,6 +10,8 @@ class NativeGqlTransport {
 
   NativeGqlTransport(this._ptr);
 
+  bool get isNull => _ptr == null;
+
   Future<int> use(Future<int> Function(Pointer<Void> ptr) function) async {
     if (_ptr == null) {
       throw GqlTransportNotFoundException();
@@ -22,14 +24,15 @@ class NativeGqlTransport {
     if (_ptr == null) {
       throw GqlTransportNotFoundException();
     } else {
+      final ptr = _ptr;
+      _ptr = null;
+
       await proceedAsync(
         (port) => nativeLibraryInstance.bindings.free_gql_transport(
           port,
-          _ptr!,
+          ptr!,
         ),
       );
-
-      _ptr = null;
     }
   }
 }

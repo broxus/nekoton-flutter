@@ -1,14 +1,12 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import 'export_key_input.dart';
 import 'password.dart';
-import 'sign_input.dart';
 
 part 'encrypted_key_password.freezed.dart';
 part 'encrypted_key_password.g.dart';
 
 @freezed
-class EncryptedKeyPassword with _$EncryptedKeyPassword implements SignInput, ExportKeyInput {
+class EncryptedKeyPassword with _$EncryptedKeyPassword {
   @JsonSerializable(
     fieldRename: FieldRename.snake,
     explicitToJson: true,

@@ -2,13 +2,7 @@ pub mod handler;
 pub mod models;
 
 use crate::{
-    core::{
-        token_wallet::{handler::TokenWalletSubscriptionHandlerImpl, models::MutexTokenWallet},
-        ton_wallet::{
-            internal_ton_wallet_prepare_transfer, models::MutexTonWallet, TON_WALLET_NOT_FOUND,
-        },
-        Expiration,
-    },
+    core::token_wallet::{handler::TokenWalletSubscriptionHandlerImpl, models::MutexTokenWallet},
     match_result,
     models::{HandleError, NativeError, NativeStatus},
     parse_address, runtime, send_to_result_port,
@@ -16,7 +10,7 @@ use crate::{
     FromPtr, ToPtr, RUNTIME,
 };
 use nekoton::{
-    core::{models::TransferRecipient, token_wallet::TokenWallet, ton_wallet::TonWallet},
+    core::{models::TransferRecipient, token_wallet::TokenWallet},
     transport::gql::GqlTransport,
 };
 use nekoton_abi::{num_bigint::BigUint, TransactionId};
@@ -430,10 +424,6 @@ async fn internal_get_token_wallet_contract_state(
 pub unsafe extern "C" fn token_wallet_prepare_transfer(
     result_port: c_longlong,
     token_wallet: *mut c_void,
-    ton_wallet: *mut c_void,
-    transport: *mut c_void,
-    public_key: *mut c_char,
-    expiration: *mut c_char,
     destination: *mut c_char,
     tokens: *mut c_char,
     notify_receiver: c_uint,
@@ -442,14 +432,6 @@ pub unsafe extern "C" fn token_wallet_prepare_transfer(
     let token_wallet = token_wallet as *mut MutexTokenWallet;
     let token_wallet = &(*token_wallet);
 
-    let ton_wallet = ton_wallet as *mut MutexTonWallet;
-    let ton_wallet = &(*ton_wallet);
-
-    let transport = transport as *mut MutexGqlTransport;
-    let transport = &(*transport);
-
-    let public_key = public_key.from_ptr();
-    let expiration = expiration.from_ptr();
     let destination = destination.from_ptr();
     let tokens = tokens.from_ptr();
     let notify_receiver = notify_receiver != 0;
@@ -475,45 +457,8 @@ pub unsafe extern "C" fn token_wallet_prepare_transfer(
             }
         };
 
-        let mut ton_wallet_guard = ton_wallet.lock().await;
-        let ton_wallet = ton_wallet_guard.take();
-        let mut ton_wallet = match ton_wallet {
-            Some(ton_wallet) => ton_wallet,
-            None => {
-                *token_wallet_guard = Some(token_wallet);
-                let result = match_result(Err(NativeError {
-                    status: NativeStatus::MutexError,
-                    info: TON_WALLET_NOT_FOUND.to_owned(),
-                }));
-                send_to_result_port(result_port, result);
-                return;
-            }
-        };
-
-        let mut transport_guard = transport.lock().await;
-        let transport = transport_guard.take();
-        let transport = match transport {
-            Some(transport) => transport,
-            None => {
-                let result = match_result(Err(NativeError {
-                    status: NativeStatus::MutexError,
-                    info: GQL_TRANSPORT_NOT_FOUND.to_owned(),
-                }));
-
-                *token_wallet_guard = Some(token_wallet);
-                *ton_wallet_guard = Some(ton_wallet);
-
-                send_to_result_port(result_port, result);
-                return;
-            }
-        };
-
         let result = internal_token_wallet_prepare_transfer(
             &mut token_wallet,
-            &mut ton_wallet,
-            transport.clone(),
-            public_key,
-            expiration,
             destination,
             tokens,
             notify_receiver,
@@ -523,8 +468,6 @@ pub unsafe extern "C" fn token_wallet_prepare_transfer(
         let result = match_result(result);
 
         *token_wallet_guard = Some(token_wallet);
-        *ton_wallet_guard = Some(ton_wallet);
-        *transport_guard = Some(transport);
 
         send_to_result_port(result_port, result);
     });
@@ -532,19 +475,11 @@ pub unsafe extern "C" fn token_wallet_prepare_transfer(
 
 async fn internal_token_wallet_prepare_transfer(
     token_wallet: &mut TokenWallet,
-    ton_wallet: &mut TonWallet,
-    transport: Arc<GqlTransport>,
-    public_key: String,
-    expiration: String,
     destination: String,
     tokens: String,
     notify_receiver: bool,
     payload: Option<String>,
 ) -> Result<u64, NativeError> {
-    let expiration = serde_json::from_str::<Expiration>(&expiration)
-        .handle_error(NativeStatus::ConversionError)?;
-    let expiration = expiration.to_core();
-
     let destination = parse_address(&destination)?;
     let destination = TransferRecipient::OwnerWallet(destination);
 
@@ -563,21 +498,10 @@ async fn internal_token_wallet_prepare_transfer(
     let message = token_wallet
         .prepare_transfer(destination, tokens, notify_receiver, payload)
         .handle_error(NativeStatus::TokenWalletError)?;
+    let message = super::InternalMessage::from_core(message);
+    let message = serde_json::to_string(&message).handle_error(NativeStatus::ConversionError)?;
 
-    let message = internal_ton_wallet_prepare_transfer(
-        ton_wallet,
-        transport,
-        public_key,
-        expiration,
-        message.destination,
-        message.amount,
-        Some(message.body),
-    )
-    .await?;
-
-    let message = message as c_ulonglong;
-
-    Ok(message)
+    Ok(message.to_ptr() as c_ulonglong)
 }
 
 #[no_mangle]

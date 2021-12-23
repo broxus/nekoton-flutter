@@ -30,50 +30,17 @@ class SubscriptionsController {
     return _instance!;
   }
 
-  Stream<List<TonWallet>> get tonWalletsStream => _tonWalletsSubject.stream.distinct();
-
-  Stream<List<TokenWallet>> get tokenWalletsStream => _tokenWalletsSubject.stream.distinct();
-
-  Stream<Map<String, List<GenericContract>>> get genericContractsStream => _genericContractsSubject.stream.distinct();
+  Stream<List<TonWallet>> get tonWalletsStream => _tonWalletsSubject.stream;
 
   List<TonWallet> get tonWallets => _tonWalletsSubject.value;
 
+  Stream<List<TokenWallet>> get tokenWalletsStream => _tokenWalletsSubject.stream;
+
   List<TokenWallet> get tokenWallets => _tokenWalletsSubject.value;
 
+  Stream<Map<String, List<GenericContract>>> get genericContractsStream => _genericContractsSubject.stream;
+
   Map<String, List<GenericContract>> get genericContracts => _genericContractsSubject.value;
-
-  Future<TokenWallet> subscribeToTokenWallet({
-    required String owner,
-    required String rootTokenContract,
-  }) async {
-    final existingTokenWallet = _tokenWalletsSubject.value.firstWhereOrNull(
-      (e) => e.owner == owner && e.symbol.rootTokenContract == rootTokenContract,
-    );
-
-    if (existingTokenWallet != null) {
-      return existingTokenWallet;
-    }
-
-    final transport = _connectionController.transport as GqlTransport;
-
-    final tonWallet = tonWallets.firstWhere((e) => e.address == owner);
-
-    final tokenWallet = await TokenWallet.subscribe(
-      transport: transport,
-      tonWallet: tonWallet,
-      rootTokenContract: rootTokenContract,
-    );
-
-    final tokenWallets = [..._tokenWalletsSubject.value];
-
-    tokenWallets
-      ..add(tokenWallet)
-      ..sort();
-
-    _tokenWalletsSubject.add(tokenWallets);
-
-    return tokenWallet;
-  }
 
   Future<TonWallet> subscribeToTonWallet({
     required String address,
@@ -98,9 +65,7 @@ class SubscriptionsController {
 
     final tonWallets = [..._tonWalletsSubject.value];
 
-    tonWallets
-      ..add(tonWallet)
-      ..sort();
+    tonWallets.add(tonWallet);
 
     _tonWalletsSubject.add(tonWallets);
 
@@ -123,13 +88,97 @@ class SubscriptionsController {
 
     final tonWallets = [..._tonWalletsSubject.value];
 
-    tonWallets
-      ..add(tonWallet)
-      ..sort();
+    tonWallets.add(tonWallet);
 
     _tonWalletsSubject.add(tonWallets);
 
     return tonWallet;
+  }
+
+  Future<void> removeTonWalletSubscription(String address) async {
+    final tonWallet = _tonWalletsSubject.value.firstWhereOrNull((e) => e.address == address);
+
+    if (tonWallet == null) {
+      return;
+    }
+
+    final subscriptions = [..._tonWalletsSubject.value];
+
+    subscriptions.removeWhere((e) => e.address == tonWallet.address);
+
+    _tonWalletsSubject.add(subscriptions);
+
+    await tonWallet.free();
+  }
+
+  Future<void> clearTonWalletsSubscriptions() async {
+    final subscriptions = [..._tonWalletsSubject.value];
+
+    _tonWalletsSubject.add([]);
+
+    for (final subscription in subscriptions) {
+      await subscription.free();
+    }
+  }
+
+  Future<TokenWallet> subscribeToTokenWallet({
+    required String owner,
+    required String rootTokenContract,
+  }) async {
+    final existingTokenWallet = _tokenWalletsSubject.value.firstWhereOrNull(
+      (e) => e.owner == owner && e.symbol.rootTokenContract == rootTokenContract,
+    );
+
+    if (existingTokenWallet != null) {
+      return existingTokenWallet;
+    }
+
+    final transport = _connectionController.transport as GqlTransport;
+
+    final tokenWallet = await TokenWallet.subscribe(
+      transport: transport,
+      owner: owner,
+      rootTokenContract: rootTokenContract,
+    );
+
+    final tokenWallets = [..._tokenWalletsSubject.value];
+
+    tokenWallets.add(tokenWallet);
+
+    _tokenWalletsSubject.add(tokenWallets);
+
+    return tokenWallet;
+  }
+
+  Future<void> removeTokenWalletSubscription({
+    required String owner,
+    required String rootTokenContract,
+  }) async {
+    final tokenWallet = _tokenWalletsSubject.value.firstWhereOrNull(
+      (e) => e.owner == owner && e.symbol.rootTokenContract == rootTokenContract,
+    );
+
+    if (tokenWallet == null) {
+      return;
+    }
+
+    final subscriptions = [..._tokenWalletsSubject.value];
+
+    subscriptions.remove(tokenWallet);
+
+    _tokenWalletsSubject.add(subscriptions);
+
+    await tokenWallet.free();
+  }
+
+  Future<void> clearTokenWalletsSubscriptions() async {
+    final subscriptions = [..._tokenWalletsSubject.value];
+
+    _tokenWalletsSubject.add([]);
+
+    for (final subscription in subscriptions) {
+      await subscription.free();
+    }
   }
 
   Future<GenericContract> subscribeToGenericContract({
@@ -151,65 +200,6 @@ class SubscriptionsController {
     return genericContract;
   }
 
-  Future<void> removeTonWalletSubscription(String address) async {
-    final tonWallet = _tonWalletsSubject.value.firstWhereOrNull((e) => e.address == address);
-
-    if (tonWallet == null) {
-      return;
-    }
-
-    final subscriptions = [..._tonWalletsSubject.value];
-
-    subscriptions
-      ..remove(tonWallet)
-      ..sort();
-
-    _tonWalletsSubject.add(subscriptions);
-
-    await tonWallet.free();
-  }
-
-  Future<void> removeTokenWalletSubscription({
-    required String owner,
-    required String rootTokenContract,
-  }) async {
-    final tokenWallet = _tokenWalletsSubject.value.firstWhereOrNull(
-      (e) => e.owner == owner && e.symbol.rootTokenContract == rootTokenContract,
-    );
-
-    if (tokenWallet == null) {
-      return;
-    }
-
-    final subscriptions = [..._tokenWalletsSubject.value];
-
-    subscriptions
-      ..remove(tokenWallet)
-      ..sort();
-
-    _tokenWalletsSubject.add(subscriptions);
-
-    await tokenWallet.free();
-  }
-
-  Future<void> removeOriginGenericContractSubscriptions(String origin) async {
-    final subscriptions = {..._genericContractsSubject.value};
-
-    final genericContracts = subscriptions[origin];
-
-    if (genericContracts == null) {
-      return;
-    }
-
-    subscriptions[origin] = [];
-
-    _genericContractsSubject.add(subscriptions);
-
-    for (final genericContract in genericContracts) {
-      await genericContract.free();
-    }
-  }
-
   Future<void> removeGenericContractSubscription({
     required String origin,
     required String address,
@@ -229,23 +219,21 @@ class SubscriptionsController {
     await genericContract.free();
   }
 
-  Future<void> clearTonWalletsSubscriptions() async {
-    final subscriptions = [..._tonWalletsSubject.value];
+  Future<void> removeOriginGenericContractSubscriptions(String origin) async {
+    final subscriptions = {..._genericContractsSubject.value};
 
-    _tonWalletsSubject.add([]);
+    final genericContracts = subscriptions[origin];
 
-    for (final subscription in subscriptions) {
-      await subscription.free();
+    if (genericContracts == null) {
+      return;
     }
-  }
 
-  Future<void> clearTokenWalletsSubscriptions() async {
-    final subscriptions = [..._tokenWalletsSubject.value];
+    subscriptions[origin] = [];
 
-    _tokenWalletsSubject.add([]);
+    _genericContractsSubject.add(subscriptions);
 
-    for (final subscription in subscriptions) {
-      await subscription.free();
+    for (final genericContract in genericContracts) {
+      await genericContract.free();
     }
   }
 

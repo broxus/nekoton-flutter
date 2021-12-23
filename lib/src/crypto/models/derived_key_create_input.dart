@@ -1,13 +1,12 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import 'create_key_input.dart';
 import 'password.dart';
 
 part 'derived_key_create_input.freezed.dart';
 part 'derived_key_create_input.g.dart';
 
 @Freezed(unionValueCase: FreezedUnionCase.pascal)
-class DerivedKeyCreateInput with _$DerivedKeyCreateInput implements CreateKeyInput {
+class DerivedKeyCreateInput with _$DerivedKeyCreateInput {
   @JsonSerializable(
     fieldRename: FieldRename.snake,
     explicitToJson: true,

@@ -93,7 +93,7 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         get_token_wallet_contract_state(0, nil);
 
-        token_wallet_prepare_transfer(0, nil, nil, nil, nil, nil, nil, nil, 0, nil);
+        token_wallet_prepare_transfer(0, nil, nil, nil, nil, 0, nil);
 
         token_wallet_refresh(0, nil);
 
@@ -137,13 +137,13 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         ton_wallet_prepare_deploy_with_multiple_owners(0, nil, nil, nil, 0);
 
-        ton_wallet_prepare_transfer(0, nil, nil, nil, nil, nil, 0, nil, 0);
+        ton_wallet_prepare_transfer(0, nil, nil, nil, nil, 0, nil, 0, nil);
 
         ton_wallet_prepare_confirm_transaction(0, nil, nil, nil, nil, nil);
 
-        prepare_add_ordinary_stake(0, nil, nil, nil, nil, nil, 0, 0);
+        prepare_add_ordinary_stake(0, nil, 0, 0);
 
-        prepare_withdraw_part(0, nil, nil, nil, nil, nil, 0, 0);
+        prepare_withdraw_part(0, nil, 0, 0);
 
         ton_wallet_estimate_fees(0, nil, nil);
 
