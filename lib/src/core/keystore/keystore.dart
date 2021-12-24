@@ -124,11 +124,11 @@ class Keystore {
     final json = jsonDecode(string) as Map<String, dynamic>;
 
     return exportKeyInput.when(
-      derivedKeyExportParams: (_) => ExportKeyOutput.encryptedKeyExportOutput(
-        EncryptedKeyExportOutput.fromJson(json),
-      ),
-      encryptedKeyPassword: (_) => ExportKeyOutput.derivedKeyExportOutput(
+      derivedKeyExportParams: (_) => ExportKeyOutput.derivedKeyExportOutput(
         DerivedKeyExportOutput.fromJson(json),
+      ),
+      encryptedKeyPassword: (_) => ExportKeyOutput.encryptedKeyExportOutput(
+        EncryptedKeyExportOutput.fromJson(json),
       ),
     );
   }
