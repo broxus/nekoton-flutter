@@ -538,7 +538,7 @@ Future<SendMessageOutput> sendMessage({
     knownPayload = helpers.parseKnownPayload(body);
   }
 
-  final password = await instance.approvalController.requestApprovalToSendMessage(
+  final tuple = await instance.approvalController.requestApprovalToSendMessage(
     origin: origin,
     sender: selectedAddress,
     recipient: repackedRecipient,
@@ -548,6 +548,9 @@ Future<SendMessageOutput> sendMessage({
     knownPayload: knownPayload,
   );
 
+  final publicKey = tuple.item1;
+  final password = tuple.item2;
+
   final tonWallet = instance.subscriptionsController.tonWallets.firstWhereOrNull((e) => e.address == selectedAddress);
 
   if (tonWallet == null) {
@@ -555,7 +558,7 @@ Future<SendMessageOutput> sendMessage({
   }
 
   final message = await tonWallet.prepareTransfer(
-    publicKey: tonWallet.publicKey,
+    publicKey: publicKey,
     expiration: kDefaultMessageExpiration,
     destination: repackedRecipient,
     amount: int.parse(input.amount),
@@ -564,7 +567,7 @@ Future<SendMessageOutput> sendMessage({
   );
 
   final signInput = await instance.keystoreController.getSignInput(
-    publicKey: tonWallet.publicKey,
+    publicKey: publicKey,
     password: password,
   );
 

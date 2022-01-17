@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:rxdart/rxdart.dart';
+import 'package:tuple/tuple.dart';
 
 import 'core/ton_wallet/models/known_payload.dart';
 import 'models/approval_request.dart';
@@ -34,7 +35,7 @@ class ApprovalController {
     return completer.future;
   }
 
-  Future<String> requestApprovalToSendMessage({
+  Future<Tuple2<String, String>> requestApprovalToSendMessage({
     required String origin,
     required String sender,
     required String recipient,
@@ -43,7 +44,7 @@ class ApprovalController {
     required FunctionCall? payload,
     required KnownPayload? knownPayload,
   }) async {
-    final completer = Completer<String>();
+    final completer = Completer<Tuple2<String, String>>();
 
     final request = ApprovalRequest.sendMessage(
       origin: origin,

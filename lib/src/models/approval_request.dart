@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:tuple/tuple.dart';
 
 import '../core/ton_wallet/models/known_payload.dart';
 import '../provider/models/function_call.dart';
@@ -25,7 +26,7 @@ class ApprovalRequest with _$ApprovalRequest {
     required bool bounce,
     required FunctionCall? payload,
     required KnownPayload? knownPayload,
-    required Completer<String> completer,
+    required Completer<Tuple2<String, String>> completer,
   }) = _SendMessage;
 
   const factory ApprovalRequest.callContractMethod({
