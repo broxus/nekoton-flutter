@@ -4,7 +4,7 @@ class NekotonException implements Exception {
   NekotonException([this.info]);
 
   @override
-  String toString() => info ?? super.toString();
+  String toString() => info ?? '$runtimeType';
 }
 
 class DynamicLibraryException extends NekotonException {
