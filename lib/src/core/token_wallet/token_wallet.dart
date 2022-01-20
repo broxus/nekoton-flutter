@@ -28,13 +28,15 @@ class TokenWallet {
   late final GqlTransport _transport;
   late final NativeTokenWallet _nativeTokenWallet;
   late final StreamSubscription _subscription;
+  late final StreamSubscription _onTransactionsFoundSubscription;
   late final Timer _timer;
   late final String owner;
   late final String address;
   late final Symbol symbol;
   late final TokenWalletVersion version;
-  final _onBalanceChangedSubject = BehaviorSubject<String>();
-  final _onTransactionsFoundSubject = BehaviorSubject<List<TokenWalletTransactionWithData>>.seeded([]);
+  final _onBalanceChangedSubject = PublishSubject<String>();
+  final _onTransactionsFoundSubject = PublishSubject<OnTokenWalletTransactionsFoundPayload>();
+  final _transactionsSubject = BehaviorSubject<List<TokenWalletTransactionWithData>>.seeded([]);
 
   TokenWallet._();
 
@@ -54,7 +56,9 @@ class TokenWallet {
 
   Stream<String> get onBalanceChangedStream => _onBalanceChangedSubject.stream;
 
-  Stream<List<TokenWalletTransactionWithData>> get onTransactionsFoundStream => _onTransactionsFoundSubject.stream;
+  Stream<OnTokenWalletTransactionsFoundPayload> get onTransactionsFoundStream => _onTransactionsFoundSubject.stream;
+
+  Stream<List<TokenWalletTransactionWithData>> get transactionsStream => _transactionsSubject.stream;
 
   Future<String> get _owner async {
     final result = await _nativeTokenWallet.use(
@@ -202,9 +206,11 @@ class TokenWallet {
     _timer.cancel();
 
     _subscription.cancel();
+    _onTransactionsFoundSubscription.cancel();
 
     _onBalanceChangedSubject.close();
     _onTransactionsFoundSubject.close();
+    _transactionsSubject.close();
 
     _receivePort.close();
 
@@ -218,6 +224,7 @@ class TokenWallet {
   }) async {
     _transport = transport;
     _subscription = _receivePort.listen(_subscriptionListener);
+    _onTransactionsFoundSubscription = _onTransactionsFoundSubject.listen(_onTransactionsFoundListener);
 
     final result = await _transport.nativeGqlTransport.use(
       (ptr) => proceedAsync(
@@ -254,34 +261,21 @@ class TokenWallet {
 
       switch (message.event) {
         case 'on_balance_changed':
-          await _onBalanceChangedHandler(message.payload);
+          final json = jsonDecode(message.payload) as Map<String, dynamic>;
+          final payload = OnBalanceChangedPayload.fromJson(json);
+
+          _onBalanceChangedSubject.add(payload.balance);
           break;
         case 'on_transactions_found':
-          await _onTransactionsFoundHandler(message.payload);
+          final json = jsonDecode(message.payload) as Map<String, dynamic>;
+          final payload = OnTokenWalletTransactionsFoundPayload.fromJson(json);
+
+          _onTransactionsFoundSubject.add(payload);
           break;
       }
     } catch (err, st) {
       logger?.e(err, err, st);
     }
-  }
-
-  Future<void> _onBalanceChangedHandler(String data) async {
-    final json = jsonDecode(data) as Map<String, dynamic>;
-    final payload = OnBalanceChangedPayload.fromJson(json);
-
-    final balance = payload.balance;
-
-    _onBalanceChangedSubject.add(balance);
-  }
-
-  Future<void> _onTransactionsFoundHandler(String data) async {
-    final json = jsonDecode(data) as Map<String, dynamic>;
-    final payload = OnTokenWalletTransactionsFoundPayload.fromJson(json);
-
-    final transactions = [..._onTransactionsFoundSubject.value, ...payload.transactions]
-      ..sort((a, b) => b.transaction.createdAt.compareTo(a.transaction.createdAt));
-
-    _onTransactionsFoundSubject.add(transactions);
   }
 
   Future<void> _refreshTimer(Timer timer) async {
@@ -295,5 +289,15 @@ class TokenWallet {
     } catch (err, st) {
       logger?.e(err, err, st);
     }
+  }
+
+  void _onTransactionsFoundListener(OnTokenWalletTransactionsFoundPayload value) {
+    final transactions = [..._transactionsSubject.value];
+
+    transactions
+      ..addAll(value.transactions)
+      ..sort((a, b) => a.transaction.createdAt.compareTo(b.transaction.createdAt));
+
+    _transactionsSubject.add(transactions);
   }
 }
