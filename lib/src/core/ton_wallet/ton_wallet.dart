@@ -49,7 +49,6 @@ class TonWallet {
   late final String publicKey;
   late final WalletType walletType;
   late final TonWalletDetails details;
-  late final List<String>? custodians;
   final _onMessageSentSubject = BehaviorSubject<List<Tuple2<PendingTransaction, Transaction?>>>.seeded([]);
   final _onMessageExpiredSubject = BehaviorSubject<List<PendingTransaction>>.seeded([]);
   final _onStateChangedSubject = BehaviorSubject<ContractState>();
@@ -250,7 +249,7 @@ class TonWallet {
     return pendingTransactions;
   }
 
-  Future<List<String>?> get _custodians async {
+  Future<List<String>?> get custodians async {
     final result = await _nativeTonWallet.use(
       (ptr) => proceedAsync(
         (port) => nativeLibraryInstance.bindings.get_ton_wallet_custodians(
@@ -613,7 +612,6 @@ class TonWallet {
     this.publicKey = await _publicKey;
     this.walletType = await _walletType;
     details = await _details;
-    custodians = await _custodians;
 
     _timer = Timer.periodic(
       kGqlRefreshPeriod,
@@ -648,7 +646,6 @@ class TonWallet {
     publicKey = await _publicKey;
     walletType = await _walletType;
     details = await _details;
-    custodians = await _custodians;
 
     _timer = Timer.periodic(
       kGqlRefreshPeriod,
@@ -685,7 +682,6 @@ class TonWallet {
     publicKey = await _publicKey;
     walletType = await _walletType;
     details = await _details;
-    custodians = await _custodians;
 
     _timer = Timer.periodic(
       kGqlRefreshPeriod,
