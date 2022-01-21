@@ -739,33 +739,24 @@ class TonWallet {
   }
 
   void _onMessageSentListener(OnMessageSentPayload value) {
-    final pending = [..._pendingTransactionsSubject.value];
-
-    pending.removeWhere((e) => e == value.pendingTransaction);
+    final pending = [..._pendingTransactionsSubject.value.where((e) => e != value.pendingTransaction)];
 
     _pendingTransactionsSubject.add(pending);
   }
 
   void _onMessageExpiredListener(OnMessageExpiredPayload value) {
-    final pending = [..._pendingTransactionsSubject.value];
-
-    pending.removeWhere((e) => e == value.pendingTransaction);
+    final pending = [..._pendingTransactionsSubject.value.where((e) => e != value.pendingTransaction)];
 
     _pendingTransactionsSubject.add(pending);
 
-    final expired = [..._expiredTransactionsSubject.value];
-
-    expired.add(value.pendingTransaction);
+    final expired = [..._expiredTransactionsSubject.value, value.pendingTransaction];
 
     _expiredTransactionsSubject.add(expired);
   }
 
   void _onTransactionsFoundListener(OnTonWalletTransactionsFoundPayload value) {
-    final transactions = [..._transactionsSubject.value];
-
-    transactions
-      ..addAll(value.transactions)
-      ..sort((a, b) => a.transaction.createdAt.compareTo(b.transaction.createdAt));
+    final transactions = [..._transactionsSubject.value, ...value.transactions]
+      ..sort((a, b) => b.transaction.createdAt.compareTo(a.transaction.createdAt));
 
     _transactionsSubject.add(transactions);
   }

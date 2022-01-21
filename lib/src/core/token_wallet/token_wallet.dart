@@ -292,11 +292,8 @@ class TokenWallet {
   }
 
   void _onTransactionsFoundListener(OnTokenWalletTransactionsFoundPayload value) {
-    final transactions = [..._transactionsSubject.value];
-
-    transactions
-      ..addAll(value.transactions)
-      ..sort((a, b) => a.transaction.createdAt.compareTo(b.transaction.createdAt));
+    final transactions = [..._transactionsSubject.value, ...value.transactions]
+      ..sort((a, b) => b.transaction.createdAt.compareTo(a.transaction.createdAt));
 
     _transactionsSubject.add(transactions);
   }
