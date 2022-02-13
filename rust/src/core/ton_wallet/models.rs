@@ -43,7 +43,6 @@ impl TransactionAdditionalInfo {
             models::TransactionAdditionalInfo::TokenWalletDeployed(notification) => {
                 Self::TokenWalletDeployed { notification }
             }
-
             models::TransactionAdditionalInfo::WalletInteraction(info) => Self::WalletInteraction {
                 info: WalletInteractionInfo::from_core(info),
             },
