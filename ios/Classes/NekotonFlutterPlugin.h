@@ -7,9 +7,17 @@ void store_post_cobject(void *ptr);
 
 void free_cstring(char *str);
 
-void free_native_result(void *ptr);
+void free_execution_result(void *ptr);
 
-void get_accounts_storage(long long result_port, void *storage);
+void *clone_unsigned_message_ptr(void *unsigned_message);
+
+void free_unsigned_message_ptr(void *unsigned_message);
+
+void create_accounts_storage(long long result_port, void *storage);
+
+void *clone_accounts_storage_ptr(void *accounts_storage);
+
+void free_accounts_storage_ptr(void *accounts_storage);
 
 void get_accounts(long long result_port, void *accounts_storage);
 
@@ -38,12 +46,18 @@ void remove_token_wallet(long long result_port,
 
 void clear_accounts_storage(long long result_port, void *accounts_storage);
 
-void free_accounts_storage(long long result_port, void *accounts_storage);
-
 void generic_contract_subscribe(long long result_port,
-                                long long port,
+                                long long on_message_sent_port,
+                                long long on_message_expired_port,
+                                long long on_state_changed_port,
+                                long long on_transactions_found_port,
                                 void *transport,
+                                int transport_type,
                                 char *address);
+
+void *clone_generic_contract_ptr(void *generic_contract);
+
+void free_generic_contract_ptr(void *generic_contract);
 
 void get_generic_contract_address(long long result_port, void *generic_contract);
 
@@ -53,24 +67,13 @@ void get_generic_contract_pending_transactions(long long result_port, void *gene
 
 void get_generic_contract_polling_method(long long result_port, void *generic_contract);
 
+void generic_contract_estimate_fees(long long result_port, void *generic_contract, void *message);
+
 void generic_contract_send(long long result_port,
                            void *generic_contract,
                            void *keystore,
                            void *message,
                            char *sign_input);
-
-void generic_contract_refresh(long long result_port, void *generic_contract);
-
-void generic_contract_handle_block(long long result_port,
-                                   void *generic_contract,
-                                   void *transport,
-                                   char *id);
-
-void generic_contract_preload_transactions(long long result_port,
-                                           void *generic_contract,
-                                           char *from);
-
-void generic_contract_estimate_fees(long long result_port, void *generic_contract, void *message);
 
 void generic_contract_execute_transaction_locally(long long result_port,
                                                   void *generic_contract,
@@ -79,9 +82,23 @@ void generic_contract_execute_transaction_locally(long long result_port,
                                                   char *sign_input,
                                                   char *options);
 
-void free_generic_contract(long long result_port, void *generic_contract);
+void generic_contract_refresh(long long result_port, void *generic_contract);
 
-void get_keystore(long long result_port, void *storage);
+void generic_contract_preload_transactions(long long result_port,
+                                           void *generic_contract,
+                                           char *from);
+
+void generic_contract_handle_block(long long result_port,
+                                   void *generic_contract,
+                                   void *transport,
+                                   int transport_type,
+                                   char *id);
+
+void create_keystore(long long result_port, void *storage);
+
+void *clone_keystore_ptr(void *keystore);
+
+void free_keystore_ptr(void *keystore);
 
 void get_entries(long long result_port, void *keystore);
 
@@ -97,18 +114,17 @@ void remove_key(long long result_port, void *keystore, char *public_key);
 
 void clear_keystore(long long result_port, void *keystore);
 
-void free_keystore(long long result_port, void *keystore);
-
 void token_wallet_subscribe(long long result_port,
-                            long long port,
+                            long long on_balance_changed_port,
+                            long long on_transactions_found_port,
                             void *transport,
+                            int transport_type,
                             char *owner,
                             char *root_token_contract);
 
-void get_token_wallet_info(long long result_port,
-                           void *transport,
-                           char *owner,
-                           char *root_token_contract);
+void *clone_token_wallet_ptr(void *token_wallet);
+
+void free_token_wallet_ptr(void *token_wallet);
 
 void get_token_wallet_owner(long long result_port, void *token_wallet);
 
@@ -124,7 +140,6 @@ void get_token_wallet_contract_state(long long result_port, void *token_wallet);
 
 void token_wallet_prepare_transfer(long long result_port,
                                    void *token_wallet,
-                                   void *transport,
                                    char *destination,
                                    char *tokens,
                                    unsigned int notify_receiver,
@@ -134,36 +149,44 @@ void token_wallet_refresh(long long result_port, void *token_wallet);
 
 void token_wallet_preload_transactions(long long result_port, void *token_wallet, char *from);
 
-void token_wallet_handle_block(long long result_port,
-                               void *token_wallet,
-                               void *transport,
-                               char *id);
-
-void free_token_wallet(long long result_port, void *token_wallet);
-
 void ton_wallet_subscribe(long long result_port,
-                          long long port,
+                          long long on_message_sent_port,
+                          long long on_message_expired_port,
+                          long long on_state_changed_port,
+                          long long on_transactions_found_port,
                           void *transport,
+                          int transport_type,
                           signed char workchain,
                           char *public_key,
                           char *contract);
 
 void ton_wallet_subscribe_by_address(long long result_port,
-                                     long long port,
+                                     long long on_message_sent_port,
+                                     long long on_message_expired_port,
+                                     long long on_state_changed_port,
+                                     long long on_transactions_found_port,
                                      void *transport,
+                                     int transport_type,
                                      char *address);
 
 void ton_wallet_subscribe_by_existing(long long result_port,
-                                      long long port,
+                                      long long on_message_sent_port,
+                                      long long on_message_expired_port,
+                                      long long on_state_changed_port,
+                                      long long on_transactions_found_port,
                                       void *transport,
+                                      int transport_type,
                                       char *existing_wallet);
+
+void *clone_ton_wallet_ptr(void *ton_wallet);
+
+void free_ton_wallet_ptr(void *ton_wallet);
 
 void find_existing_wallets(long long result_port,
                            void *transport,
+                           int transport_type,
                            char *public_key,
                            signed char workchain_id);
-
-void get_ton_wallet_info(long long result_port, void *transport, char *address);
 
 void get_ton_wallet_workchain(long long result_port, void *ton_wallet);
 
@@ -196,29 +219,20 @@ void ton_wallet_prepare_deploy_with_multiple_owners(long long result_port,
 void ton_wallet_prepare_transfer(long long result_port,
                                  void *ton_wallet,
                                  void *transport,
+                                 int transport_type,
                                  char *public_key,
                                  char *destination,
-                                 unsigned long long amount,
+                                 char *amount,
                                  char *body,
-                                 unsigned int is_comment,
                                  char *expiration);
 
 void ton_wallet_prepare_confirm_transaction(long long result_port,
                                             void *ton_wallet,
                                             void *transport,
+                                            int transport_type,
                                             char *public_key,
                                             char *transaction_id,
                                             char *expiration);
-
-void prepare_add_ordinary_stake(long long result_port,
-                                char *depool,
-                                unsigned long long depool_fee,
-                                unsigned long long stake);
-
-void prepare_withdraw_part(long long result_port,
-                           char *depool,
-                           unsigned long long depool_fee,
-                           unsigned long long withdraw_value);
 
 void ton_wallet_estimate_fees(long long result_port, void *ton_wallet, void *message);
 
@@ -232,9 +246,11 @@ void ton_wallet_refresh(long long result_port, void *ton_wallet);
 
 void ton_wallet_preload_transactions(long long result_port, void *ton_wallet, char *from);
 
-void ton_wallet_handle_block(long long result_port, void *ton_wallet, void *transport, char *id);
-
-void free_ton_wallet(long long result_port, void *ton_wallet);
+void ton_wallet_handle_block(long long result_port,
+                             void *ton_wallet,
+                             void *transport,
+                             int transport_type,
+                             char *id);
 
 void *generate_key(char *mnemonic_type);
 
@@ -242,24 +258,43 @@ void *get_hints(char *input);
 
 void *derive_from_phrase(char *phrase, char *mnemonic_type);
 
-void get_participant_info(long long result_port,
-                          void *transport,
-                          char *address,
-                          char *wallet_address);
+void *create_storage(char *dir);
 
-void get_depool_info(long long result_port, void *transport, char *address);
+void *clone_storage_ptr(void *storage);
 
-void get_adnl_connection(long long result_port, char *adnl_config);
+void free_storage_ptr(void *storage);
 
-void free_adnl_connection(long long result_port, void *adnl_connection);
+void get_full_account_state(long long result_port,
+                            void *transport,
+                            int transport_type,
+                            char *address);
 
-void *get_gql_connection(char *url);
+void get_transactions(long long result_port,
+                      void *transport,
+                      int transport_type,
+                      char *address,
+                      char *continuation,
+                      unsigned char limit);
 
-void free_gql_connection(long long result_port, void *gql_connection);
+void *create_gql_transport(char *settings);
 
-void *get_storage(char *dir);
+void *clone_gql_transport_ptr(void *gql_transport);
 
-void free_storage(long long result_port, void *storage);
+void free_gql_transport_ptr(void *gql_transport);
+
+void get_latest_block_id(long long result_port, void *gql_transport, char *address);
+
+void wait_for_next_block_id(long long result_port,
+                            void *gql_transport,
+                            char *current_block_id,
+                            char *address,
+                            unsigned long long timeout);
+
+void *create_jrpc_transport(char *endpoint);
+
+void *clone_jrpc_transport_ptr(void *jrpc_transport);
+
+void free_jrpc_transport_ptr(void *jrpc_transport);
 
 void *pack_std_smc_addr(unsigned int base64_url, char *addr, unsigned int bounceable);
 
@@ -269,14 +304,7 @@ void *validate_address(char *address);
 
 void *repack_address(char *address);
 
-void *parse_message_body_data(char *data);
-
-void *run_local(char *gen_timings,
-                char *last_transaction_id,
-                char *account_stuff_boc,
-                char *contract_abi,
-                char *method,
-                char *input);
+void *run_local(char *account_stuff_boc, char *contract_abi, char *method, char *input);
 
 void *get_expected_address(char *tvc,
                            char *contract_abi,
@@ -315,26 +343,3 @@ void *create_external_message(char *dst,
                               char *input,
                               char *public_key,
                               unsigned int timeout);
-
-void get_full_account_state(long long result_port, void *transport, char *address);
-
-void get_transactions(long long result_port,
-                      void *transport,
-                      char *address,
-                      char *continuation,
-                      unsigned char limit);
-
-void get_adnl_transport(long long result_port, void *connection);
-
-void free_adnl_transport(long long result_port, void *adnl_transport);
-
-void get_gql_transport(long long result_port, void *connection);
-
-void free_gql_transport(long long result_port, void *gql_transport);
-
-void get_latest_block_id(long long result_port, void *transport, char *address);
-
-void wait_for_next_block_id(long long result_port,
-                            void *transport,
-                            char *current_block_id,
-                            char *address);

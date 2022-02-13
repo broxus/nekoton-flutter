@@ -1,8 +1,8 @@
-use super::models::{
-    OnMessageExpiredPayload, OnMessageSentPayload, OnStateChangedPayload,
-    OnTransactionsFoundPayload,
+use super::models::OnTransactionsFoundPayload;
+use crate::core::{
+    models::{OnMessageExpiredPayload, OnMessageSentPayload, OnStateChangedPayload},
+    post_subscription_data,
 };
-use crate::core::{post_subscription_data, SubscriptionHandlerMessage};
 use async_trait::async_trait;
 use nekoton::core::{
     generic_contract::GenericContractSubscriptionHandler,
@@ -10,7 +10,10 @@ use nekoton::core::{
 };
 
 pub struct GenericContractSubscriptionHandlerImpl {
-    pub port: Option<i64>,
+    pub on_message_sent_port: i64,
+    pub on_message_expired_port: i64,
+    pub on_state_changed_port: i64,
+    pub on_transactions_found_port: i64,
 }
 
 #[async_trait]
@@ -20,68 +23,29 @@ impl GenericContractSubscriptionHandler for GenericContractSubscriptionHandlerIm
         pending_transaction: PendingTransaction,
         transaction: Option<Transaction>,
     ) {
-        let port = match self.port {
-            Some(port) => port,
-            None => return,
-        };
-
         let payload = OnMessageSentPayload {
             pending_transaction,
             transaction,
         };
+        let payload = serde_json::to_string(&payload).unwrap();
 
-        if let Ok(payload) = serde_json::to_string(&payload) {
-            let message = SubscriptionHandlerMessage {
-                event: "on_message_sent".to_owned(),
-                payload,
-            };
-
-            if let Ok(message) = serde_json::to_string(&message) {
-                post_subscription_data(port, message);
-            };
-        };
+        post_subscription_data(self.on_message_sent_port, payload);
     }
 
     fn on_message_expired(&self, pending_transaction: PendingTransaction) {
-        let port = match self.port {
-            Some(port) => port,
-            None => return,
-        };
-
         let payload = OnMessageExpiredPayload {
             pending_transaction,
         };
+        let payload = serde_json::to_string(&payload).unwrap();
 
-        if let Ok(payload) = serde_json::to_string(&payload) {
-            let message = SubscriptionHandlerMessage {
-                event: "on_message_expired".to_owned(),
-                payload,
-            };
-
-            if let Ok(message) = serde_json::to_string(&message) {
-                post_subscription_data(port, message);
-            };
-        };
+        post_subscription_data(self.on_message_expired_port, payload);
     }
 
     fn on_state_changed(&self, new_state: models::ContractState) {
-        let port = match self.port {
-            Some(port) => port,
-            None => return,
-        };
-
         let payload = OnStateChangedPayload { new_state };
+        let payload = serde_json::to_string(&payload).unwrap();
 
-        if let Ok(payload) = serde_json::to_string(&payload) {
-            let message = SubscriptionHandlerMessage {
-                event: "on_state_changed".to_owned(),
-                payload,
-            };
-
-            if let Ok(message) = serde_json::to_string(&message) {
-                post_subscription_data(port, message);
-            };
-        };
+        post_subscription_data(self.on_state_changed_port, payload);
     }
 
     fn on_transactions_found(
@@ -89,25 +53,12 @@ impl GenericContractSubscriptionHandler for GenericContractSubscriptionHandlerIm
         transactions: Vec<Transaction>,
         batch_info: TransactionsBatchInfo,
     ) {
-        let port = match self.port {
-            Some(port) => port,
-            None => return,
-        };
-
         let payload = OnTransactionsFoundPayload {
             transactions,
             batch_info,
         };
+        let payload = serde_json::to_string(&payload).unwrap();
 
-        if let Ok(payload) = serde_json::to_string(&payload) {
-            let message = SubscriptionHandlerMessage {
-                event: "on_transactions_found".to_owned(),
-                payload,
-            };
-
-            if let Ok(message) = serde_json::to_string(&message) {
-                post_subscription_data(port, message);
-            };
-        };
+        post_subscription_data(self.on_transactions_found_port, payload);
     }
 }

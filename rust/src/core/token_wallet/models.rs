@@ -1,10 +1,7 @@
-use nekoton::core::{models, token_wallet::TokenWallet};
+use nekoton::core::models;
 use nekoton_utils::serde_address;
 use serde::Serialize;
-use tokio::sync::Mutex;
 use ton_block::MsgAddressInt;
-
-pub type MutexTokenWallet = Mutex<Option<TokenWallet>>;
 
 #[derive(Serialize)]
 pub struct OnBalanceChangedPayload {
@@ -100,17 +97,4 @@ impl TransferRecipient {
             models::TransferRecipient::TokenWallet(address) => Self::TokenWallet { address },
         }
     }
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TokenWalletInfo {
-    #[serde(with = "serde_address")]
-    pub owner: MsgAddressInt,
-    #[serde(with = "serde_address")]
-    pub address: MsgAddressInt,
-    pub symbol: models::Symbol,
-    pub version: models::TokenWalletVersion,
-    pub balance: String,
-    pub contract_state: models::ContractState,
 }

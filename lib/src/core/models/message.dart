@@ -8,13 +8,14 @@ part 'message.g.dart';
 class Message with _$Message {
   @HiveType(typeId: 11)
   const factory Message({
-    @HiveField(0) String? src,
-    @HiveField(1) String? dst,
-    @HiveField(2) required String value,
-    @HiveField(3) required bool bounce,
-    @HiveField(4) required bool bounced,
-    @HiveField(5) String? body,
-    @HiveField(6) String? bodyHash,
+    @HiveField(0) required String hash,
+    @HiveField(1) String? src,
+    @HiveField(2) String? dst,
+    @HiveField(3) required String value,
+    @HiveField(4) required bool bounce,
+    @HiveField(5) required bool bounced,
+    @HiveField(6) String? body,
+    @HiveField(7) String? bodyHash,
   }) = _Message;
 
   factory Message.fromJson(Map<String, dynamic> json) => _$MessageFromJson(json);

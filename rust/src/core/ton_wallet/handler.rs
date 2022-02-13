@@ -1,7 +1,11 @@
-use super::models::{
-    OnMessageExpiredPayload, OnMessageSentPayload, OnStateChangedPayload, TransactionAdditionalInfo,
+use super::models::TransactionAdditionalInfo;
+use crate::core::{
+    models::{
+        OnMessageExpiredPayload, OnMessageSentPayload, OnStateChangedPayload,
+        OnTransactionsFoundPayload,
+    },
+    post_subscription_data,
 };
-use crate::core::{post_subscription_data, OnTransactionsFoundPayload, SubscriptionHandlerMessage};
 use async_trait::async_trait;
 use nekoton::core::{
     models::{self, PendingTransaction, Transaction, TransactionWithData, TransactionsBatchInfo},
@@ -9,7 +13,10 @@ use nekoton::core::{
 };
 
 pub struct TonWalletSubscriptionHandlerImpl {
-    pub port: Option<i64>,
+    pub on_message_sent_port: i64,
+    pub on_message_expired_port: i64,
+    pub on_state_changed_port: i64,
+    pub on_transactions_found_port: i64,
 }
 
 #[async_trait]
@@ -19,68 +26,29 @@ impl TonWalletSubscriptionHandler for TonWalletSubscriptionHandlerImpl {
         pending_transaction: PendingTransaction,
         transaction: Option<Transaction>,
     ) {
-        let port = match self.port {
-            Some(port) => port,
-            None => return,
-        };
-
         let payload = OnMessageSentPayload {
             pending_transaction,
             transaction,
         };
+        let payload = serde_json::to_string(&payload).unwrap();
 
-        if let Ok(payload) = serde_json::to_string(&payload) {
-            let message = SubscriptionHandlerMessage {
-                event: "on_message_sent".to_owned(),
-                payload,
-            };
-
-            if let Ok(message) = serde_json::to_string(&message) {
-                post_subscription_data(port, message);
-            };
-        };
+        post_subscription_data(self.on_message_sent_port, payload);
     }
 
     fn on_message_expired(&self, pending_transaction: PendingTransaction) {
-        let port = match self.port {
-            Some(port) => port,
-            None => return,
-        };
-
         let payload = OnMessageExpiredPayload {
             pending_transaction,
         };
+        let payload = serde_json::to_string(&payload).unwrap();
 
-        if let Ok(payload) = serde_json::to_string(&payload) {
-            let message = SubscriptionHandlerMessage {
-                event: "on_message_expired".to_owned(),
-                payload,
-            };
-
-            if let Ok(message) = serde_json::to_string(&message) {
-                post_subscription_data(port, message);
-            };
-        };
+        post_subscription_data(self.on_message_expired_port, payload);
     }
 
     fn on_state_changed(&self, new_state: models::ContractState) {
-        let port = match self.port {
-            Some(port) => port,
-            None => return,
-        };
-
         let payload = OnStateChangedPayload { new_state };
+        let payload = serde_json::to_string(&payload).unwrap();
 
-        if let Ok(payload) = serde_json::to_string(&payload) {
-            let message = SubscriptionHandlerMessage {
-                event: "on_state_changed".to_owned(),
-                payload,
-            };
-
-            if let Ok(message) = serde_json::to_string(&message) {
-                post_subscription_data(port, message);
-            };
-        };
+        post_subscription_data(self.on_state_changed_port, payload);
     }
 
     fn on_transactions_found(
@@ -88,40 +56,25 @@ impl TonWalletSubscriptionHandler for TonWalletSubscriptionHandlerImpl {
         transactions: Vec<TransactionWithData<models::TransactionAdditionalInfo>>,
         batch_info: TransactionsBatchInfo,
     ) {
-        let port = match self.port {
-            Some(port) => port,
-            None => return,
-        };
-
         let transactions = transactions
             .iter()
-            .map(
-                |transaction| -> TransactionWithData<TransactionAdditionalInfo> {
-                    TransactionWithData::<TransactionAdditionalInfo> {
-                        transaction: transaction.transaction.clone(),
-                        data: transaction
-                            .data
-                            .clone()
-                            .map(|data| TransactionAdditionalInfo::from_core(data)),
-                    }
-                },
-            )
+            .map(|e| -> TransactionWithData<TransactionAdditionalInfo> {
+                TransactionWithData::<TransactionAdditionalInfo> {
+                    transaction: e.transaction.clone(),
+                    data: e
+                        .data
+                        .clone()
+                        .map(|e| TransactionAdditionalInfo::from_core(e)),
+                }
+            })
             .collect::<Vec<_>>();
 
         let payload = OnTransactionsFoundPayload::<TransactionAdditionalInfo> {
             transactions,
             batch_info,
         };
+        let payload = serde_json::to_string(&payload).unwrap();
 
-        if let Ok(payload) = serde_json::to_string(&payload) {
-            let message = SubscriptionHandlerMessage {
-                event: "on_transactions_found".to_owned(),
-                payload,
-            };
-
-            if let Ok(message) = serde_json::to_string(&message) {
-                post_subscription_data(port, message);
-            };
-        };
+        post_subscription_data(self.on_transactions_found_port, payload);
     }
 }

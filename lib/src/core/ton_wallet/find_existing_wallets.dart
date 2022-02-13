@@ -3,24 +3,26 @@ import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
 
+import '../../bindings.dart';
 import '../../ffi_utils.dart';
-import '../../nekoton.dart';
-import '../../transport/gql_transport.dart';
+import '../../transport/transport.dart';
 import 'models/existing_wallet_info.dart';
 
 Future<List<ExistingWalletInfo>> findExistingWallets({
-  required GqlTransport transport,
+  required Transport transport,
   required String publicKey,
   required int workchainId,
 }) async {
-  final result = await transport.nativeGqlTransport.use(
-    (ptr) => proceedAsync(
-      (port) => nativeLibraryInstance.bindings.find_existing_wallets(
-        port,
-        ptr,
-        publicKey.toNativeUtf8().cast<Int8>(),
-        workchainId,
-      ),
+  final ptr = await transport.clonePtr();
+  final transportType = transport.connectionData.type;
+
+  final result = await executeAsync(
+    (port) => bindings().find_existing_wallets(
+      port,
+      ptr,
+      transportType.index,
+      publicKey.toNativeUtf8().cast<Int8>(),
+      workchainId,
     ),
   );
 

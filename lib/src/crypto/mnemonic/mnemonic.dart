@@ -3,8 +3,8 @@ import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
 
+import '../../bindings.dart';
 import '../../ffi_utils.dart';
-import '../../nekoton.dart';
 import 'models/generated_key.dart';
 import 'models/keypair.dart';
 import 'models/mnemonic_type.dart';
@@ -12,8 +12,7 @@ import 'models/mnemonic_type.dart';
 GeneratedKey generateKey(MnemonicType mnemonicType) {
   final mnemonicTypeStr = jsonEncode(mnemonicType);
 
-  final result =
-      proceedSync(() => nativeLibraryInstance.bindings.generate_key(mnemonicTypeStr.toNativeUtf8().cast<Int8>()));
+  final result = executeSync(() => bindings().generate_key(mnemonicTypeStr.toNativeUtf8().cast<Int8>()));
 
   final string = cStringToDart(result);
   final json = jsonDecode(string) as Map<String, dynamic>;
@@ -23,7 +22,7 @@ GeneratedKey generateKey(MnemonicType mnemonicType) {
 }
 
 List<String> getHints(String input) {
-  final result = proceedSync(() => nativeLibraryInstance.bindings.get_hints(input.toNativeUtf8().cast<Int8>()));
+  final result = executeSync(() => bindings().get_hints(input.toNativeUtf8().cast<Int8>()));
 
   final string = cStringToDart(result);
   final list = jsonDecode(string) as List;
@@ -38,8 +37,8 @@ Keypair deriveFromPhrase({
   final phraseStr = phrase.join(' ');
   final mnemonicTypeStr = jsonEncode(mnemonicType);
 
-  final result = proceedSync(
-    () => nativeLibraryInstance.bindings.derive_from_phrase(
+  final result = executeSync(
+    () => bindings().derive_from_phrase(
       phraseStr.toNativeUtf8().cast<Int8>(),
       mnemonicTypeStr.toNativeUtf8().cast<Int8>(),
     ),

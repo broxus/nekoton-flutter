@@ -9,7 +9,7 @@ part 'transaction.freezed.dart';
 part 'transaction.g.dart';
 
 @freezed
-class Transaction with _$Transaction {
+class Transaction with _$Transaction implements Comparable<Transaction> {
   @JsonSerializable(explicitToJson: true)
   @HiveType(typeId: 22)
   const factory Transaction({
@@ -18,12 +18,18 @@ class Transaction with _$Transaction {
     @HiveField(2) required int createdAt,
     @HiveField(3) required bool aborted,
     @HiveField(4) int? exitCode,
-    @HiveField(5) required AccountStatus origStatus,
-    @HiveField(6) required AccountStatus endStatus,
-    @HiveField(7) required String totalFees,
-    @HiveField(8) required Message inMessage,
-    @HiveField(9) required List<Message> outMessages,
+    @HiveField(5) int? resultCode,
+    @HiveField(6) required AccountStatus origStatus,
+    @HiveField(7) required AccountStatus endStatus,
+    @HiveField(8) required String totalFees,
+    @HiveField(9) required Message inMessage,
+    @HiveField(10) required List<Message> outMessages,
   }) = _Transaction;
 
   factory Transaction.fromJson(Map<String, dynamic> json) => _$TransactionFromJson(json);
+
+  const Transaction._();
+
+  @override
+  int compareTo(Transaction other) => -createdAt.compareTo(other.createdAt);
 }

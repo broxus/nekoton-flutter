@@ -2,33 +2,13 @@ use crate::core::token_wallet::models::TokenOutgoingTransfer;
 use nekoton::core::{
     models::{
         self, ContractState, DePoolOnRoundCompleteNotification, DePoolReceiveAnswerNotification,
-        EthEventStatus, PendingTransaction, TokenWalletDeployedNotification, TonEventStatus,
-        Transaction,
+        TokenWalletDeployedNotification,
     },
-    ton_wallet::{self, MultisigType, TonWallet},
+    ton_wallet::{self, MultisigType},
 };
 use nekoton_utils::{serde_address, serde_optional_address, serde_public_key};
 use serde::{Deserialize, Serialize};
-use tokio::sync::Mutex;
 use ton_block::MsgAddressInt;
-
-pub type MutexTonWallet = Mutex<Option<TonWallet>>;
-
-#[derive(Serialize)]
-pub struct OnMessageSentPayload {
-    pub pending_transaction: PendingTransaction,
-    pub transaction: Option<Transaction>,
-}
-
-#[derive(Serialize)]
-pub struct OnMessageExpiredPayload {
-    pub pending_transaction: PendingTransaction,
-}
-
-#[derive(Serialize)]
-pub struct OnStateChangedPayload {
-    pub new_state: ContractState,
-}
 
 #[derive(Serialize)]
 #[serde(tag = "runtimeType")]
@@ -44,12 +24,6 @@ pub enum TransactionAdditionalInfo {
     },
     TokenWalletDeployed {
         notification: TokenWalletDeployedNotification,
-    },
-    EthEventStatusChanged {
-        status: EthEventStatus,
-    },
-    TonEventStatusChanged {
-        status: TonEventStatus,
     },
     WalletInteraction {
         info: WalletInteractionInfo,
@@ -69,12 +43,7 @@ impl TransactionAdditionalInfo {
             models::TransactionAdditionalInfo::TokenWalletDeployed(notification) => {
                 Self::TokenWalletDeployed { notification }
             }
-            models::TransactionAdditionalInfo::EthEventStatusChanged(status) => {
-                Self::EthEventStatusChanged { status }
-            }
-            models::TransactionAdditionalInfo::TonEventStatusChanged(status) => {
-                Self::TonEventStatusChanged { status }
-            }
+
             models::TransactionAdditionalInfo::WalletInteraction(info) => Self::WalletInteraction {
                 info: WalletInteractionInfo::from_core(info),
             },
@@ -243,18 +212,4 @@ impl ExistingWalletInfo {
             contract_state: self.contract_state,
         }
     }
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TonWalletInfo {
-    pub workchain: i8,
-    #[serde(with = "serde_address")]
-    pub address: MsgAddressInt,
-    #[serde(with = "serde_public_key")]
-    pub public_key: ed25519_dalek::PublicKey,
-    pub wallet_type: WalletType,
-    pub contract_state: ContractState,
-    pub details: ton_wallet::TonWalletDetails,
-    pub custodians: Option<Vec<String>>,
 }

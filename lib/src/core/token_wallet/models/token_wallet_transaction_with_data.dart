@@ -8,7 +8,9 @@ part 'token_wallet_transaction_with_data.freezed.dart';
 part 'token_wallet_transaction_with_data.g.dart';
 
 @freezed
-class TokenWalletTransactionWithData with _$TokenWalletTransactionWithData {
+class TokenWalletTransactionWithData
+    with _$TokenWalletTransactionWithData
+    implements Comparable<TokenWalletTransactionWithData> {
   @HiveType(typeId: 21)
   const factory TokenWalletTransactionWithData({
     @HiveField(0) required Transaction transaction,
@@ -17,4 +19,9 @@ class TokenWalletTransactionWithData with _$TokenWalletTransactionWithData {
 
   factory TokenWalletTransactionWithData.fromJson(Map<String, dynamic> json) =>
       _$TokenWalletTransactionWithDataFromJson(json);
+
+  const TokenWalletTransactionWithData._();
+
+  @override
+  int compareTo(TokenWalletTransactionWithData other) => -transaction.createdAt.compareTo(other.transaction.createdAt);
 }

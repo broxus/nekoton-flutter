@@ -16,6 +16,7 @@ class ContractState with _$ContractState {
     @HiveField(1) required GenTimings genTimings,
     @HiveField(2) LastTransactionId? lastTransactionId,
     @HiveField(3) required bool isDeployed,
+    @HiveField(4) String? codeHash,
   }) = _ContractState;
 
   factory ContractState.fromJson(Map<String, dynamic> json) => _$ContractStateFromJson(json);

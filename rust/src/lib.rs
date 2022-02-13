@@ -1,30 +1,26 @@
 pub mod core;
 pub mod crypto;
-pub mod depool;
 pub mod external;
-pub mod helpers;
 pub mod models;
 pub mod transport;
+pub mod utils;
 
 use allo_isolate::{
     ffi::{DartCObject, DartPort},
     Isolate,
 };
+use anyhow::Result;
 use lazy_static::lazy_static;
-use models::{FromPtr, HandleError, NativeError, NativeResult, NativeStatus, ToPtr};
+use models::{ExecutionResult, FromPtr, HandleError, ToPtr};
 use std::{
     ffi::c_void,
     intrinsics::transmute,
     io,
-    os::raw::{c_char, c_longlong, c_uint, c_ulonglong},
+    os::raw::{c_char, c_longlong, c_ulonglong},
     str::FromStr,
-    time::Duration,
-    u64,
 };
 use tokio::runtime::{Builder, Runtime};
 use ton_block::MsgAddressInt;
-
-pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 
 lazy_static! {
     static ref RUNTIME: io::Result<Runtime> = Builder::new_multi_thread()
@@ -52,29 +48,8 @@ pub unsafe extern "C" fn store_post_cobject(ptr: *mut c_void) {
     allo_isolate::store_dart_post_cobject(ptr);
 }
 
-pub fn match_result(result: Result<u64, NativeError>) -> *mut c_void {
-    let result = match result {
-        Ok(success) => NativeResult {
-            status_code: NativeStatus::Success as c_uint,
-            payload: success,
-        },
-        Err(error) => NativeResult {
-            status_code: error.status as c_uint,
-            payload: error.info.to_ptr() as c_ulonglong,
-        },
-    };
-
-    let result = Box::new(result);
-    let result = Box::into_raw(result);
-    let result = result as *mut c_void;
-
-    result
-}
-
 pub fn send_to_result_port(port: c_longlong, result: *mut c_void) {
-    let result = result as c_ulonglong;
-    let isolate = Isolate::new(port);
-    isolate.post(result);
+    Isolate::new(port).post(result as c_ulonglong);
 }
 
 #[no_mangle]
@@ -83,18 +58,16 @@ pub unsafe extern "C" fn free_cstring(str: *mut c_char) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn free_native_result(ptr: *mut c_void) {
-    let result = ptr as *mut NativeResult;
+pub unsafe extern "C" fn free_execution_result(ptr: *mut c_void) {
+    let result = ptr as *mut ExecutionResult;
+
     Box::from_raw(result);
 }
 
-pub fn parse_public_key(public_key: &str) -> Result<ed25519_dalek::PublicKey, NativeError> {
-    ed25519_dalek::PublicKey::from_bytes(
-        &hex::decode(&public_key).handle_error(NativeStatus::ConversionError)?,
-    )
-    .handle_error(NativeStatus::ConversionError)
+pub fn parse_public_key(public_key: &str) -> Result<ed25519_dalek::PublicKey, String> {
+    ed25519_dalek::PublicKey::from_bytes(&hex::decode(&public_key).handle_error()?).handle_error()
 }
 
-pub fn parse_address(address: &str) -> Result<MsgAddressInt, NativeError> {
-    MsgAddressInt::from_str(address).handle_error(NativeStatus::ConversionError)
+pub fn parse_address(address: &str) -> Result<MsgAddressInt, String> {
+    MsgAddressInt::from_str(address).handle_error()
 }

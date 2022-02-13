@@ -15,9 +15,17 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         free_cstring(nil);
 
-        free_native_result(nil);
+        free_execution_result(nil);
 
-        get_accounts_storage(0, nil);
+        clone_unsigned_message_ptr(nil);
+
+        free_unsigned_message_ptr(nil);
+
+        create_accounts_storage(0, nil);
+
+        clone_accounts_storage_ptr(nil);
+
+        free_accounts_storage_ptr(nil);
 
         get_accounts(0, nil);
 
@@ -33,9 +41,11 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         clear_accounts_storage(0, nil);
 
-        free_accounts_storage(0, nil);
+        generic_contract_subscribe(0, 0, 0, 0, 0, nil, 0, nil);
 
-        generic_contract_subscribe(0, 0, nil, nil);
+        clone_generic_contract_ptr(nil);
+
+        free_generic_contract_ptr(nil);
 
         get_generic_contract_address(0, nil);
 
@@ -45,21 +55,23 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         get_generic_contract_polling_method(0, nil);
 
-        generic_contract_send(0, nil, nil, nil, nil);
-
-        generic_contract_refresh(0, nil);
-
-        generic_contract_handle_block(0, nil, nil, nil);
-
-        generic_contract_preload_transactions(0, nil, nil);
-
         generic_contract_estimate_fees(0, nil, nil);
+
+        generic_contract_send(0, nil, nil, nil, nil);
 
         generic_contract_execute_transaction_locally(0, nil, nil, nil, nil, nil);
 
-        free_generic_contract(0, nil);
+        generic_contract_refresh(0, nil);
 
-        get_keystore(0, nil);
+        generic_contract_preload_transactions(0, nil, nil);
+
+        generic_contract_handle_block(0, nil, nil, 0, nil);
+
+        create_keystore(0, nil);
+
+        clone_keystore_ptr(nil);
+
+        free_keystore_ptr(nil);
 
         get_entries(0, nil);
 
@@ -75,11 +87,11 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         clear_keystore(0, nil);
 
-        free_keystore(0, nil);
+        token_wallet_subscribe(0, 0, 0, nil, 0, nil, nil);
 
-        token_wallet_subscribe(0, 0, nil, nil, nil);
+        clone_token_wallet_ptr(nil);
 
-        get_token_wallet_info(0, nil, nil, nil);
+        free_token_wallet_ptr(nil);
 
         get_token_wallet_owner(0, nil);
 
@@ -93,25 +105,23 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         get_token_wallet_contract_state(0, nil);
 
-        token_wallet_prepare_transfer(0, nil, nil, nil, nil, 0, nil);
+        token_wallet_prepare_transfer(0, nil, nil, nil, 0, nil);
 
         token_wallet_refresh(0, nil);
 
         token_wallet_preload_transactions(0, nil, nil);
 
-        token_wallet_handle_block(0, nil, nil, nil);
+        ton_wallet_subscribe(0, 0, 0, 0, 0, nil, 0, 0, nil, nil);
 
-        free_token_wallet(0, nil);
+        ton_wallet_subscribe_by_address(0, 0, 0, 0, 0, nil, 0, nil);
 
-        ton_wallet_subscribe(0, 0, nil, 0, nil, nil);
+        ton_wallet_subscribe_by_existing(0, 0, 0, 0, 0, nil, 0, nil);
 
-        ton_wallet_subscribe_by_address(0, 0, nil, nil);
+        clone_ton_wallet_ptr(nil);
 
-        ton_wallet_subscribe_by_existing(0, 0, nil, nil);
+        free_ton_wallet_ptr(nil);
 
-        find_existing_wallets(0, nil, nil, 0);
-
-        get_ton_wallet_info(0, nil, nil);
+        find_existing_wallets(0, nil, 0, nil, 0);
 
         get_ton_wallet_workchain(0, nil);
 
@@ -137,13 +147,9 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         ton_wallet_prepare_deploy_with_multiple_owners(0, nil, nil, nil, 0);
 
-        ton_wallet_prepare_transfer(0, nil, nil, nil, nil, 0, nil, 0, nil);
+        ton_wallet_prepare_transfer(0, nil, nil, 0, nil, nil, nil, nil, nil);
 
-        ton_wallet_prepare_confirm_transaction(0, nil, nil, nil, nil, nil);
-
-        prepare_add_ordinary_stake(0, nil, 0, 0);
-
-        prepare_withdraw_part(0, nil, 0, 0);
+        ton_wallet_prepare_confirm_transaction(0, nil, nil, 0, nil, nil, nil);
 
         ton_wallet_estimate_fees(0, nil, nil);
 
@@ -153,9 +159,7 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         ton_wallet_preload_transactions(0, nil, nil);
 
-        ton_wallet_handle_block(0, nil, nil, nil);
-
-        free_ton_wallet(0, nil);
+        ton_wallet_handle_block(0, nil, nil, 0, nil);
 
         generate_key(nil);
 
@@ -163,21 +167,31 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         derive_from_phrase(nil, nil);
 
-        get_participant_info(0, nil, nil, nil);
+        create_storage(nil);
 
-        get_depool_info(0, nil, nil);
+        clone_storage_ptr(nil);
 
-        get_adnl_connection(0, nil);
+        free_storage_ptr(nil);
 
-        free_adnl_connection(0, nil);
+        get_full_account_state(0, nil, 0, nil);
 
-        get_gql_connection(nil);
+        get_transactions(0, nil, 0, nil, nil, 0);
 
-        free_gql_connection(0, nil);
+        create_gql_transport(nil);
 
-        get_storage(nil);
+        clone_gql_transport_ptr(nil);
 
-        free_storage(0, nil);
+        free_gql_transport_ptr(nil);
+
+        get_latest_block_id(0, nil, nil);
+
+        wait_for_next_block_id(0, nil, nil, nil, 0);
+
+        create_jrpc_transport(nil);
+
+        clone_jrpc_transport_ptr(nil);
+
+        free_jrpc_transport_ptr(nil);
 
         pack_std_smc_addr(0, nil, 0);
 
@@ -187,9 +201,7 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         repack_address(nil);
 
-        parse_message_body_data(nil);
-
-        run_local(nil, nil, nil, nil, nil, nil);
+        run_local(nil, nil, nil, nil);
 
         get_expected_address(nil, nil, 0, nil, nil);
 
@@ -218,21 +230,5 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
         parse_known_payload(nil);
 
         create_external_message(nil, nil, nil, nil, nil, nil, 0);
-
-        get_full_account_state(0, nil, nil);
-
-        get_transactions(0, nil, nil, nil, 0);
-
-        get_adnl_transport(0, nil);
-
-        free_adnl_transport(0, nil);
-
-        get_gql_transport(0, nil);
-
-        free_gql_transport(0, nil);
-
-        get_latest_block_id(0, nil, nil);
-
-        wait_for_next_block_id(0, nil, nil, nil);
     }
 }

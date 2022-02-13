@@ -3,38 +3,34 @@ import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
+import 'package:synchronized/synchronized.dart';
 
+import '../../bindings.dart';
 import '../../external/storage.dart';
 import '../../ffi_utils.dart';
-import '../../nekoton.dart';
+import '../../models/pointed.dart';
 import 'models/assets_list.dart';
-import 'models/native_accounts_storage.dart';
 import 'models/wallet_type.dart';
 
-class AccountsStorage {
-  static AccountsStorage? _instance;
-  late final Storage _storage;
-  late final NativeAccountsStorage _nativeAccountsStorage;
+class AccountsStorage implements Pointed {
+  final _lock = Lock();
+  Pointer<Void>? _ptr;
 
   AccountsStorage._();
 
-  static Future<AccountsStorage> getInstance() async {
-    if (_instance == null) {
-      final instance = AccountsStorage._();
-      await instance._initialize();
-      _instance = instance;
-    }
-
-    return _instance!;
+  static Future<AccountsStorage> create(Storage storage) async {
+    final instance = AccountsStorage._();
+    await instance._initialize(storage);
+    return instance;
   }
 
   Future<List<AssetsList>> get accounts async {
-    final result = await _nativeAccountsStorage.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.get_accounts(
-          port,
-          ptr,
-        ),
+    final ptr = await clonePtr();
+
+    final result = await executeAsync(
+      (port) => bindings().get_accounts(
+        port,
+        ptr,
       ),
     );
 
@@ -52,18 +48,18 @@ class AccountsStorage {
     required WalletType walletType,
     required int workchain,
   }) async {
+    final ptr = await clonePtr();
+
     final walletTypeStr = jsonEncode(walletType);
 
-    final result = await _nativeAccountsStorage.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.add_account(
-          port,
-          ptr,
-          name.toNativeUtf8().cast<Int8>(),
-          publicKey.toNativeUtf8().cast<Int8>(),
-          walletTypeStr.toNativeUtf8().cast<Int8>(),
-          workchain,
-        ),
+    final result = await executeAsync(
+      (port) => bindings().add_account(
+        port,
+        ptr,
+        name.toNativeUtf8().cast<Int8>(),
+        publicKey.toNativeUtf8().cast<Int8>(),
+        walletTypeStr.toNativeUtf8().cast<Int8>(),
+        workchain,
       ),
     );
 
@@ -78,14 +74,14 @@ class AccountsStorage {
     required String address,
     required String name,
   }) async {
-    final result = await _nativeAccountsStorage.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.rename_account(
-          port,
-          ptr,
-          address.toNativeUtf8().cast<Int8>(),
-          name.toNativeUtf8().cast<Int8>(),
-        ),
+    final ptr = await clonePtr();
+
+    final result = await executeAsync(
+      (port) => bindings().rename_account(
+        port,
+        ptr,
+        address.toNativeUtf8().cast<Int8>(),
+        name.toNativeUtf8().cast<Int8>(),
       ),
     );
 
@@ -97,13 +93,13 @@ class AccountsStorage {
   }
 
   Future<AssetsList?> removeAccount(String address) async {
-    final result = await _nativeAccountsStorage.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.remove_account(
-          port,
-          ptr,
-          address.toNativeUtf8().cast<Int8>(),
-        ),
+    final ptr = await clonePtr();
+
+    final result = await executeAsync(
+      (port) => bindings().remove_account(
+        port,
+        ptr,
+        address.toNativeUtf8().cast<Int8>(),
       ),
     );
 
@@ -119,15 +115,15 @@ class AccountsStorage {
     required String rootTokenContract,
     required String networkGroup,
   }) async {
-    final result = await _nativeAccountsStorage.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.add_token_wallet(
-          port,
-          ptr,
-          address.toNativeUtf8().cast<Int8>(),
-          networkGroup.toNativeUtf8().cast<Int8>(),
-          rootTokenContract.toNativeUtf8().cast<Int8>(),
-        ),
+    final ptr = await clonePtr();
+
+    final result = await executeAsync(
+      (port) => bindings().add_token_wallet(
+        port,
+        ptr,
+        address.toNativeUtf8().cast<Int8>(),
+        networkGroup.toNativeUtf8().cast<Int8>(),
+        rootTokenContract.toNativeUtf8().cast<Int8>(),
       ),
     );
 
@@ -143,15 +139,15 @@ class AccountsStorage {
     required String rootTokenContract,
     required String networkGroup,
   }) async {
-    final result = await _nativeAccountsStorage.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.remove_token_wallet(
-          port,
-          ptr,
-          address.toNativeUtf8().cast<Int8>(),
-          networkGroup.toNativeUtf8().cast<Int8>(),
-          rootTokenContract.toNativeUtf8().cast<Int8>(),
-        ),
+    final ptr = await clonePtr();
+
+    final result = await executeAsync(
+      (port) => bindings().remove_token_wallet(
+        port,
+        ptr,
+        address.toNativeUtf8().cast<Int8>(),
+        networkGroup.toNativeUtf8().cast<Int8>(),
+        rootTokenContract.toNativeUtf8().cast<Int8>(),
       ),
     );
 
@@ -162,30 +158,49 @@ class AccountsStorage {
     return account;
   }
 
-  Future<void> clear() => _nativeAccountsStorage.use(
-        (ptr) => proceedAsync(
-          (port) => nativeLibraryInstance.bindings.clear_accounts_storage(
-            port,
-            ptr,
-          ),
-        ),
-      );
+  Future<void> clear() async {
+    final ptr = await clonePtr();
 
-  Future<void> free() => _nativeAccountsStorage.free();
-
-  Future<void> _initialize() async {
-    _storage = await Storage.getInstance();
-
-    final result = await _storage.nativeStorage.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.get_accounts_storage(
-          port,
-          ptr,
-        ),
+    await executeAsync(
+      (port) => bindings().clear_accounts_storage(
+        port,
+        ptr,
       ),
     );
-    final ptr = Pointer.fromAddress(result).cast<Void>();
+  }
 
-    _nativeAccountsStorage = NativeAccountsStorage(ptr);
+  @override
+  Future<Pointer<Void>> clonePtr() => _lock.synchronized(() {
+        if (_ptr == null) throw Exception('Accounts storage use after free');
+
+        final ptr = bindings().clone_accounts_storage_ptr(
+          _ptr!,
+        );
+
+        return ptr;
+      });
+
+  @override
+  Future<void> freePtr() => _lock.synchronized(() {
+        if (_ptr == null) throw Exception('Accounts storage use after free');
+
+        bindings().free_accounts_storage_ptr(
+          _ptr!,
+        );
+
+        _ptr = null;
+      });
+
+  Future<void> _initialize(Storage storage) async {
+    final storagePtr = await storage.clonePtr();
+
+    final result = await executeAsync(
+      (port) => bindings().create_accounts_storage(
+        port,
+        storagePtr,
+      ),
+    );
+
+    _ptr = Pointer.fromAddress(result).cast<Void>();
   }
 }

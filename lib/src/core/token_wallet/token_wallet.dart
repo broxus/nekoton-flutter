@@ -7,41 +7,41 @@ import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:recase/recase.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:synchronized/synchronized.dart';
+import 'package:tuple/tuple.dart';
 
+import '../../bindings.dart';
 import '../../constants.dart';
 import '../../ffi_utils.dart';
-import '../../nekoton.dart';
-import '../../transport/gql_transport.dart';
+import '../../models/pointed.dart';
+import '../../transport/transport.dart';
 import '../models/contract_state.dart';
 import '../models/internal_message.dart';
-import '../models/subscription_handler_message.dart';
 import '../models/transaction_id.dart';
-import 'models/native_token_wallet.dart';
 import 'models/on_balance_changed_payload.dart';
 import 'models/on_token_wallet_transactions_found_payload.dart';
 import 'models/symbol.dart';
 import 'models/token_wallet_transaction_with_data.dart';
 import 'models/token_wallet_version.dart';
 
-class TokenWallet {
-  final _receivePort = ReceivePort();
-  late final GqlTransport _transport;
-  late final NativeTokenWallet _nativeTokenWallet;
-  late final StreamSubscription _subscription;
+class TokenWallet implements Pointed {
+  final _lock = Lock();
+  Pointer<Void>? _ptr;
+  final _onBalanceChangedPort = ReceivePort();
+  final _onTransactionsFoundPort = ReceivePort();
+  late final Stream<OnBalanceChangedPayload> onBalanceChangedStream;
+  late final Stream<OnTokenWalletTransactionsFoundPayload> onTransactionsFoundStream;
   late final StreamSubscription _onTransactionsFoundSubscription;
-  late final Timer _timer;
   late final String owner;
   late final String address;
   late final Symbol symbol;
   late final TokenWalletVersion version;
-  final _onBalanceChangedSubject = PublishSubject<String>();
-  final _onTransactionsFoundSubject = PublishSubject<OnTokenWalletTransactionsFoundPayload>();
   final _transactionsSubject = BehaviorSubject<List<TokenWalletTransactionWithData>>.seeded([]);
 
   TokenWallet._();
 
   static Future<TokenWallet> subscribe({
-    required GqlTransport transport,
+    required Transport transport,
     required String owner,
     required String rootTokenContract,
   }) async {
@@ -54,47 +54,45 @@ class TokenWallet {
     return tokenWallet;
   }
 
-  Stream<String> get onBalanceChangedStream => _onBalanceChangedSubject.stream;
-
-  Stream<OnTokenWalletTransactionsFoundPayload> get onTransactionsFoundStream => _onTransactionsFoundSubject.stream;
-
   Stream<List<TokenWalletTransactionWithData>> get transactionsStream => _transactionsSubject.stream;
 
   Future<String> get _owner async {
-    final result = await _nativeTokenWallet.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.get_token_wallet_owner(
-          port,
-          ptr,
-        ),
+    final ptr = await clonePtr();
+
+    final result = await executeAsync(
+      (port) => bindings().get_token_wallet_owner(
+        port,
+        ptr,
       ),
     );
+
     final owner = cStringToDart(result);
 
     return owner;
   }
 
   Future<String> get _address async {
-    final result = await _nativeTokenWallet.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.get_token_wallet_address(
-          port,
-          ptr,
-        ),
+    final ptr = await clonePtr();
+
+    final result = await executeAsync(
+      (port) => bindings().get_token_wallet_address(
+        port,
+        ptr,
       ),
     );
+
     final address = cStringToDart(result);
 
     return address;
   }
 
   Future<Symbol> get _symbol async {
-    final result = await _nativeTokenWallet.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.get_token_wallet_symbol(
-          port,
-          ptr,
-        ),
+    final ptr = await clonePtr();
+
+    final result = await executeAsync(
+      (port) => bindings().get_token_wallet_symbol(
+        port,
+        ptr,
       ),
     );
 
@@ -106,12 +104,12 @@ class TokenWallet {
   }
 
   Future<TokenWalletVersion> get _version async {
-    final result = await _nativeTokenWallet.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.get_token_wallet_version(
-          port,
-          ptr,
-        ),
+    final ptr = await clonePtr();
+
+    final result = await executeAsync(
+      (port) => bindings().get_token_wallet_version(
+        port,
+        ptr,
       ),
     );
 
@@ -123,26 +121,27 @@ class TokenWallet {
   }
 
   Future<String> get balance async {
-    final result = await _nativeTokenWallet.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.get_token_wallet_balance(
-          port,
-          ptr,
-        ),
+    final ptr = await clonePtr();
+
+    final result = await executeAsync(
+      (port) => bindings().get_token_wallet_balance(
+        port,
+        ptr,
       ),
     );
+
     final balance = cStringToDart(result);
 
     return balance;
   }
 
   Future<ContractState> get contractState async {
-    final result = await _nativeTokenWallet.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.get_token_wallet_contract_state(
-          port,
-          ptr,
-        ),
+    final ptr = await clonePtr();
+
+    final result = await executeAsync(
+      (port) => bindings().get_token_wallet_contract_state(
+        port,
+        ptr,
       ),
     );
 
@@ -159,16 +158,16 @@ class TokenWallet {
     required bool notifyReceiver,
     String? payload,
   }) async {
-    final result = await _nativeTokenWallet.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.token_wallet_prepare_transfer(
-          port,
-          ptr,
-          destination.toNativeUtf8().cast<Int8>(),
-          tokens.toNativeUtf8().cast<Int8>(),
-          notifyReceiver ? 1 : 0,
-          payload?.toNativeUtf8().cast<Int8>() ?? Pointer.fromAddress(0).cast<Int8>(),
-        ),
+    final ptr = await clonePtr();
+
+    final result = await executeAsync(
+      (port) => bindings().token_wallet_prepare_transfer(
+        port,
+        ptr,
+        destination.toNativeUtf8().cast<Int8>(),
+        tokens.toNativeUtf8().cast<Int8>(),
+        notifyReceiver ? 1 : 0,
+        payload?.toNativeUtf8().cast<Int8>() ?? nullptr,
       ),
     );
 
@@ -179,122 +178,123 @@ class TokenWallet {
     return internalMessage;
   }
 
-  Future<void> refresh() => _nativeTokenWallet.use(
-        (ptr) => proceedAsync(
-          (port) => nativeLibraryInstance.bindings.token_wallet_refresh(
-            port,
-            ptr,
-          ),
-        ),
-      );
+  Future<void> refresh() async {
+    final ptr = await clonePtr();
 
-  Future<void> preloadTransactions(TransactionId from) async {
-    final fromStr = jsonEncode(from);
-
-    await _nativeTokenWallet.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.token_wallet_preload_transactions(
-          port,
-          ptr,
-          fromStr.toNativeUtf8().cast<Int8>(),
-        ),
+    await executeAsync(
+      (port) => bindings().token_wallet_refresh(
+        port,
+        ptr,
       ),
     );
   }
 
-  Future<void> free() async {
-    _timer.cancel();
+  Future<void> preloadTransactions(TransactionId from) async {
+    final ptr = await clonePtr();
 
-    _subscription.cancel();
-    _onTransactionsFoundSubscription.cancel();
+    final fromStr = jsonEncode(from);
 
-    _onBalanceChangedSubject.close();
-    _onTransactionsFoundSubject.close();
-    _transactionsSubject.close();
-
-    _receivePort.close();
-
-    await _nativeTokenWallet.free();
+    await executeAsync(
+      (port) => bindings().token_wallet_preload_transactions(
+        port,
+        ptr,
+        fromStr.toNativeUtf8().cast<Int8>(),
+      ),
+    );
   }
 
+  @override
+  Future<Pointer<Void>> clonePtr() => _lock.synchronized(() {
+        if (_ptr == null) throw Exception('Token wallet use after free');
+
+        final ptr = bindings().clone_token_wallet_ptr(
+          _ptr!,
+        );
+
+        return ptr;
+      });
+
+  @override
+  Future<void> freePtr() => _lock.synchronized(() {
+        if (_ptr == null) throw Exception('Token wallet use after free');
+
+        _onTransactionsFoundSubscription.cancel();
+
+        _transactionsSubject.close();
+
+        _onBalanceChangedPort.close();
+        _onTransactionsFoundPort.close();
+
+        bindings().free_token_wallet_ptr(
+          _ptr!,
+        );
+
+        _ptr = null;
+      });
+
   Future<void> _initialize({
-    required GqlTransport transport,
+    required Transport transport,
     required String owner,
     required String rootTokenContract,
   }) async {
-    _transport = transport;
-    _subscription = _receivePort.listen(_subscriptionListener);
-    _onTransactionsFoundSubscription = _onTransactionsFoundSubject.listen(_onTransactionsFoundListener);
+    final transportPtr = await transport.clonePtr();
 
-    final result = await _transport.nativeGqlTransport.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.token_wallet_subscribe(
-          port,
-          _receivePort.sendPort.nativePort,
-          ptr,
-          owner.toNativeUtf8().cast<Int8>(),
-          rootTokenContract.toNativeUtf8().cast<Int8>(),
-        ),
+    final transportType = transport.connectionData.type;
+
+    final result = await executeAsync(
+      (port) => bindings().token_wallet_subscribe(
+        port,
+        _onBalanceChangedPort.sendPort.nativePort,
+        _onTransactionsFoundPort.sendPort.nativePort,
+        transportPtr,
+        transportType.index,
+        owner.toNativeUtf8().cast<Int8>(),
+        rootTokenContract.toNativeUtf8().cast<Int8>(),
       ),
     );
-    final ptr = Pointer.fromAddress(result).cast<Void>();
 
-    _nativeTokenWallet = NativeTokenWallet(ptr);
+    _ptr = Pointer.fromAddress(result).cast<Void>();
+
+    onBalanceChangedStream = _onBalanceChangedPort.asBroadcastStream().cast<String>().map((e) {
+      final json = jsonDecode(e) as Map<String, dynamic>;
+      final payload = OnBalanceChangedPayload.fromJson(json);
+      return payload;
+    });
+
+    onTransactionsFoundStream = _onTransactionsFoundPort.asBroadcastStream().cast<String>().map((e) {
+      final json = jsonDecode(e) as Map<String, dynamic>;
+      final payload = OnTokenWalletTransactionsFoundPayload.fromJson(json);
+      return payload;
+    });
+
+    _onTransactionsFoundSubscription = onTransactionsFoundStream.listen(_onTransactionsFoundListener);
 
     this.owner = await _owner;
     address = await _address;
     symbol = await _symbol;
     version = await _version;
 
-    _timer = Timer.periodic(
-      kGqlRefreshPeriod,
-      _refreshTimer,
-    );
-  }
-
-  Future<void> _subscriptionListener(dynamic data) async {
-    try {
-      if (data is! String) return;
-
-      final json = jsonDecode(data) as Map<String, dynamic>;
-      final message = SubscriptionHandlerMessage.fromJson(json);
-
-      switch (message.event) {
-        case 'on_balance_changed':
-          final json = jsonDecode(message.payload) as Map<String, dynamic>;
-          final payload = OnBalanceChangedPayload.fromJson(json);
-
-          _onBalanceChangedSubject.add(payload.balance);
-          break;
-        case 'on_transactions_found':
-          final json = jsonDecode(message.payload) as Map<String, dynamic>;
-          final payload = OnTokenWalletTransactionsFoundPayload.fromJson(json);
-
-          _onTransactionsFoundSubject.add(payload);
-          break;
-      }
-    } catch (err, st) {
-      logger?.e(err, err, st);
-    }
-  }
-
-  Future<void> _refreshTimer(Timer timer) async {
-    try {
-      if (_nativeTokenWallet.isNull) {
-        timer.cancel();
-        return;
-      }
-
-      await refresh();
-    } catch (err, st) {
-      logger?.e(err, err, st);
-    }
+    _refreshCycle();
   }
 
   void _onTransactionsFoundListener(OnTokenWalletTransactionsFoundPayload value) {
-    final transactions = [..._transactionsSubject.value, ...value.transactions]
-      ..sort((a, b) => b.transaction.createdAt.compareTo(a.transaction.createdAt));
+    final transactions = [
+      ..._transactionsSubject.value,
+      ...value.transactions,
+    ]..sort();
 
     _transactionsSubject.add(transactions);
+  }
+
+  Future<void> _refreshCycle() async {
+    while (_ptr != null) {
+      try {
+        await refresh();
+
+        await Future.delayed(kRefreshPeriod);
+      } catch (err, st) {
+        nekotonErrorsSubject.add(Tuple2(err, st));
+      }
+    }
   }
 }

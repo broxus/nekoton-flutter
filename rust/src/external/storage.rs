@@ -1,174 +1,105 @@
-use crate::{
-    match_result,
-    models::{NativeError, NativeStatus},
-    runtime, send_to_result_port, FromPtr, RUNTIME,
-};
+use crate::{models::MatchResult, runtime, FromPtr, RUNTIME};
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use nekoton::external::Storage;
 use pickledb::{PickleDb, PickleDbDumpPolicy, SerializationMethod};
 use std::{
     ffi::c_void,
-    os::raw::{c_char, c_longlong, c_ulonglong},
+    os::raw::{c_char, c_ulonglong},
     path::Path,
     sync::Arc,
-    u64,
 };
 use tokio::sync::Mutex;
 
-pub type MutexStorage = Mutex<Option<Arc<StorageImpl>>>;
-
-pub const STORAGE_NOT_FOUND: &str = "Storage not found";
-
 #[no_mangle]
-pub unsafe extern "C" fn get_storage(dir: *mut c_char) -> *mut c_void {
-    let result = internal_get_storage(dir);
-    match_result(result)
-}
+pub unsafe extern "C" fn create_storage(dir: *mut c_char) -> *mut c_void {
+    fn internal_fn(dir: *mut c_char) -> Result<u64, String> {
+        let dir = dir.from_ptr();
+        let path = Path::new(&dir).join("nekoton_storage.db");
 
-fn internal_get_storage(dir: *mut c_char) -> Result<u64, NativeError> {
-    let dir = dir.from_ptr();
-
-    let path = Path::new(&dir).join("nekoton_storage.db");
-
-    let db = match PickleDb::load(
-        path.clone(),
-        PickleDbDumpPolicy::AutoDump,
-        SerializationMethod::Json,
-    ) {
-        Ok(db) => db,
-        Err(_) => PickleDb::new(
-            path,
+        let db = match PickleDb::load(
+            path.clone(),
             PickleDbDumpPolicy::AutoDump,
             SerializationMethod::Json,
-        ),
-    };
-    let db = std::sync::Mutex::new(Some(db));
+        ) {
+            Ok(db) => db,
+            Err(_) => PickleDb::new(
+                path,
+                PickleDbDumpPolicy::AutoDump,
+                SerializationMethod::Json,
+            ),
+        };
+        let db = Arc::new(Mutex::new(db));
 
-    let storage = StorageImpl { db };
-    let storage = Arc::new(storage);
-    let storage = Mutex::new(Some(storage));
-    let storage = Arc::new(storage);
+        let storage = StorageImpl { db };
+        let storage = Box::new(Arc::new(storage));
 
-    let ptr = Arc::into_raw(storage) as *mut c_void;
-    let ptr = ptr as c_ulonglong;
+        let ptr = Box::into_raw(storage) as *mut c_void as c_ulonglong;
 
-    Ok(ptr)
+        Ok(ptr)
+    }
+
+    internal_fn(dir).match_result()
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn free_storage(result_port: c_longlong, storage: *mut c_void) {
-    let storage = storage as *mut MutexStorage;
-    let storage = &(*storage);
+pub unsafe extern "C" fn clone_storage_ptr(storage: *mut c_void) -> *mut c_void {
+    let storage = storage as *mut Arc<StorageImpl>;
+    let cloned = Arc::clone(&*storage);
 
-    let rt = runtime!();
-    rt.spawn(async move {
-        let mut storage_guard = storage.lock().await;
-        let storage = storage_guard.take();
-        match storage {
-            Some(storage) => storage,
-            None => {
-                let result = match_result(Err(NativeError {
-                    status: NativeStatus::MutexError,
-                    info: STORAGE_NOT_FOUND.to_owned(),
-                }));
-                send_to_result_port(result_port, result);
-                return;
-            }
-        };
+    Arc::into_raw(cloned) as *mut c_void
+}
 
-        let result = Ok(0);
-        let result = match_result(result);
+#[no_mangle]
+pub unsafe extern "C" fn free_storage_ptr(storage: *mut c_void) {
+    let storage = storage as *mut Arc<StorageImpl>;
 
-        send_to_result_port(result_port, result);
-    });
+    let _ = Box::from_raw(storage);
 }
 
 pub struct StorageImpl {
-    pub db: std::sync::Mutex<Option<PickleDb>>,
+    pub db: Arc<Mutex<PickleDb>>,
 }
 
 #[async_trait]
 impl Storage for StorageImpl {
     async fn get(&self, key: &str) -> Result<Option<String>> {
-        let mut db_guard = match self.db.lock().ok() {
-            Some(db_guard) => db_guard,
-            None => return Err(anyhow!("Mutex db error")),
-        };
-
-        match db_guard.take() {
-            Some(db) => {
-                let result = db.get::<String>(key);
-                *db_guard = Some(db);
-                Ok(result)
-            }
-            None => return Err(anyhow!("Mutex db error")),
-        }
+        Ok(self.db.lock().await.get::<String>(key))
     }
 
     async fn set(&self, key: &str, value: &str) -> Result<()> {
-        let mut db_guard = match self.db.lock().ok() {
-            Some(db_guard) => db_guard,
-            None => return Err(anyhow!("Mutex db error")),
-        };
-
-        match db_guard.take() {
-            Some(mut db) => {
-                let result = db
-                    .set::<String>(key, &value.to_owned())
-                    .map_err(|e| anyhow!("{}", e));
-                *db_guard = Some(db);
-                result
-            }
-            None => return Err(anyhow!("Mutex db error")),
-        }
+        self.db
+            .lock()
+            .await
+            .set::<String>(key, &value.to_owned())
+            .map_err(|e| anyhow!("{}", e))
     }
 
     fn set_unchecked(&self, key: &str, value: &str) {
-        let mut db_guard = match self.db.lock().ok() {
-            Some(db_guard) => db_guard,
-            None => return,
-        };
+        let db = self.db.clone();
+        let key = key.to_string();
+        let value = value.to_string();
 
-        let _ = match db_guard.take() {
-            Some(mut db) => {
-                let result = db.set::<String>(key, &value.to_owned());
-                *db_guard = Some(db);
-                result
-            }
-            None => return,
-        };
+        runtime!().spawn(async move {
+            let _ = db.lock().await.set::<String>(&key, &value.to_owned());
+        });
     }
 
     async fn remove(&self, key: &str) -> Result<()> {
-        let mut db_guard = match self.db.lock().ok() {
-            Some(db_guard) => db_guard,
-            None => return Err(anyhow!("Mutex db error")),
-        };
-
-        match db_guard.take() {
-            Some(mut db) => {
-                let result = db.rem(key).map(|_| ()).map_err(|e| anyhow!("{}", e));
-                *db_guard = Some(db);
-                result
-            }
-            None => return Err(anyhow!("Mutex db error")),
-        }
+        self.db
+            .lock()
+            .await
+            .rem(key)
+            .map(|_| ())
+            .map_err(|e| anyhow!("{}", e))
     }
 
     fn remove_unchecked(&self, key: &str) {
-        let mut db_guard = match self.db.lock().ok() {
-            Some(db_guard) => db_guard,
-            None => return,
-        };
+        let db = self.db.clone();
+        let key = key.to_string();
 
-        let _ = match db_guard.take() {
-            Some(mut db) => {
-                let result = db.rem(key);
-                *db_guard = Some(db);
-                result
-            }
-            None => return,
-        };
+        runtime!().spawn(async move {
+            let _ = db.lock().await.rem(&key);
+        });
     }
 }

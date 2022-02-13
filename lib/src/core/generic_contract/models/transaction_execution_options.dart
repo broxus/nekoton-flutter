@@ -7,6 +7,7 @@ part 'transaction_execution_options.g.dart';
 class TransactionExecutionOptions with _$TransactionExecutionOptions {
   const factory TransactionExecutionOptions({
     required bool disableSignatureCheck,
+    int? overrideBalance,
   }) = _TransactionExecutionOptions;
 
   factory TransactionExecutionOptions.fromJson(Map<String, dynamic> json) =>

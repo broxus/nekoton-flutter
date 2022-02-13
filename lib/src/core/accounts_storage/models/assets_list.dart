@@ -3,7 +3,6 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import 'additional_assets.dart';
 import 'ton_wallet_asset.dart';
-import 'wallet_type.dart';
 
 part 'assets_list.freezed.dart';
 part 'assets_list.g.dart';
@@ -32,5 +31,5 @@ class AssetsList with _$AssetsList implements Comparable<AssetsList> {
   int get workchain => tonWallet.workchain;
 
   @override
-  int compareTo(AssetsList other) => tonWallet.contract.toInt().compareTo(other.tonWallet.contract.toInt());
+  int compareTo(AssetsList other) => address.compareTo(other.address);
 }

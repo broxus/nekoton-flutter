@@ -1,33 +1,17 @@
 use std::{
-    ffi::{CStr, CString},
+    ffi::{c_void, CStr, CString},
     os::raw::{c_char, c_uint, c_ulonglong},
 };
 
 #[repr(C)]
-pub struct NativeResult {
+pub struct ExecutionResult {
     pub status_code: c_uint,
     pub payload: c_ulonglong,
 }
 
-pub struct NativeError {
-    pub status: NativeStatus,
-    pub info: String,
-}
-
-pub enum NativeStatus {
-    Success,
-    MutexError,
-    ConversionError,
-    AccountsStorageError,
-    KeyStoreError,
-    TokenWalletError,
-    TonWalletError,
-    GenericContractError,
-    CryptoError,
-    DePoolError,
-    AbiError,
-    ConnectionError,
-    TransportError,
+pub enum ExecutionStatus {
+    Ok,
+    Err,
 }
 
 pub trait ToPtr {
@@ -54,7 +38,7 @@ impl FromPtr for *mut c_char {
 pub trait HandleError {
     type Output;
 
-    fn handle_error(self, status: NativeStatus) -> Result<Self::Output, NativeError>;
+    fn handle_error(self) -> Result<Self::Output, String>;
 }
 
 impl<T, E> HandleError for Result<T, E>
@@ -63,10 +47,28 @@ where
 {
     type Output = T;
 
-    fn handle_error(self, status: NativeStatus) -> Result<Self::Output, NativeError> {
-        self.map_err(|e| NativeError {
-            status,
-            info: e.to_string(),
-        })
+    fn handle_error(self) -> Result<Self::Output, String> {
+        self.map_err(|e| e.to_string())
+    }
+}
+
+pub trait MatchResult {
+    fn match_result(self) -> *mut c_void;
+}
+
+impl MatchResult for Result<u64, String> {
+    fn match_result(self) -> *mut c_void {
+        let result = match self {
+            Ok(success) => ExecutionResult {
+                status_code: ExecutionStatus::Ok as c_uint,
+                payload: success as c_ulonglong,
+            },
+            Err(error) => ExecutionResult {
+                status_code: ExecutionStatus::Err as c_uint,
+                payload: error.to_ptr() as c_ulonglong,
+            },
+        };
+
+        Box::into_raw(Box::new(result)) as *mut c_void
     }
 }

@@ -1,12 +1,13 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'export_key_input.dart';
 import 'password.dart';
 
 part 'derived_key_export_params.freezed.dart';
 part 'derived_key_export_params.g.dart';
 
 @freezed
-class DerivedKeyExportParams with _$DerivedKeyExportParams {
+class DerivedKeyExportParams with _$DerivedKeyExportParams implements ExportKeyInput {
   @JsonSerializable(
     fieldRename: FieldRename.snake,
     explicitToJson: true,

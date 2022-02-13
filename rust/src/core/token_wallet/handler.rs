@@ -1,5 +1,5 @@
 use super::models::{OnBalanceChangedPayload, TokenWalletTransaction};
-use crate::core::{post_subscription_data, OnTransactionsFoundPayload, SubscriptionHandlerMessage};
+use crate::core::{models::OnTransactionsFoundPayload, post_subscription_data};
 use async_trait::async_trait;
 use nekoton::core::{
     models::{self, TransactionWithData, TransactionsBatchInfo},
@@ -8,31 +8,19 @@ use nekoton::core::{
 use nekoton_abi::num_bigint::BigUint;
 
 pub struct TokenWalletSubscriptionHandlerImpl {
-    pub port: Option<i64>,
+    pub on_balance_changed_port: i64,
+    pub on_transactions_found_port: i64,
 }
 
 #[async_trait]
 impl TokenWalletSubscriptionHandler for TokenWalletSubscriptionHandlerImpl {
     fn on_balance_changed(&self, balance: BigUint) {
-        let port = match self.port {
-            Some(port) => port,
-            None => return,
-        };
-
         let payload = OnBalanceChangedPayload {
             balance: balance.to_string(),
         };
+        let payload = serde_json::to_string(&payload).unwrap();
 
-        if let Ok(payload) = serde_json::to_string(&payload) {
-            let message = SubscriptionHandlerMessage {
-                event: "on_balance_changed".to_owned(),
-                payload,
-            };
-
-            if let Ok(message) = serde_json::to_string(&message) {
-                post_subscription_data(port, message);
-            };
-        };
+        post_subscription_data(self.on_balance_changed_port, payload);
     }
 
     fn on_transactions_found(
@@ -40,40 +28,22 @@ impl TokenWalletSubscriptionHandler for TokenWalletSubscriptionHandlerImpl {
         transactions: Vec<TransactionWithData<models::TokenWalletTransaction>>,
         batch_info: TransactionsBatchInfo,
     ) {
-        let port = match self.port {
-            Some(port) => port,
-            None => return,
-        };
-
         let transactions = transactions
             .iter()
-            .map(
-                |transaction| -> TransactionWithData<TokenWalletTransaction> {
-                    TransactionWithData::<TokenWalletTransaction> {
-                        transaction: transaction.transaction.clone(),
-                        data: transaction
-                            .data
-                            .clone()
-                            .map(|data| TokenWalletTransaction::from_core(data)),
-                    }
-                },
-            )
+            .map(|e| -> TransactionWithData<TokenWalletTransaction> {
+                TransactionWithData::<TokenWalletTransaction> {
+                    transaction: e.transaction.clone(),
+                    data: e.data.clone().map(|e| TokenWalletTransaction::from_core(e)),
+                }
+            })
             .collect::<Vec<_>>();
 
         let payload = OnTransactionsFoundPayload::<TokenWalletTransaction> {
             transactions,
             batch_info,
         };
+        let payload = serde_json::to_string(&payload).unwrap();
 
-        if let Ok(payload) = serde_json::to_string(&payload) {
-            let message = SubscriptionHandlerMessage {
-                event: "on_transactions_found".to_owned(),
-                payload,
-            };
-
-            if let Ok(message) = serde_json::to_string(&message) {
-                post_subscription_data(port, message);
-            };
-        };
+        post_subscription_data(self.on_transactions_found_port, payload);
     }
 }

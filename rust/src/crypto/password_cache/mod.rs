@@ -39,7 +39,7 @@ impl PasswordCacheBehavior {
     pub fn to_core(self) -> crypto::PasswordCacheBehavior {
         match self {
             PasswordCacheBehavior::Store { duration } => {
-                crypto::PasswordCacheBehavior::Store(Duration::new(duration, 0))
+                crypto::PasswordCacheBehavior::Store(Duration::from_millis(duration))
             }
             PasswordCacheBehavior::Remove => crypto::PasswordCacheBehavior::Remove,
         }

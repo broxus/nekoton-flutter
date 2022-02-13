@@ -1,116 +1,81 @@
 pub mod models;
 
 use crate::{
-    core::{
-        accounts_storage::models::{AssetsList, MutexAccountsStorage},
-        ton_wallet::models::WalletType,
-    },
-    external::storage::{MutexStorage, StorageImpl, STORAGE_NOT_FOUND},
-    match_result,
-    models::{HandleError, NativeError, NativeStatus},
+    core::{accounts_storage::models::AssetsList, ton_wallet::models::WalletType},
+    external::storage::StorageImpl,
+    models::{HandleError, MatchResult},
     parse_address, parse_public_key, runtime, send_to_result_port, FromPtr, ToPtr, RUNTIME,
 };
-use nekoton::core::accounts_storage::AccountsStorage;
+use nekoton::{core::accounts_storage::AccountsStorage, external::Storage};
 use std::{
     ffi::c_void,
     os::raw::{c_char, c_longlong, c_schar, c_ulonglong},
     sync::Arc,
 };
-use tokio::sync::Mutex;
-
-const ACCOUNTS_STORAGE_NOT_FOUND: &str = "Accounts storage not found";
+use ton_block::AccountStorage;
 
 #[no_mangle]
-pub unsafe extern "C" fn get_accounts_storage(result_port: c_longlong, storage: *mut c_void) {
-    let storage = storage as *mut MutexStorage;
-    let storage = &(*storage);
+pub unsafe extern "C" fn create_accounts_storage(result_port: c_longlong, storage: *mut c_void) {
+    let storage = storage as *mut StorageImpl;
+    let storage = Arc::from_raw(storage) as Arc<dyn Storage>;
 
-    let rt = runtime!();
-    rt.spawn(async move {
-        let mut storage_guard = storage.lock().await;
-        let storage = storage_guard.take();
-        let storage = match storage {
-            Some(storage) => storage,
-            None => {
-                let result = match_result(Err(NativeError {
-                    status: NativeStatus::MutexError,
-                    info: STORAGE_NOT_FOUND.to_owned(),
-                }));
+    runtime!().spawn(async move {
+        async fn internal_fn(storage: Arc<dyn Storage>) -> Result<u64, String> {
+            let accounts_storage = AccountsStorage::load(storage).await.handle_error()?;
 
-                send_to_result_port(result_port, result);
-                return;
-            }
-        };
+            let accounts_storage = Box::new(Arc::new(accounts_storage));
 
-        let result = internal_get_accounts_storage(storage.clone()).await;
-        let result = match_result(result);
+            let ptr = Box::into_raw(accounts_storage) as *mut c_void as c_ulonglong;
 
-        *storage_guard = Some(storage);
+            Ok(ptr)
+        }
+
+        let result = internal_fn(storage).await.match_result();
 
         send_to_result_port(result_port, result);
     });
 }
 
-async fn internal_get_accounts_storage(storage: Arc<StorageImpl>) -> Result<u64, NativeError> {
-    let accounts_storage = AccountsStorage::load(storage)
-        .await
-        .handle_error(NativeStatus::AccountsStorageError)?;
+#[no_mangle]
+pub unsafe extern "C" fn clone_accounts_storage_ptr(accounts_storage: *mut c_void) -> *mut c_void {
+    let accounts_storage = accounts_storage as *mut Arc<AccountStorage>;
+    let cloned = Arc::clone(&*accounts_storage);
 
-    let accounts_storage = Mutex::new(Some(accounts_storage));
-    let accounts_storage = Arc::new(accounts_storage);
+    Arc::into_raw(cloned) as *mut c_void
+}
 
-    let ptr = Arc::into_raw(accounts_storage) as *mut c_void;
-    let ptr = ptr as c_ulonglong;
+#[no_mangle]
+pub unsafe extern "C" fn free_accounts_storage_ptr(accounts_storage: *mut c_void) {
+    let accounts_storage = accounts_storage as *mut Arc<AccountStorage>;
 
-    Ok(ptr)
+    let _ = Box::from_raw(accounts_storage);
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn get_accounts(result_port: c_longlong, accounts_storage: *mut c_void) {
-    let accounts_storage = accounts_storage as *mut MutexAccountsStorage;
-    let accounts_storage = &(*accounts_storage);
+    let accounts_storage = accounts_storage as *mut AccountsStorage;
+    let accounts_storage = Arc::from_raw(accounts_storage) as Arc<AccountsStorage>;
 
-    let rt = runtime!();
-    rt.spawn(async move {
-        let mut accounts_storage_guard = accounts_storage.lock().await;
-        let accounts_storage = accounts_storage_guard.take();
-        let accounts_storage = match accounts_storage {
-            Some(accounts_storage) => accounts_storage,
-            None => {
-                let result = match_result(Err(NativeError {
-                    status: NativeStatus::MutexError,
-                    info: ACCOUNTS_STORAGE_NOT_FOUND.to_owned(),
-                }));
-                send_to_result_port(result_port, result);
-                return;
-            }
-        };
+    runtime!().spawn(async move {
+        async fn internal_fn(accounts_storage: &AccountsStorage) -> Result<u64, String> {
+            let data = accounts_storage.stored_data().await;
 
-        let result = internal_get_accounts(&accounts_storage).await;
-        let result = match_result(result);
+            let accounts = data
+                .accounts()
+                .values()
+                .into_iter()
+                .map(|e| AssetsList::from_core(e.clone()))
+                .collect::<Vec<_>>();
 
-        *accounts_storage_guard = Some(accounts_storage);
+            let accounts = serde_json::to_string(&accounts).handle_error()?.to_ptr() as c_ulonglong;
+
+            Ok(accounts)
+        }
+
+        let result = internal_fn(&accounts_storage).await.match_result();
 
         send_to_result_port(result_port, result);
     });
-}
-
-async fn internal_get_accounts(accounts_storage: &AccountsStorage) -> Result<u64, NativeError> {
-    let accounts = {
-        let data = accounts_storage.stored_data().await;
-        let accounts = data.accounts();
-        let accounts = accounts.values();
-
-        let mut result = Vec::new();
-        for address in accounts {
-            let address = AssetsList::from_core(address.clone());
-            result.push(address);
-        }
-
-        serde_json::to_string(&result).handle_error(NativeStatus::ConversionError)?
-    };
-
-    Ok(accounts.to_ptr() as c_ulonglong)
 }
 
 #[no_mangle]
@@ -122,61 +87,44 @@ pub unsafe extern "C" fn add_account(
     contract: *mut c_char,
     workchain: c_schar,
 ) {
-    let accounts_storage = accounts_storage as *mut MutexAccountsStorage;
-    let accounts_storage = &(*accounts_storage);
+    let accounts_storage = accounts_storage as *mut AccountsStorage;
+    let accounts_storage = Arc::from_raw(accounts_storage) as Arc<AccountsStorage>;
 
     let name = name.from_ptr();
     let public_key = public_key.from_ptr();
     let contract = contract.from_ptr();
 
-    let rt = runtime!();
-    rt.spawn(async move {
-        let mut accounts_storage_guard = accounts_storage.lock().await;
-        let accounts_storage = accounts_storage_guard.take();
-        let accounts_storage = match accounts_storage {
-            Some(accounts_storage) => accounts_storage,
-            None => {
-                let result = match_result(Err(NativeError {
-                    status: NativeStatus::MutexError,
-                    info: ACCOUNTS_STORAGE_NOT_FOUND.to_owned(),
-                }));
-                send_to_result_port(result_port, result);
-                return;
-            }
-        };
+    runtime!().spawn(async move {
+        async fn internal_fn(
+            accounts_storage: &AccountsStorage,
+            name: String,
+            public_key: String,
+            contract: String,
+            workchain: i8,
+        ) -> Result<u64, String> {
+            let contract = serde_json::from_str::<WalletType>(&contract)
+                .handle_error()?
+                .to_core();
 
-        let result =
-            internal_add_account(&accounts_storage, name, public_key, contract, workchain).await;
-        let result = match_result(result);
+            let public_key = parse_public_key(&public_key)?;
 
-        *accounts_storage_guard = Some(accounts_storage);
+            let assets = accounts_storage
+                .add_account(&name, public_key, contract, workchain)
+                .await
+                .handle_error()
+                .map(|e| AssetsList::from_core(e))?;
+
+            let assets = serde_json::to_string(&assets).handle_error()?.to_ptr() as c_ulonglong;
+
+            Ok(assets)
+        }
+
+        let result = internal_fn(&accounts_storage, name, public_key, contract, workchain)
+            .await
+            .match_result();
 
         send_to_result_port(result_port, result);
     });
-}
-
-async fn internal_add_account(
-    accounts_storage: &AccountsStorage,
-    name: String,
-    public_key: String,
-    contract: String,
-    workchain: i8,
-) -> Result<u64, NativeError> {
-    let contract = serde_json::from_str::<WalletType>(&contract)
-        .handle_error(NativeStatus::ConversionError)?;
-    let contract = contract.to_core();
-
-    let public_key = parse_public_key(&public_key)?;
-
-    let assets = accounts_storage
-        .add_account(&name, public_key, contract, workchain)
-        .await
-        .handle_error(NativeStatus::AccountsStorageError)?;
-
-    let assets = AssetsList::from_core(assets);
-    let assets = serde_json::to_string(&assets).handle_error(NativeStatus::ConversionError)?;
-
-    Ok(assets.to_ptr() as c_ulonglong)
 }
 
 #[no_mangle]
@@ -186,51 +134,35 @@ pub unsafe extern "C" fn rename_account(
     address: *mut c_char,
     name: *mut c_char,
 ) {
-    let accounts_storage = accounts_storage as *mut MutexAccountsStorage;
-    let accounts_storage = &(*accounts_storage);
+    let accounts_storage = accounts_storage as *mut AccountsStorage;
+    let accounts_storage = Arc::from_raw(accounts_storage) as Arc<AccountsStorage>;
 
     let address = address.from_ptr();
     let name = name.from_ptr();
 
-    let rt = runtime!();
-    rt.spawn(async move {
-        let mut accounts_storage_guard = accounts_storage.lock().await;
-        let accounts_storage = accounts_storage_guard.take();
-        let accounts_storage = match accounts_storage {
-            Some(accounts_storage) => accounts_storage,
-            None => {
-                let result = match_result(Err(NativeError {
-                    status: NativeStatus::MutexError,
-                    info: ACCOUNTS_STORAGE_NOT_FOUND.to_owned(),
-                }));
-                send_to_result_port(result_port, result);
-                return;
-            }
-        };
+    runtime!().spawn(async move {
+        async fn internal_fn(
+            accounts_storage: &AccountsStorage,
+            address: String,
+            name: String,
+        ) -> Result<u64, String> {
+            let assets = accounts_storage
+                .rename_account(&address, name)
+                .await
+                .handle_error()
+                .map(|e| AssetsList::from_core(e.clone()))?;
 
-        let result = internal_rename_account(&accounts_storage, address, name).await;
-        let result = match_result(result);
+            let assets = serde_json::to_string(&assets).handle_error()?.to_ptr() as c_ulonglong;
 
-        *accounts_storage_guard = Some(accounts_storage);
+            Ok(assets)
+        }
+
+        let result = internal_fn(&accounts_storage, address, name)
+            .await
+            .match_result();
 
         send_to_result_port(result_port, result);
     });
-}
-
-async fn internal_rename_account(
-    accounts_storage: &AccountsStorage,
-    address: String,
-    name: String,
-) -> Result<u64, NativeError> {
-    let assets = accounts_storage
-        .rename_account(&address, name)
-        .await
-        .handle_error(NativeStatus::AccountsStorageError)?;
-
-    let assets = AssetsList::from_core(assets);
-    let assets = serde_json::to_string(&assets).handle_error(NativeStatus::ConversionError)?;
-
-    Ok(assets.to_ptr() as c_ulonglong)
 }
 
 #[no_mangle]
@@ -239,48 +171,31 @@ pub unsafe extern "C" fn remove_account(
     accounts_storage: *mut c_void,
     address: *mut c_char,
 ) {
-    let accounts_storage = accounts_storage as *mut MutexAccountsStorage;
-    let accounts_storage = &(*accounts_storage);
+    let accounts_storage = accounts_storage as *mut AccountsStorage;
+    let accounts_storage = Arc::from_raw(accounts_storage) as Arc<AccountsStorage>;
 
     let address = address.from_ptr();
 
-    let rt = runtime!();
-    rt.spawn(async move {
-        let mut accounts_storage_guard = accounts_storage.lock().await;
-        let accounts_storage = accounts_storage_guard.take();
-        let accounts_storage = match accounts_storage {
-            Some(accounts_storage) => accounts_storage,
-            None => {
-                let result = match_result(Err(NativeError {
-                    status: NativeStatus::MutexError,
-                    info: ACCOUNTS_STORAGE_NOT_FOUND.to_owned(),
-                }));
-                send_to_result_port(result_port, result);
-                return;
-            }
-        };
+    runtime!().spawn(async move {
+        async fn internal_fn(
+            accounts_storage: &AccountsStorage,
+            address: String,
+        ) -> Result<u64, String> {
+            let assets = accounts_storage
+                .remove_account(&address)
+                .await
+                .handle_error()
+                .map(|e| e.map(|e| AssetsList::from_core(e.clone())))?;
 
-        let result = internal_remove_account(&accounts_storage, address).await;
-        let result = match_result(result);
+            let assets = serde_json::to_string(&assets).handle_error()?.to_ptr() as c_ulonglong;
 
-        *accounts_storage_guard = Some(accounts_storage);
+            Ok(assets)
+        }
+
+        let result = internal_fn(&accounts_storage, address).await.match_result();
 
         send_to_result_port(result_port, result);
     });
-}
-
-async fn internal_remove_account(
-    accounts_storage: &AccountsStorage,
-    address: String,
-) -> Result<u64, NativeError> {
-    let assets = accounts_storage
-        .remove_account(&address)
-        .await
-        .handle_error(NativeStatus::AccountsStorageError)?;
-    let assets = assets.map(|assets| AssetsList::from_core(assets));
-    let assets = serde_json::to_string(&assets).handle_error(NativeStatus::ConversionError)?;
-
-    Ok(assets.to_ptr() as c_ulonglong)
 }
 
 #[no_mangle]
@@ -291,61 +206,44 @@ pub unsafe extern "C" fn add_token_wallet(
     network_group: *mut c_char,
     root_token_contract: *mut c_char,
 ) {
-    let accounts_storage = accounts_storage as *mut MutexAccountsStorage;
-    let accounts_storage = &(*accounts_storage);
+    let accounts_storage = accounts_storage as *mut AccountsStorage;
+    let accounts_storage = Arc::from_raw(accounts_storage) as Arc<AccountsStorage>;
 
     let address = address.from_ptr();
     let network_group = network_group.from_ptr();
     let root_token_contract = root_token_contract.from_ptr();
 
-    let rt = runtime!();
-    rt.spawn(async move {
-        let mut accounts_storage_guard = accounts_storage.lock().await;
-        let accounts_storage = accounts_storage_guard.take();
-        let accounts_storage = match accounts_storage {
-            Some(accounts_storage) => accounts_storage,
-            None => {
-                let result = match_result(Err(NativeError {
-                    status: NativeStatus::MutexError,
-                    info: ACCOUNTS_STORAGE_NOT_FOUND.to_owned(),
-                }));
-                send_to_result_port(result_port, result);
-                return;
-            }
-        };
+    runtime!().spawn(async move {
+        async fn internal_fn(
+            accounts_storage: &AccountsStorage,
+            address: String,
+            network_group: String,
+            root_token_contract: String,
+        ) -> Result<u64, String> {
+            let root_token_contract = parse_address(&root_token_contract)?;
 
-        let result = internal_add_token_wallet(
+            let assets = accounts_storage
+                .add_token_wallet(&address, &network_group, root_token_contract)
+                .await
+                .handle_error()
+                .map(|e| AssetsList::from_core(e.clone()))?;
+
+            let assets = serde_json::to_string(&assets).handle_error()?.to_ptr() as c_ulonglong;
+
+            Ok(assets)
+        }
+
+        let result = internal_fn(
             &accounts_storage,
             address,
             network_group,
             root_token_contract,
         )
-        .await;
-        let result = match_result(result);
-
-        *accounts_storage_guard = Some(accounts_storage);
+        .await
+        .match_result();
 
         send_to_result_port(result_port, result);
     });
-}
-
-async fn internal_add_token_wallet(
-    accounts_storage: &AccountsStorage,
-    address: String,
-    network_group: String,
-    root_token_contract: String,
-) -> Result<u64, NativeError> {
-    let root_token_contract = parse_address(&root_token_contract)?;
-
-    let assets = accounts_storage
-        .add_token_wallet(&address, &network_group, root_token_contract)
-        .await
-        .handle_error(NativeStatus::AccountsStorageError)?;
-
-    let assets = AssetsList::from_core(assets);
-    let assets = serde_json::to_string(&assets).handle_error(NativeStatus::ConversionError)?;
-
-    Ok(assets.to_ptr() as c_ulonglong)
 }
 
 #[no_mangle]
@@ -356,61 +254,44 @@ pub unsafe extern "C" fn remove_token_wallet(
     network_group: *mut c_char,
     root_token_contract: *mut c_char,
 ) {
-    let accounts_storage = accounts_storage as *mut MutexAccountsStorage;
-    let accounts_storage = &(*accounts_storage);
+    let accounts_storage = accounts_storage as *mut AccountsStorage;
+    let accounts_storage = Arc::from_raw(accounts_storage) as Arc<AccountsStorage>;
 
     let address = address.from_ptr();
     let network_group = network_group.from_ptr();
     let root_token_contract = root_token_contract.from_ptr();
 
-    let rt = runtime!();
-    rt.spawn(async move {
-        let mut accounts_storage_guard = accounts_storage.lock().await;
-        let accounts_storage = accounts_storage_guard.take();
-        let accounts_storage = match accounts_storage {
-            Some(accounts_storage) => accounts_storage,
-            None => {
-                let result = match_result(Err(NativeError {
-                    status: NativeStatus::MutexError,
-                    info: ACCOUNTS_STORAGE_NOT_FOUND.to_owned(),
-                }));
-                send_to_result_port(result_port, result);
-                return;
-            }
-        };
+    runtime!().spawn(async move {
+        async fn internal_fn(
+            accounts_storage: &AccountsStorage,
+            address: String,
+            network_group: String,
+            root_token_contract: String,
+        ) -> Result<u64, String> {
+            let root_token_contract = parse_address(&root_token_contract)?;
 
-        let result = internal_remove_token_wallet(
+            let assets = accounts_storage
+                .remove_token_wallet(&address, &network_group, &root_token_contract)
+                .await
+                .handle_error()
+                .map(|e| AssetsList::from_core(e.clone()))?;
+
+            let assets = serde_json::to_string(&assets).handle_error()?.to_ptr() as c_ulonglong;
+
+            Ok(assets)
+        }
+
+        let result = internal_fn(
             &accounts_storage,
             address,
             network_group,
             root_token_contract,
         )
-        .await;
-        let result = match_result(result);
-
-        *accounts_storage_guard = Some(accounts_storage);
+        .await
+        .match_result();
 
         send_to_result_port(result_port, result);
     });
-}
-
-async fn internal_remove_token_wallet(
-    accounts_storage: &AccountsStorage,
-    address: String,
-    network_group: String,
-    root_token_contract: String,
-) -> Result<u64, NativeError> {
-    let root_token_contract = parse_address(&root_token_contract)?;
-
-    let assets = accounts_storage
-        .remove_token_wallet(&address, &network_group, &root_token_contract)
-        .await
-        .handle_error(NativeStatus::AccountsStorageError)?;
-
-    let assets = AssetsList::from_core(assets);
-    let assets = serde_json::to_string(&assets).handle_error(NativeStatus::ConversionError)?;
-
-    Ok(assets.to_ptr() as c_ulonglong)
 }
 
 #[no_mangle]
@@ -418,71 +299,17 @@ pub unsafe extern "C" fn clear_accounts_storage(
     result_port: c_longlong,
     accounts_storage: *mut c_void,
 ) {
-    let accounts_storage = accounts_storage as *mut MutexAccountsStorage;
-    let accounts_storage = &(*accounts_storage);
+    let accounts_storage = accounts_storage as *mut AccountsStorage;
+    let accounts_storage = Arc::from_raw(accounts_storage) as Arc<AccountsStorage>;
 
-    let rt = runtime!();
-    rt.spawn(async move {
-        let mut accounts_storage_guard = accounts_storage.lock().await;
-        let accounts_storage = accounts_storage_guard.take();
-        let accounts_storage = match accounts_storage {
-            Some(accounts_storage) => accounts_storage,
-            None => {
-                let result = match_result(Err(NativeError {
-                    status: NativeStatus::MutexError,
-                    info: ACCOUNTS_STORAGE_NOT_FOUND.to_owned(),
-                }));
-                send_to_result_port(result_port, result);
-                return;
-            }
-        };
+    runtime!().spawn(async move {
+        async fn internal_fn(accounts_storage: &AccountsStorage) -> Result<u64, String> {
+            let _ = accounts_storage.clear().await.handle_error()?;
 
-        let result = internal_clear_accounts_storage(&accounts_storage).await;
-        let result = match_result(result);
+            Ok(0)
+        }
 
-        *accounts_storage_guard = Some(accounts_storage);
-
-        send_to_result_port(result_port, result);
-    });
-}
-
-async fn internal_clear_accounts_storage(
-    accounts_storage: &AccountsStorage,
-) -> Result<u64, NativeError> {
-    let _ = accounts_storage
-        .clear()
-        .await
-        .handle_error(NativeStatus::AccountsStorageError)?;
-
-    Ok(0)
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn free_accounts_storage(
-    result_port: c_longlong,
-    accounts_storage: *mut c_void,
-) {
-    let accounts_storage = accounts_storage as *mut MutexAccountsStorage;
-    let accounts_storage = &(*accounts_storage);
-
-    let rt = runtime!();
-    rt.spawn(async move {
-        let mut accounts_storage_guard = accounts_storage.lock().await;
-        let accounts_storage = accounts_storage_guard.take();
-        match accounts_storage {
-            Some(accounts_storage) => accounts_storage,
-            None => {
-                let result = match_result(Err(NativeError {
-                    status: NativeStatus::MutexError,
-                    info: ACCOUNTS_STORAGE_NOT_FOUND.to_owned(),
-                }));
-                send_to_result_port(result_port, result);
-                return;
-            }
-        };
-
-        let result = Ok(0);
-        let result = match_result(result);
+        let result = internal_fn(&accounts_storage).await.match_result();
 
         send_to_result_port(result_port, result);
     });

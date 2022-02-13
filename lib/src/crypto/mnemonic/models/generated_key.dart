@@ -13,7 +13,7 @@ class GeneratedKey with _$GeneratedKey {
   )
   const factory GeneratedKey({
     required List<String> words,
-    required MnemonicType mnemonicType,
+    required MnemonicType accountType,
   }) = _GeneratedKey;
 
   factory GeneratedKey.fromJson(Map<String, dynamic> json) => _$GeneratedKeyFromJson(json);

@@ -27,8 +27,6 @@ class KeyStoreEntry with _$KeyStoreEntry implements Comparable<KeyStoreEntry> {
 
   bool get isMaster => publicKey == masterKey;
 
-  int get nextAccountId => accountId + 1;
-
   @override
   int compareTo(KeyStoreEntry other) => publicKey.compareTo(other.publicKey);
 }

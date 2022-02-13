@@ -1,135 +1,100 @@
 pub mod models;
 
 use crate::{
-    core::keystore::models::{KeySigner, MutexKeyStore},
+    core::keystore::models::KeySigner,
     crypto::{
-        derived_key::{DerivedKeyExportParams, DerivedKeyUpdateParams},
-        encrypted_key::{EncryptedKeyPassword, EncryptedKeyUpdateParams},
+        derived_key::{
+            DerivedKeyCreateInput, DerivedKeyExportParams, DerivedKeySignParams,
+            DerivedKeyUpdateParams,
+        },
+        encrypted_key::{
+            EncryptedKeyCreateInput, EncryptedKeyExportOutput, EncryptedKeyPassword,
+            EncryptedKeyUpdateParams,
+        },
     },
-    external::storage::{StorageImpl, STORAGE_NOT_FOUND},
-    match_result,
-    models::{NativeError, NativeStatus},
+    external::storage::StorageImpl,
+    models::{HandleError, MatchResult},
     parse_public_key, runtime, send_to_result_port, FromPtr, ToPtr, RUNTIME,
 };
-use crate::{
-    crypto::{
-        derived_key::{DerivedKeyCreateInput, DerivedKeySignParams},
-        encrypted_key::{EncryptedKeyCreateInput, EncryptedKeyExportOutput},
-    },
-    external::storage::MutexStorage,
-    models::HandleError,
-};
-use anyhow::anyhow;
 use nekoton::{
     core::keystore::KeyStore,
     crypto::{DerivedKeySigner, EncryptedKeySigner},
+    external::Storage,
 };
 use std::{
     ffi::c_void,
     os::raw::{c_char, c_longlong, c_ulonglong},
     sync::Arc,
 };
-use tokio::sync::Mutex;
-
-pub const KEY_STORE_NOT_FOUND: &str = "Key store not found";
-pub const UNKNOWN_SIGNER: &str = "Unknown signer";
 
 #[no_mangle]
-pub unsafe extern "C" fn get_keystore(result_port: c_longlong, storage: *mut c_void) {
-    let storage = storage as *mut MutexStorage;
-    let storage = &(*storage);
+pub unsafe extern "C" fn create_keystore(result_port: c_longlong, storage: *mut c_void) {
+    let storage = storage as *mut StorageImpl;
+    let storage = Arc::from_raw(storage) as Arc<dyn Storage>;
 
-    let rt = runtime!();
-    rt.spawn(async move {
-        let mut storage_guard = storage.lock().await;
-        let storage = storage_guard.take();
-        let storage = match storage {
-            Some(storage) => storage,
-            None => {
-                let result = match_result(Err(NativeError {
-                    status: NativeStatus::MutexError,
-                    info: STORAGE_NOT_FOUND.to_owned(),
-                }));
+    runtime!().spawn(async move {
+        async fn internal_fn(storage: Arc<dyn Storage>) -> Result<u64, String> {
+            let keystore = KeyStore::builder()
+                .with_signer::<EncryptedKeySigner>(
+                    &KeySigner::EncryptedKeySigner.to_string(),
+                    EncryptedKeySigner::new(),
+                )
+                .handle_error()?
+                .with_signer::<DerivedKeySigner>(
+                    &KeySigner::DerivedKeySigner.to_string(),
+                    DerivedKeySigner::new(),
+                )
+                .handle_error()?
+                .load(storage)
+                .await
+                .handle_error()?;
 
-                send_to_result_port(result_port, result);
-                return;
-            }
-        };
+            let keystore = Box::new(Arc::new(keystore));
 
-        let result = internal_get_keystore(storage.clone()).await;
-        let result = match_result(result);
+            let ptr = Box::into_raw(keystore) as *mut c_void as c_ulonglong;
 
-        *storage_guard = Some(storage);
+            Ok(ptr)
+        }
+
+        let result = internal_fn(storage).await.match_result();
 
         send_to_result_port(result_port, result);
     });
 }
 
-async fn internal_get_keystore(storage: Arc<StorageImpl>) -> Result<u64, NativeError> {
-    let keystore = KeyStore::builder(storage)
-        .with_signer::<EncryptedKeySigner>(
-            &KeySigner::EncryptedKeySigner.to_string(),
-            EncryptedKeySigner::new(),
-        )
-        .handle_error(NativeStatus::KeyStoreError)?
-        .with_signer::<DerivedKeySigner>(
-            &KeySigner::DerivedKeySigner.to_string(),
-            DerivedKeySigner::new(),
-        )
-        .handle_error(NativeStatus::KeyStoreError)?
-        .load()
-        .await
-        .handle_error(NativeStatus::KeyStoreError)?;
+#[no_mangle]
+pub unsafe extern "C" fn clone_keystore_ptr(keystore: *mut c_void) -> *mut c_void {
+    let keystore = keystore as *mut Arc<KeyStore>;
+    let cloned = Arc::clone(&*keystore);
 
-    let keystore = Mutex::new(Some(keystore));
-    let keystore = Arc::new(keystore);
+    Arc::into_raw(cloned) as *mut c_void
+}
 
-    let ptr = Arc::into_raw(keystore) as *mut c_void;
-    let ptr = ptr as c_ulonglong;
+#[no_mangle]
+pub unsafe extern "C" fn free_keystore_ptr(keystore: *mut c_void) {
+    let keystore = keystore as *mut Arc<KeyStore>;
 
-    Ok(ptr)
+    let _ = Box::from_raw(keystore);
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn get_entries(result_port: c_longlong, keystore: *mut c_void) {
-    let keystore = keystore as *mut MutexKeyStore;
-    let keystore = &(*keystore);
+    let keystore = keystore as *mut KeyStore;
+    let keystore = Arc::from_raw(keystore) as Arc<KeyStore>;
 
-    let rt = runtime!();
-    rt.spawn(async move {
-        let mut keystore_guard = keystore.lock().await;
-        let keystore = keystore_guard.take();
-        let keystore = match keystore {
-            Some(keystore) => keystore,
-            None => {
-                let result = match_result(Err(NativeError {
-                    status: NativeStatus::MutexError,
-                    info: KEY_STORE_NOT_FOUND.to_owned(),
-                }));
-                send_to_result_port(result_port, result);
-                return;
-            }
-        };
+    runtime!().spawn(async move {
+        async fn internal_fn(keystore: &KeyStore) -> Result<u64, String> {
+            let entries = keystore.get_entries().await;
 
-        let result = internal_get_entries(&keystore).await;
-        let result = match_result(result);
+            let entries = serde_json::to_string(&entries).handle_error()?.to_ptr() as c_ulonglong;
 
-        *keystore_guard = Some(keystore);
+            Ok(entries)
+        }
+
+        let result = internal_fn(&keystore).await.match_result();
 
         send_to_result_port(result_port, result);
     });
-}
-
-async fn internal_get_entries(keystore: &KeyStore) -> Result<u64, NativeError> {
-    let entries = keystore.get_entries().await;
-
-    let mut result = Vec::new();
-    for entry in entries {
-        result.push(entry);
-    }
-    let result = serde_json::to_string(&result).handle_error(NativeStatus::ConversionError)?;
-
-    Ok(result.to_ptr() as c_ulonglong)
 }
 
 #[no_mangle]
@@ -138,64 +103,43 @@ pub unsafe extern "C" fn add_key(
     keystore: *mut c_void,
     create_key_input: *mut c_char,
 ) {
-    let keystore = keystore as *mut MutexKeyStore;
-    let keystore = &(*keystore);
+    let keystore = keystore as *mut KeyStore;
+    let keystore = Arc::from_raw(keystore) as Arc<KeyStore>;
 
     let create_key_input = create_key_input.from_ptr();
 
-    let rt = runtime!();
-    rt.spawn(async move {
-        let mut keystore_guard = keystore.lock().await;
-        let keystore = keystore_guard.take();
-        let keystore = match keystore {
-            Some(keystore) => keystore,
-            None => {
-                let result = match_result(Err(NativeError {
-                    status: NativeStatus::MutexError,
-                    info: KEY_STORE_NOT_FOUND.to_owned(),
-                }));
-                send_to_result_port(result_port, result);
-                return;
+    runtime!().spawn(async move {
+        async fn internal_fn(keystore: &KeyStore, create_key_input: String) -> Result<u64, String> {
+            let entry = if let Ok(create_key_input) =
+                serde_json::from_str::<EncryptedKeyCreateInput>(&create_key_input)
+            {
+                let entry = keystore
+                    .add_key::<EncryptedKeySigner>(create_key_input.to_core())
+                    .await
+                    .handle_error()?;
+                serde_json::to_string(&entry).handle_error()?
+            } else if let Ok(create_key_input) =
+                serde_json::from_str::<DerivedKeyCreateInput>(&create_key_input)
+            {
+                let entry = keystore
+                    .add_key::<DerivedKeySigner>(create_key_input.to_core())
+                    .await
+                    .handle_error()?;
+                serde_json::to_string(&entry).handle_error()?
+            } else {
+                panic!()
             }
-        };
+            .to_ptr() as c_ulonglong;
 
-        let result = internal_add_key(&keystore, create_key_input).await;
-        let result = match_result(result);
+            Ok(entry)
+        }
 
-        *keystore_guard = Some(keystore);
+        let result = internal_fn(&keystore, create_key_input)
+            .await
+            .match_result();
 
         send_to_result_port(result_port, result);
     });
-}
-
-async fn internal_add_key(
-    keystore: &KeyStore,
-    create_key_input: String,
-) -> Result<u64, NativeError> {
-    let entry = if let Ok(create_key_input) =
-        serde_json::from_str::<EncryptedKeyCreateInput>(&create_key_input)
-    {
-        let entry = keystore
-            .add_key::<EncryptedKeySigner>(create_key_input.to_core())
-            .await
-            .handle_error(NativeStatus::KeyStoreError)?;
-        serde_json::to_string(&entry).handle_error(NativeStatus::ConversionError)?
-    } else if let Ok(create_key_input) =
-        serde_json::from_str::<DerivedKeyCreateInput>(&create_key_input)
-    {
-        let entry = keystore
-            .add_key::<DerivedKeySigner>(create_key_input.to_core())
-            .await
-            .handle_error(NativeStatus::KeyStoreError)?;
-        serde_json::to_string(&entry).handle_error(NativeStatus::ConversionError)?
-    } else {
-        return Err(NativeError {
-            status: NativeStatus::KeyStoreError,
-            info: UNKNOWN_SIGNER.to_owned(),
-        });
-    };
-
-    Ok(entry.to_ptr() as c_ulonglong)
 }
 
 #[no_mangle]
@@ -204,64 +148,43 @@ pub unsafe extern "C" fn update_key(
     keystore: *mut c_void,
     update_key_input: *mut c_char,
 ) {
-    let keystore = keystore as *mut MutexKeyStore;
-    let keystore = &(*keystore);
+    let keystore = keystore as *mut KeyStore;
+    let keystore = Arc::from_raw(keystore) as Arc<KeyStore>;
 
     let update_key_input = update_key_input.from_ptr();
 
-    let rt = runtime!();
-    rt.spawn(async move {
-        let mut keystore_guard = keystore.lock().await;
-        let keystore = keystore_guard.take();
-        let keystore = match keystore {
-            Some(keystore) => keystore,
-            None => {
-                let result = match_result(Err(NativeError {
-                    status: NativeStatus::MutexError,
-                    info: KEY_STORE_NOT_FOUND.to_owned(),
-                }));
-                send_to_result_port(result_port, result);
-                return;
+    runtime!().spawn(async move {
+        async fn internal_fn(keystore: &KeyStore, update_key_input: String) -> Result<u64, String> {
+            let entry = if let Ok(update_key_input) =
+                serde_json::from_str::<EncryptedKeyUpdateParams>(&update_key_input)
+            {
+                let entry = keystore
+                    .update_key::<EncryptedKeySigner>(update_key_input.to_core())
+                    .await
+                    .handle_error()?;
+                serde_json::to_string(&entry).handle_error()?
+            } else if let Ok(update_key_input) =
+                serde_json::from_str::<DerivedKeyUpdateParams>(&update_key_input)
+            {
+                let entry = keystore
+                    .update_key::<DerivedKeySigner>(update_key_input.to_core())
+                    .await
+                    .handle_error()?;
+                serde_json::to_string(&entry).handle_error()?
+            } else {
+                panic!()
             }
-        };
+            .to_ptr() as c_ulonglong;
 
-        let result = internal_update_key(&keystore, update_key_input).await;
-        let result = match_result(result);
+            Ok(entry)
+        }
 
-        *keystore_guard = Some(keystore);
+        let result = internal_fn(&keystore, update_key_input)
+            .await
+            .match_result();
 
         send_to_result_port(result_port, result);
     });
-}
-
-async fn internal_update_key(
-    keystore: &KeyStore,
-    update_key_input: String,
-) -> Result<u64, NativeError> {
-    let entry = if let Ok(update_key_input) =
-        serde_json::from_str::<EncryptedKeyUpdateParams>(&update_key_input)
-    {
-        let entry = keystore
-            .update_key::<EncryptedKeySigner>(update_key_input.to_core())
-            .await
-            .handle_error(NativeStatus::KeyStoreError)?;
-        serde_json::to_string(&entry).handle_error(NativeStatus::ConversionError)?
-    } else if let Ok(update_key_input) =
-        serde_json::from_str::<DerivedKeyUpdateParams>(&update_key_input)
-    {
-        let entry = keystore
-            .update_key::<DerivedKeySigner>(update_key_input.to_core())
-            .await
-            .handle_error(NativeStatus::KeyStoreError)?;
-        serde_json::to_string(&entry).handle_error(NativeStatus::ConversionError)?
-    } else {
-        return Err(NativeError {
-            status: NativeStatus::KeyStoreError,
-            info: UNKNOWN_SIGNER.to_owned(),
-        });
-    };
-
-    Ok(entry.to_ptr() as c_ulonglong)
 }
 
 #[no_mangle]
@@ -270,69 +193,48 @@ pub unsafe extern "C" fn export_key(
     keystore: *mut c_void,
     export_key_input: *mut c_char,
 ) {
-    let keystore = keystore as *mut MutexKeyStore;
-    let keystore = &(*keystore);
+    let keystore = keystore as *mut KeyStore;
+    let keystore = Arc::from_raw(keystore) as Arc<KeyStore>;
 
     let export_key_input = export_key_input.from_ptr();
 
-    let rt = runtime!();
-    rt.spawn(async move {
-        let mut keystore_guard = keystore.lock().await;
-        let keystore = keystore_guard.take();
-        let keystore = match keystore {
-            Some(keystore) => keystore,
-            None => {
-                let result = match_result(Err(NativeError {
-                    status: NativeStatus::MutexError,
-                    info: KEY_STORE_NOT_FOUND.to_owned(),
-                }));
-                send_to_result_port(result_port, result);
-                return;
+    runtime!().spawn(async move {
+        async fn internal_fn(keystore: &KeyStore, export_key_input: String) -> Result<u64, String> {
+            let phrase = if let Ok(export_key_input) =
+                serde_json::from_str::<EncryptedKeyPassword>(&export_key_input)
+            {
+                let output = keystore
+                    .export_key::<EncryptedKeySigner>(export_key_input.to_core())
+                    .await
+                    .handle_error()?;
+
+                let output = EncryptedKeyExportOutput::from_core(output);
+                let output = serde_json::to_string(&output).handle_error()?;
+                output
+            } else if let Ok(export_key_input) =
+                serde_json::from_str::<DerivedKeyExportParams>(&export_key_input)
+            {
+                let output = keystore
+                    .export_key::<DerivedKeySigner>(export_key_input.to_core())
+                    .await
+                    .handle_error()?;
+
+                let output = serde_json::to_string(&output).handle_error()?;
+                output
+            } else {
+                panic!()
             }
-        };
+            .to_ptr() as c_ulonglong;
 
-        let result = internal_export_key(&keystore, export_key_input).await;
-        let result = match_result(result);
+            Ok(phrase)
+        }
 
-        *keystore_guard = Some(keystore);
+        let result = internal_fn(&keystore, export_key_input)
+            .await
+            .match_result();
 
         send_to_result_port(result_port, result);
     });
-}
-
-async fn internal_export_key(
-    keystore: &KeyStore,
-    export_key_input: String,
-) -> Result<u64, NativeError> {
-    let phrase = if let Ok(export_key_input) =
-        serde_json::from_str::<EncryptedKeyPassword>(&export_key_input)
-    {
-        let output = keystore
-            .export_key::<EncryptedKeySigner>(export_key_input.to_core())
-            .await
-            .handle_error(NativeStatus::KeyStoreError)?;
-
-        let output = EncryptedKeyExportOutput::from_core(output);
-        let output = serde_json::to_string(&output).handle_error(NativeStatus::ConversionError)?;
-        output
-    } else if let Ok(export_key_input) =
-        serde_json::from_str::<DerivedKeyExportParams>(&export_key_input)
-    {
-        let output = keystore
-            .export_key::<DerivedKeySigner>(export_key_input.to_core())
-            .await
-            .handle_error(NativeStatus::KeyStoreError)?;
-
-        let output = serde_json::to_string(&output).handle_error(NativeStatus::ConversionError)?;
-        output
-    } else {
-        return Err(NativeError {
-            status: NativeStatus::KeyStoreError,
-            info: UNKNOWN_SIGNER.to_owned(),
-        });
-    };
-
-    Ok(phrase.to_ptr() as c_ulonglong)
 }
 
 #[no_mangle]
@@ -341,55 +243,39 @@ pub unsafe extern "C" fn check_key_password(
     keystore: *mut c_void,
     sign_input: *mut c_char,
 ) {
-    let keystore = keystore as *mut MutexKeyStore;
-    let keystore = &(*keystore);
+    let keystore = keystore as *mut KeyStore;
+    let keystore = Arc::from_raw(keystore) as Arc<KeyStore>;
 
     let sign_input = sign_input.from_ptr();
 
-    let rt = runtime!();
-    rt.spawn(async move {
-        let mut keystore_guard = keystore.lock().await;
-        let keystore = keystore_guard.take();
-        let keystore = match keystore {
-            Some(keystore) => keystore,
-            None => {
-                let result = match_result(Err(NativeError {
-                    status: NativeStatus::MutexError,
-                    info: KEY_STORE_NOT_FOUND.to_owned(),
-                }));
-                send_to_result_port(result_port, result);
-                return;
-            }
-        };
+    runtime!().spawn(async move {
+        async fn internal_fn(keystore: &KeyStore, sign_input: String) -> Result<u64, String> {
+            let hash = [u8::default(); ed25519_dalek::SIGNATURE_LENGTH];
 
-        let result = internal_check_key_password(&keystore, sign_input).await;
-        let result = match_result(result);
+            let result = if let Ok(sign_input) =
+                serde_json::from_str::<EncryptedKeyPassword>(&sign_input)
+            {
+                keystore
+                    .sign::<EncryptedKeySigner>(&hash, sign_input.to_core())
+                    .await
+            } else if let Ok(sign_input) = serde_json::from_str::<DerivedKeySignParams>(&sign_input)
+            {
+                keystore
+                    .sign::<DerivedKeySigner>(&hash, sign_input.to_core())
+                    .await
+            } else {
+                panic!()
+            };
 
-        *keystore_guard = Some(keystore);
+            let is_valid = result.is_ok() as c_ulonglong;
+
+            Ok(is_valid)
+        }
+
+        let result = internal_fn(&keystore, sign_input).await.match_result();
 
         send_to_result_port(result_port, result);
     });
-}
-
-async fn internal_check_key_password(
-    keystore: &KeyStore,
-    sign_input: String,
-) -> Result<u64, NativeError> {
-    let hash = [u8::default(); ed25519_dalek::SIGNATURE_LENGTH];
-
-    let result = if let Ok(sign_input) = serde_json::from_str::<EncryptedKeyPassword>(&sign_input) {
-        keystore
-            .sign::<EncryptedKeySigner>(&hash, sign_input.to_core())
-            .await
-    } else if let Ok(sign_input) = serde_json::from_str::<DerivedKeySignParams>(&sign_input) {
-        keystore
-            .sign::<DerivedKeySigner>(&hash, sign_input.to_core())
-            .await
-    } else {
-        Err(anyhow!(UNKNOWN_SIGNER))
-    };
-
-    Ok(result.is_ok() as c_ulonglong)
 }
 
 #[no_mangle]
@@ -398,110 +284,41 @@ pub unsafe extern "C" fn remove_key(
     keystore: *mut c_void,
     public_key: *mut c_char,
 ) {
-    let keystore = keystore as *mut MutexKeyStore;
-    let keystore = &(*keystore);
+    let keystore = keystore as *mut KeyStore;
+    let keystore = Arc::from_raw(keystore) as Arc<KeyStore>;
 
     let public_key = public_key.from_ptr();
 
-    let rt = runtime!();
-    rt.spawn(async move {
-        let mut keystore_guard = keystore.lock().await;
-        let keystore = keystore_guard.take();
-        let keystore = match keystore {
-            Some(keystore) => keystore,
-            None => {
-                let result = match_result(Err(NativeError {
-                    status: NativeStatus::MutexError,
-                    info: KEY_STORE_NOT_FOUND.to_owned(),
-                }));
-                send_to_result_port(result_port, result);
-                return;
-            }
-        };
+    runtime!().spawn(async move {
+        async fn internal_fn(keystore: &KeyStore, public_key: String) -> Result<u64, String> {
+            let public_key = parse_public_key(&public_key)?;
 
-        let result = internal_remove_key(&keystore, public_key).await;
-        let result = match_result(result);
+            let entry = keystore.remove_key(&public_key).await.handle_error()?;
 
-        *keystore_guard = Some(keystore);
+            let entry = serde_json::to_string(&entry).handle_error()?.to_ptr() as c_ulonglong;
+
+            Ok(entry)
+        }
+
+        let result = internal_fn(&keystore, public_key).await.match_result();
 
         send_to_result_port(result_port, result);
     });
-}
-
-async fn internal_remove_key(keystore: &KeyStore, public_key: String) -> Result<u64, NativeError> {
-    let public_key = parse_public_key(&public_key)?;
-
-    let entry = keystore
-        .remove_key(&public_key)
-        .await
-        .handle_error(NativeStatus::KeyStoreError)?;
-    let entry = serde_json::to_string(&entry).handle_error(NativeStatus::ConversionError)?;
-
-    Ok(entry.to_ptr() as c_ulonglong)
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn clear_keystore(result_port: c_longlong, keystore: *mut c_void) {
-    let keystore = keystore as *mut MutexKeyStore;
-    let keystore = &(*keystore);
+    let keystore = keystore as *mut KeyStore;
+    let keystore = Arc::from_raw(keystore) as Arc<KeyStore>;
 
-    let rt = runtime!();
-    rt.spawn(async move {
-        let mut keystore_guard = keystore.lock().await;
-        let keystore = keystore_guard.take();
-        let keystore = match keystore {
-            Some(keystore) => keystore,
-            None => {
-                let result = match_result(Err(NativeError {
-                    status: NativeStatus::MutexError,
-                    info: KEY_STORE_NOT_FOUND.to_owned(),
-                }));
-                send_to_result_port(result_port, result);
-                return;
-            }
-        };
+    runtime!().spawn(async move {
+        async fn internal_fn(keystore: &KeyStore) -> Result<u64, String> {
+            let _ = keystore.clear().await.handle_error()?;
 
-        let result = internal_clear_keystore(&keystore).await;
-        let result = match_result(result);
+            Ok(0)
+        }
 
-        *keystore_guard = Some(keystore);
-
-        send_to_result_port(result_port, result);
-    });
-}
-
-async fn internal_clear_keystore(keystore: &KeyStore) -> Result<u64, NativeError> {
-    let _ = keystore
-        .clear()
-        .await
-        .handle_error(NativeStatus::KeyStoreError)?;
-
-    Ok(0)
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn free_keystore(result_port: c_longlong, keystore: *mut c_void) {
-    let keystore = keystore as *mut MutexKeyStore;
-    let keystore = &(*keystore);
-
-    let rt = runtime!();
-    rt.spawn(async move {
-        let mut keystore_guard = keystore.lock().await;
-        let keystore = keystore_guard.take();
-        match keystore {
-            Some(keystore) => keystore,
-            None => {
-                let result = match_result(Err(NativeError {
-                    status: NativeStatus::MutexError,
-                    info: KEY_STORE_NOT_FOUND.to_owned(),
-                }));
-                send_to_result_port(result_port, result);
-                return;
-            }
-        };
-
-        let result = Ok(0);
-        let result = match_result(result);
+        let result = internal_fn(&keystore).await.match_result();
 
         send_to_result_port(result_port, result);
     });

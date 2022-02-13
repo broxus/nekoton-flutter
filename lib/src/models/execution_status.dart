@@ -1,0 +1,4 @@
+enum ExecutionStatus {
+  ok,
+  err,
+}

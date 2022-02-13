@@ -4,43 +4,36 @@ import 'dart:isolate';
 
 import 'package:ffi/ffi.dart';
 
-import 'models/native_result.dart';
-import 'models/nekoton_exception.dart';
-import 'nekoton.dart';
+import 'bindings.dart';
+import 'models/execution_result.dart';
 
-int proceedSync(Pointer<Void> Function() function) {
+int executeSync(Pointer<Void> Function() function) {
   final ptr = function();
-  final nativeResult = ptr.cast<NativeResult>().ref;
+  final executionResult = ptr.cast<ExecutionResult>().ref;
 
   try {
-    return nativeResult.handle();
+    return executionResult.handle();
   } finally {
-    nativeLibraryInstance.bindings.free_native_result(ptr);
+    bindings().free_execution_result(ptr);
   }
 }
 
-Future<int> proceedAsync(void Function(int port) function) async {
+Future<int> executeAsync(void Function(int port) function) async {
   final receivePort = ReceivePort();
   final completer = Completer<int>();
   final st = StackTrace.current;
 
-  receivePort.listen((data) {
-    if (data is! int) {
-      completer.completeError(IncorrectDataFormatException());
-      receivePort.close();
-      return;
-    }
-
+  receivePort.cast<int>().listen((data) {
     final ptr = Pointer.fromAddress(data).cast<Void>();
-    final nativeResult = ptr.cast<NativeResult>().ref;
+    final executionResult = ptr.cast<ExecutionResult>().ref;
 
     try {
-      final result = nativeResult.handle();
+      final result = executionResult.handle();
       completer.complete(result);
     } catch (err) {
       completer.completeError(err, st);
     } finally {
-      nativeLibraryInstance.bindings.free_native_result(ptr);
+      bindings().free_execution_result(ptr);
       receivePort.close();
     }
   });
@@ -52,9 +45,10 @@ Future<int> proceedAsync(void Function(int port) function) async {
 
 String cStringToDart(int address) {
   final ptr = Pointer.fromAddress(address).cast<Int8>();
+
   final string = ptr.cast<Utf8>().toDartString();
 
-  nativeLibraryInstance.bindings.free_cstring(ptr);
+  bindings().free_cstring(ptr);
 
   return string;
 }

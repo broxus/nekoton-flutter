@@ -1,12 +1,9 @@
 use crate::core::ton_wallet::models::WalletType;
-use nekoton::core::accounts_storage::{self, AccountsStorage, AdditionalAssets};
+use nekoton::core::accounts_storage::{self, AdditionalAssets};
 use nekoton_utils::{serde_address, serde_public_key};
 use serde::Serialize;
 use std::collections::HashMap;
-use tokio::sync::Mutex;
 use ton_block::MsgAddressInt;
-
-pub type MutexAccountsStorage = Mutex<Option<AccountsStorage>>;
 
 #[derive(Serialize)]
 pub struct AssetsList {

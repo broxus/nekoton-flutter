@@ -6,53 +6,54 @@ import 'dart:isolate';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:synchronized/synchronized.dart';
+import 'package:tuple/tuple.dart';
 
+import '../../bindings.dart';
 import '../../constants.dart';
 import '../../core/keystore/keystore.dart';
 import '../../crypto/models/sign_input.dart';
 import '../../ffi_utils.dart';
-import '../../nekoton.dart';
+import '../../models/pointed.dart';
 import '../../transport/gql_transport.dart';
+import '../../transport/models/transport_type.dart';
+import '../../transport/transport.dart';
 import '../accounts_storage/models/wallet_type.dart';
 import '../models/contract_state.dart';
 import '../models/expiration.dart';
-import '../models/internal_message.dart';
-import '../models/native_unsigned_message.dart';
 import '../models/on_message_expired_payload.dart';
 import '../models/on_message_sent_payload.dart';
 import '../models/on_state_changed_payload.dart';
 import '../models/pending_transaction.dart';
 import '../models/polling_method.dart';
-import '../models/subscription_handler_message.dart';
-import '../models/transaction.dart';
 import '../models/transaction_id.dart';
-import '../models/unsigned_message.dart';
+import '../unsigned_message.dart';
 import 'models/existing_wallet_info.dart';
 import 'models/multisig_pending_transaction.dart';
-import 'models/native_ton_wallet.dart';
 import 'models/on_ton_wallet_transactions_found_payload.dart';
 import 'models/ton_wallet_details.dart';
 import 'models/ton_wallet_transaction_with_data.dart';
 
-class TonWallet {
-  final _receivePort = ReceivePort();
-  late final GqlTransport _transport;
-  late final Keystore _keystore;
-  late final NativeTonWallet _nativeTonWallet;
-  late final StreamSubscription _subscription;
+class TonWallet implements Pointed {
+  final _lock = Lock();
+  Pointer<Void>? _ptr;
+  final _onMessageSentPort = ReceivePort();
+  final _onMessageExpiredPort = ReceivePort();
+  final _onStateChangedPort = ReceivePort();
+  final _onTransactionsFoundPort = ReceivePort();
+  late final Stream<OnMessageSentPayload> onMessageSentStream;
+  late final Stream<OnMessageExpiredPayload> onMessageExpiredStream;
+  late final Stream<OnStateChangedPayload> onStateChangedStream;
+  late final Stream<OnTonWalletTransactionsFoundPayload> onTransactionsFoundStream;
+  late final Transport _transport;
   late final StreamSubscription _onMessageSentSubscription;
   late final StreamSubscription _onMessageExpiredSubscription;
   late final StreamSubscription _onTransactionsFoundSubscription;
-  late final Timer _timer;
   late final int workchain;
   late final String address;
   late final String publicKey;
   late final WalletType walletType;
   late final TonWalletDetails details;
-  final _onMessageSentSubject = PublishSubject<OnMessageSentPayload>();
-  final _onMessageExpiredSubject = PublishSubject<OnMessageExpiredPayload>();
-  final _onStateChangedSubject = PublishSubject<OnStateChangedPayload>();
-  final _onTransactionsFoundSubject = PublishSubject<OnTonWalletTransactionsFoundPayload>();
   final _transactionsSubject = BehaviorSubject<List<TonWalletTransactionWithData>>.seeded([]);
   final _pendingTransactionsSubject = BehaviorSubject<List<PendingTransaction>>.seeded([]);
   final _expiredTransactionsSubject = BehaviorSubject<List<PendingTransaction>>.seeded([]);
@@ -60,13 +61,13 @@ class TonWallet {
   TonWallet._();
 
   static Future<TonWallet> subscribe({
-    required GqlTransport transport,
+    required Transport transport,
     required int workchain,
     required String publicKey,
     required WalletType walletType,
   }) async {
     final tonWallet = TonWallet._();
-    await tonWallet._initialize(
+    await tonWallet._subscribe(
       transport: transport,
       workchain: workchain,
       publicKey: publicKey,
@@ -76,11 +77,11 @@ class TonWallet {
   }
 
   static Future<TonWallet> subscribeByAddress({
-    required GqlTransport transport,
+    required Transport transport,
     required String address,
   }) async {
     final tonWallet = TonWallet._();
-    await tonWallet._initializeByAddress(
+    await tonWallet._subscribeByAddress(
       transport: transport,
       address: address,
     );
@@ -88,24 +89,16 @@ class TonWallet {
   }
 
   static Future<TonWallet> subscribeByExisting({
-    required GqlTransport transport,
+    required Transport transport,
     required ExistingWalletInfo existingWalletInfo,
   }) async {
     final tonWallet = TonWallet._();
-    await tonWallet._initializeByExisting(
+    await tonWallet._subscribeByExisting(
       transport: transport,
       existingWalletInfo: existingWalletInfo,
     );
     return tonWallet;
   }
-
-  Stream<OnMessageSentPayload> get onMessageSentStream => _onMessageSentSubject.stream;
-
-  Stream<OnMessageExpiredPayload> get onMessageExpiredStream => _onMessageExpiredSubject.stream;
-
-  Stream<OnStateChangedPayload> get onStateChangedStream => _onStateChangedSubject.stream;
-
-  Stream<OnTonWalletTransactionsFoundPayload> get onTransactionsFoundStream => _onTransactionsFoundSubject.stream;
 
   Stream<List<TonWalletTransactionWithData>> get transactionsStream => _transactionsSubject.stream;
 
@@ -114,12 +107,12 @@ class TonWallet {
   Stream<List<PendingTransaction>> get expiredTransactionsStream => _expiredTransactionsSubject.stream;
 
   Future<int> get _workchain async {
-    final result = await _nativeTonWallet.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.get_ton_wallet_workchain(
-          port,
-          ptr,
-        ),
+    final ptr = await clonePtr();
+
+    final result = await executeAsync(
+      (port) => bindings().get_ton_wallet_workchain(
+        port,
+        ptr,
       ),
     );
 
@@ -127,40 +120,42 @@ class TonWallet {
   }
 
   Future<String> get _address async {
-    final result = await _nativeTonWallet.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.get_ton_wallet_address(
-          port,
-          ptr,
-        ),
+    final ptr = await clonePtr();
+
+    final result = await executeAsync(
+      (port) => bindings().get_ton_wallet_address(
+        port,
+        ptr,
       ),
     );
+
     final address = cStringToDart(result);
 
     return address;
   }
 
   Future<String> get _publicKey async {
-    final result = await _nativeTonWallet.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.get_ton_wallet_public_key(
-          port,
-          ptr,
-        ),
+    final ptr = await clonePtr();
+
+    final result = await executeAsync(
+      (port) => bindings().get_ton_wallet_public_key(
+        port,
+        ptr,
       ),
     );
+
     final publicKey = cStringToDart(result);
 
     return publicKey;
   }
 
   Future<WalletType> get _walletType async {
-    final result = await _nativeTonWallet.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.get_ton_wallet_wallet_type(
-          port,
-          ptr,
-        ),
+    final ptr = await clonePtr();
+
+    final result = await executeAsync(
+      (port) => bindings().get_ton_wallet_wallet_type(
+        port,
+        ptr,
       ),
     );
 
@@ -172,12 +167,12 @@ class TonWallet {
   }
 
   Future<ContractState> get contractState async {
-    final result = await _nativeTonWallet.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.get_ton_wallet_contract_state(
-          port,
-          ptr,
-        ),
+    final ptr = await clonePtr();
+
+    final result = await executeAsync(
+      (port) => bindings().get_ton_wallet_contract_state(
+        port,
+        ptr,
       ),
     );
 
@@ -189,12 +184,12 @@ class TonWallet {
   }
 
   Future<List<PendingTransaction>> get pendingTransactions async {
-    final result = await _nativeTonWallet.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.get_ton_wallet_pending_transactions(
-          port,
-          ptr,
-        ),
+    final ptr = await clonePtr();
+
+    final result = await executeAsync(
+      (port) => bindings().get_ton_wallet_pending_transactions(
+        port,
+        ptr,
       ),
     );
 
@@ -206,13 +201,13 @@ class TonWallet {
     return pendingTransactions;
   }
 
-  Future<PollingMethod> get pollingMethod async {
-    final result = await _nativeTonWallet.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.get_ton_wallet_polling_method(
-          port,
-          ptr,
-        ),
+  Future<PollingMethod> get _pollingMethod async {
+    final ptr = await clonePtr();
+
+    final result = await executeAsync(
+      (port) => bindings().get_ton_wallet_polling_method(
+        port,
+        ptr,
       ),
     );
 
@@ -224,12 +219,12 @@ class TonWallet {
   }
 
   Future<TonWalletDetails> get _details async {
-    final result = await _nativeTonWallet.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.get_ton_wallet_details(
-          port,
-          ptr,
-        ),
+    final ptr = await clonePtr();
+
+    final result = await executeAsync(
+      (port) => bindings().get_ton_wallet_details(
+        port,
+        ptr,
       ),
     );
 
@@ -241,12 +236,12 @@ class TonWallet {
   }
 
   Future<List<MultisigPendingTransaction>> get unconfirmedTransactions async {
-    final result = await _nativeTonWallet.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.get_ton_wallet_unconfirmed_transactions(
-          port,
-          ptr,
-        ),
+    final ptr = await clonePtr();
+
+    final result = await executeAsync(
+      (port) => bindings().get_ton_wallet_unconfirmed_transactions(
+        port,
+        ptr,
       ),
     );
 
@@ -259,12 +254,12 @@ class TonWallet {
   }
 
   Future<List<String>?> get custodians async {
-    final result = await _nativeTonWallet.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.get_ton_wallet_custodians(
-          port,
-          ptr,
-        ),
+    final ptr = await clonePtr();
+
+    final result = await executeAsync(
+      (port) => bindings().get_ton_wallet_custodians(
+        port,
+        ptr,
       ),
     );
 
@@ -276,21 +271,20 @@ class TonWallet {
   }
 
   Future<UnsignedMessage> prepareDeploy(Expiration expiration) async {
+    final ptr = await clonePtr();
+
     final expirationStr = jsonEncode(expiration);
 
-    final result = await _nativeTonWallet.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.ton_wallet_prepare_deploy(
-          port,
-          ptr,
-          expirationStr.toNativeUtf8().cast<Int8>(),
-        ),
+    final result = await executeAsync(
+      (port) => bindings().ton_wallet_prepare_deploy(
+        port,
+        ptr,
+        expirationStr.toNativeUtf8().cast<Int8>(),
       ),
     );
 
-    final ptr = Pointer.fromAddress(result).cast<Void>();
-    final nativeUnsignedMessage = NativeUnsignedMessage(ptr);
-    final unsignedMessage = UnsignedMessage(nativeUnsignedMessage);
+    final unsignedMessagePtr = Pointer.fromAddress(result).cast<Void>();
+    final unsignedMessage = UnsignedMessage(unsignedMessagePtr);
 
     return unsignedMessage;
   }
@@ -300,24 +294,23 @@ class TonWallet {
     required List<String> custodians,
     required int reqConfirms,
   }) async {
+    final ptr = await clonePtr();
+
     final expirationStr = jsonEncode(expiration);
     final custodiansStr = jsonEncode(custodians);
 
-    final result = await _nativeTonWallet.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.ton_wallet_prepare_deploy_with_multiple_owners(
-          port,
-          ptr,
-          expirationStr.toNativeUtf8().cast<Int8>(),
-          custodiansStr.toNativeUtf8().cast<Int8>(),
-          reqConfirms,
-        ),
+    final result = await executeAsync(
+      (port) => bindings().ton_wallet_prepare_deploy_with_multiple_owners(
+        port,
+        ptr,
+        expirationStr.toNativeUtf8().cast<Int8>(),
+        custodiansStr.toNativeUtf8().cast<Int8>(),
+        reqConfirms,
       ),
     );
 
-    final ptr = Pointer.fromAddress(result).cast<Void>();
-    final nativeUnsignedMessage = NativeUnsignedMessage(ptr);
-    final unsignedMessage = UnsignedMessage(nativeUnsignedMessage);
+    final unsignedMessagePtr = Pointer.fromAddress(result).cast<Void>();
+    final unsignedMessage = UnsignedMessage(unsignedMessagePtr);
 
     return unsignedMessage;
   }
@@ -325,34 +318,35 @@ class TonWallet {
   Future<UnsignedMessage> prepareTransfer({
     required String publicKey,
     required String destination,
-    required int amount,
+    required String amount,
     String? body,
     bool isComment = true,
     required Expiration expiration,
   }) async {
+    final ptr = await clonePtr();
+
+    final transportPtr = await _transport.clonePtr();
+
+    final transportType = _transport.connectionData.type;
+
     final expirationStr = jsonEncode(expiration);
 
-    final result = await _nativeTonWallet.use(
-      (ptr) => _transport.nativeGqlTransport.use(
-        (nativeGqlTransportPtr) => proceedAsync(
-          (port) => nativeLibraryInstance.bindings.ton_wallet_prepare_transfer(
-            port,
-            ptr,
-            nativeGqlTransportPtr,
-            publicKey.toNativeUtf8().cast<Int8>(),
-            destination.toNativeUtf8().cast<Int8>(),
-            amount,
-            body?.toNativeUtf8().cast<Int8>() ?? Pointer.fromAddress(0).cast<Int8>(),
-            isComment ? 1 : 0,
-            expirationStr.toNativeUtf8().cast<Int8>(),
-          ),
-        ),
+    final result = await executeAsync(
+      (port) => bindings().ton_wallet_prepare_transfer(
+        port,
+        ptr,
+        transportPtr,
+        transportType.index,
+        publicKey.toNativeUtf8().cast<Int8>(),
+        destination.toNativeUtf8().cast<Int8>(),
+        amount.toNativeUtf8().cast<Int8>(),
+        body?.toNativeUtf8().cast<Int8>() ?? nullptr,
+        expirationStr.toNativeUtf8().cast<Int8>(),
       ),
     );
 
-    final ptr = Pointer.fromAddress(result).cast<Void>();
-    final nativeUnsignedMessage = NativeUnsignedMessage(ptr);
-    final unsignedMessage = UnsignedMessage(nativeUnsignedMessage);
+    final unsignedMessagePtr = Pointer.fromAddress(result).cast<Void>();
+    final unsignedMessage = UnsignedMessage(unsignedMessagePtr);
 
     return unsignedMessage;
   }
@@ -362,111 +356,72 @@ class TonWallet {
     required String transactionId,
     required Expiration expiration,
   }) async {
+    final ptr = await clonePtr();
+
+    final transportPtr = await _transport.clonePtr();
+
+    final transportType = _transport.connectionData.type;
+
     final expirationStr = jsonEncode(expiration);
 
-    final result = await _nativeTonWallet.use(
-      (ptr) => _transport.nativeGqlTransport.use(
-        (nativeGqlTransportPtr) => proceedAsync(
-          (port) => nativeLibraryInstance.bindings.ton_wallet_prepare_confirm_transaction(
-            port,
-            ptr,
-            nativeGqlTransportPtr,
-            publicKey.toNativeUtf8().cast<Int8>(),
-            transactionId.toNativeUtf8().cast<Int8>(),
-            expirationStr.toNativeUtf8().cast<Int8>(),
-          ),
-        ),
+    final result = await executeAsync(
+      (port) => bindings().ton_wallet_prepare_confirm_transaction(
+        port,
+        ptr,
+        transportPtr,
+        transportType.index,
+        publicKey.toNativeUtf8().cast<Int8>(),
+        transactionId.toNativeUtf8().cast<Int8>(),
+        expirationStr.toNativeUtf8().cast<Int8>(),
       ),
     );
 
-    final ptr = Pointer.fromAddress(result).cast<Void>();
-    final nativeUnsignedMessage = NativeUnsignedMessage(ptr);
-    final unsignedMessage = UnsignedMessage(nativeUnsignedMessage);
+    final unsignedMessagePtr = Pointer.fromAddress(result).cast<Void>();
+    final unsignedMessage = UnsignedMessage(unsignedMessagePtr);
 
     return unsignedMessage;
   }
 
-  Future<InternalMessage> prepareAddOrdinaryStake({
-    required String depool,
-    required int depoolFee,
-    required int stake,
-  }) async {
-    final result = await proceedAsync(
-      (port) => nativeLibraryInstance.bindings.prepare_add_ordinary_stake(
+  Future<String> estimateFees(UnsignedMessage message) async {
+    final ptr = await clonePtr();
+
+    final unsignedMessagePtr = await message.clonePtr();
+
+    final result = await executeAsync(
+      (port) => bindings().ton_wallet_estimate_fees(
         port,
-        depool.toNativeUtf8().cast<Int8>(),
-        depoolFee,
-        stake,
+        ptr,
+        unsignedMessagePtr,
       ),
     );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>;
-    final internalMessage = InternalMessage.fromJson(json);
+    final fees = cStringToDart(result);
 
-    return internalMessage;
+    return fees;
   }
-
-  Future<InternalMessage> prepareWithdrawPart({
-    required String depool,
-    required int depoolFee,
-    required int withdrawValue,
-  }) async {
-    final result = await proceedAsync(
-      (port) => nativeLibraryInstance.bindings.prepare_withdraw_part(
-        port,
-        depool.toNativeUtf8().cast<Int8>(),
-        depoolFee,
-        withdrawValue,
-      ),
-    );
-
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>;
-    final internalMessage = InternalMessage.fromJson(json);
-
-    return internalMessage;
-  }
-
-  Future<int> estimateFees(UnsignedMessage message) => _nativeTonWallet.use(
-        (ptr) => message.nativeUnsignedMessage.use(
-          (nativeUnsignedMessagePtr) => proceedAsync(
-            (port) => nativeLibraryInstance.bindings.ton_wallet_estimate_fees(
-              port,
-              ptr,
-              nativeUnsignedMessagePtr,
-            ),
-          ),
-        ),
-      );
 
   Future<PendingTransaction> send({
+    required Keystore keystore,
     required UnsignedMessage message,
     required SignInput signInput,
   }) async {
-    final signInputStr = signInput.when(
-      derivedKeySignParams: (derivedKeySignParams) => jsonEncode(derivedKeySignParams),
-      encryptedKeyPassword: (encryptedKeyPassword) => jsonEncode(encryptedKeyPassword),
-    );
+    final ptr = await clonePtr();
 
-    final currentBlockId = await _transport.getLatestBlockId(address);
+    final keystorePtr = await keystore.clonePtr();
 
-    final result = await _nativeTonWallet.use(
-      (ptr) => _keystore.nativeKeystore.use(
-        (nativeKeystorePtr) => message.nativeUnsignedMessage.use(
-          (nativeUnsignedMessagePtr) => proceedAsync(
-            (port) => nativeLibraryInstance.bindings.ton_wallet_send(
-              port,
-              ptr,
-              nativeKeystorePtr,
-              nativeUnsignedMessagePtr,
-              signInputStr.toNativeUtf8().cast<Int8>(),
-            ),
-          ),
-        ),
+    final unsignedMessagePtr = await message.clonePtr();
+
+    final signInputStr = jsonEncode(signInput);
+
+    final result = await executeAsync(
+      (port) => bindings().ton_wallet_send(
+        port,
+        ptr,
+        keystorePtr,
+        unsignedMessagePtr,
+        signInputStr.toNativeUtf8().cast<Int8>(),
       ),
     );
-    await message.nativeUnsignedMessage.free();
 
     final string = cStringToDart(result);
     final json = jsonDecode(string) as Map<String, dynamic>;
@@ -475,203 +430,215 @@ class TonWallet {
     final pending = [
       pendingTransaction,
       ..._pendingTransactionsSubject.value,
-    ];
+    ]..sort();
 
     _pendingTransactionsSubject.add(pending);
-
-    _internalRefresh(currentBlockId);
 
     return pendingTransaction;
   }
 
-  Future<void> refresh() => _nativeTonWallet.use(
-        (ptr) => proceedAsync(
-          (port) => nativeLibraryInstance.bindings.ton_wallet_refresh(
-            port,
-            ptr,
-          ),
-        ),
-      );
+  Future<void> refresh() async {
+    final ptr = await clonePtr();
 
-  Future<void> preloadTransactions(TransactionId from) async {
-    final fromStr = jsonEncode(from);
-
-    await _nativeTonWallet.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.ton_wallet_preload_transactions(
-          port,
-          ptr,
-          fromStr.toNativeUtf8().cast<Int8>(),
-        ),
+    await executeAsync(
+      (port) => bindings().ton_wallet_refresh(
+        port,
+        ptr,
       ),
     );
   }
 
-  Future<Transaction> waitForTransaction(PendingTransaction pendingTransaction) async => _onMessageSentSubject.stream
-      .firstWhere((e) => e.pendingTransaction == pendingTransaction)
-      .then((v) => v.transaction!);
+  Future<void> preloadTransactions(TransactionId from) async {
+    final ptr = await clonePtr();
 
-  Future<void> free() async {
-    _timer.cancel();
+    final fromStr = jsonEncode(from);
 
-    _subscription.cancel();
-    _onMessageSentSubscription.cancel();
-    _onMessageExpiredSubscription.cancel();
-    _onTransactionsFoundSubscription.cancel();
-
-    _onMessageSentSubject.close();
-    _onMessageExpiredSubject.close();
-    _onStateChangedSubject.close();
-    _onTransactionsFoundSubject.close();
-    _transactionsSubject.close();
-    _pendingTransactionsSubject.close();
-    _expiredTransactionsSubject.close();
-
-    _receivePort.close();
-
-    await _nativeTonWallet.free();
+    await executeAsync(
+      (port) => bindings().ton_wallet_preload_transactions(
+        port,
+        ptr,
+        fromStr.toNativeUtf8().cast<Int8>(),
+      ),
+    );
   }
 
-  Future<void> _handleBlock(String id) => _nativeTonWallet.use(
-        (ptr) => _transport.nativeGqlTransport.use(
-          (nativeGqlTransportPtr) => proceedAsync(
-            (port) => nativeLibraryInstance.bindings.ton_wallet_handle_block(
-              port,
-              ptr,
-              nativeGqlTransportPtr,
-              id.toNativeUtf8().cast<Int8>(),
-            ),
-          ),
-        ),
-      );
+  Future<void> _handleBlock(String id) async {
+    final ptr = await clonePtr();
 
-  Future<void> _internalRefresh(String currentBlockId) async {
-    for (var i = 0; 0 < 10; i++) {
-      try {
-        if (_nativeTonWallet.isNull) break;
+    final transportPtr = await _transport.clonePtr();
 
-        final nextBlockId = await _transport.waitForNextBlockId(
-          currentBlockId: currentBlockId,
-          address: address,
+    final transportType = _transport.connectionData.type;
+
+    await executeAsync(
+      (port) => bindings().ton_wallet_handle_block(
+        port,
+        ptr,
+        transportPtr,
+        transportType.index,
+        id.toNativeUtf8().cast<Int8>(),
+      ),
+    );
+  }
+
+  @override
+  Future<Pointer<Void>> clonePtr() => _lock.synchronized(() {
+        if (_ptr == null) throw Exception('Ton wallet use after free');
+
+        final ptr = bindings().clone_ton_wallet_ptr(
+          _ptr!,
         );
 
-        await _handleBlock(nextBlockId);
-        await refresh();
+        return ptr;
+      });
 
-        if (await pollingMethod == PollingMethod.manual) break;
-      } catch (err, st) {
-        logger?.e(err, err, st);
-        break;
-      }
-    }
-  }
+  @override
+  Future<void> freePtr() => _lock.synchronized(() {
+        if (_ptr == null) throw Exception('Ton wallet use after free');
 
-  Future<void> _initialize({
-    required GqlTransport transport,
+        _onMessageSentSubscription.cancel();
+        _onMessageExpiredSubscription.cancel();
+        _onTransactionsFoundSubscription.cancel();
+
+        _transactionsSubject.close();
+        _pendingTransactionsSubject.close();
+        _expiredTransactionsSubject.close();
+
+        _onMessageSentPort.close();
+        _onMessageExpiredPort.close();
+        _onStateChangedPort.close();
+        _onTransactionsFoundPort.close();
+
+        bindings().free_ton_wallet_ptr(
+          _ptr!,
+        );
+
+        _ptr = null;
+      });
+
+  Future<void> _subscribe({
+    required Transport transport,
     required int workchain,
     required String publicKey,
     required WalletType walletType,
   }) async {
-    _transport = transport;
-    _keystore = await Keystore.getInstance();
-    _subscription = _receivePort.listen(_subscriptionListener);
-    _onMessageSentSubscription = _onMessageSentSubject.listen(_onMessageSentListener);
-    _onMessageExpiredSubscription = _onMessageExpiredSubject.listen(_onMessageExpiredListener);
-    _onTransactionsFoundSubscription = _onTransactionsFoundSubject.listen(_onTransactionsFoundListener);
+    final transportPtr = await transport.clonePtr();
+
+    final transportType = transport.connectionData.type;
 
     final walletTypeStr = jsonEncode(walletType);
 
-    final result = await _transport.nativeGqlTransport.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.ton_wallet_subscribe(
-          port,
-          _receivePort.sendPort.nativePort,
-          ptr,
-          workchain,
-          publicKey.toNativeUtf8().cast<Int8>(),
-          walletTypeStr.toNativeUtf8().cast<Int8>(),
-        ),
+    final result = await executeAsync(
+      (port) => bindings().ton_wallet_subscribe(
+        port,
+        _onMessageSentPort.sendPort.nativePort,
+        _onMessageExpiredPort.sendPort.nativePort,
+        _onStateChangedPort.sendPort.nativePort,
+        _onTransactionsFoundPort.sendPort.nativePort,
+        transportPtr,
+        transportType.index,
+        workchain,
+        publicKey.toNativeUtf8().cast<Int8>(),
+        walletTypeStr.toNativeUtf8().cast<Int8>(),
       ),
     );
-    final ptr = Pointer.fromAddress(result).cast<Void>();
 
-    _nativeTonWallet = NativeTonWallet(ptr);
+    _ptr = Pointer.fromAddress(result).cast<Void>();
 
-    this.workchain = await _workchain;
-    address = await _address;
-    this.publicKey = await _publicKey;
-    this.walletType = await _walletType;
-    details = await _details;
-
-    _timer = Timer.periodic(
-      kGqlRefreshPeriod,
-      _refreshTimer,
+    await _initialize(
+      transport: transport,
     );
   }
 
-  Future<void> _initializeByAddress({
-    required GqlTransport transport,
+  Future<void> _subscribeByAddress({
+    required Transport transport,
     required String address,
   }) async {
-    _transport = transport;
-    _keystore = await Keystore.getInstance();
-    _subscription = _receivePort.listen(_subscriptionListener);
-    _onMessageSentSubscription = _onMessageSentSubject.listen(_onMessageSentListener);
-    _onMessageExpiredSubscription = _onMessageExpiredSubject.listen(_onMessageExpiredListener);
-    _onTransactionsFoundSubscription = _onTransactionsFoundSubject.listen(_onTransactionsFoundListener);
+    final transportPtr = await transport.clonePtr();
 
-    final result = await _transport.nativeGqlTransport.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.ton_wallet_subscribe_by_address(
-          port,
-          _receivePort.sendPort.nativePort,
-          ptr,
-          address.toNativeUtf8().cast<Int8>(),
-        ),
+    final transportType = transport.connectionData.type;
+
+    final result = await executeAsync(
+      (port) => bindings().ton_wallet_subscribe_by_address(
+        port,
+        _onMessageSentPort.sendPort.nativePort,
+        _onMessageExpiredPort.sendPort.nativePort,
+        _onStateChangedPort.sendPort.nativePort,
+        _onTransactionsFoundPort.sendPort.nativePort,
+        transportPtr,
+        transportType.index,
+        address.toNativeUtf8().cast<Int8>(),
       ),
     );
-    final ptr = Pointer.fromAddress(result).cast<Void>();
 
-    _nativeTonWallet = NativeTonWallet(ptr);
+    _ptr = Pointer.fromAddress(result).cast<Void>();
 
-    workchain = await _workchain;
-    this.address = await _address;
-    publicKey = await _publicKey;
-    walletType = await _walletType;
-    details = await _details;
-
-    _timer = Timer.periodic(
-      kGqlRefreshPeriod,
-      _refreshTimer,
+    await _initialize(
+      transport: transport,
     );
   }
 
-  Future<void> _initializeByExisting({
-    required GqlTransport transport,
+  Future<void> _subscribeByExisting({
+    required Transport transport,
     required ExistingWalletInfo existingWalletInfo,
   }) async {
-    _transport = transport;
-    _keystore = await Keystore.getInstance();
-    _subscription = _receivePort.listen(_subscriptionListener);
-    _onMessageSentSubscription = _onMessageSentSubject.listen(_onMessageSentListener);
-    _onMessageExpiredSubscription = _onMessageExpiredSubject.listen(_onMessageExpiredListener);
-    _onTransactionsFoundSubscription = _onTransactionsFoundSubject.listen(_onTransactionsFoundListener);
+    final transportPtr = await transport.clonePtr();
+
+    final transportType = transport.connectionData.type;
 
     final existingWalletInfoStr = jsonEncode(existingWalletInfo);
 
-    final result = await _transport.nativeGqlTransport.use(
-      (ptr) => proceedAsync(
-        (port) => nativeLibraryInstance.bindings.ton_wallet_subscribe_by_existing(
-          port,
-          _receivePort.sendPort.nativePort,
-          ptr,
-          existingWalletInfoStr.toNativeUtf8().cast<Int8>(),
-        ),
+    final result = await executeAsync(
+      (port) => bindings().ton_wallet_subscribe_by_existing(
+        port,
+        _onMessageSentPort.sendPort.nativePort,
+        _onMessageExpiredPort.sendPort.nativePort,
+        _onStateChangedPort.sendPort.nativePort,
+        _onTransactionsFoundPort.sendPort.nativePort,
+        transportPtr,
+        transportType.index,
+        existingWalletInfoStr.toNativeUtf8().cast<Int8>(),
       ),
     );
-    final ptr = Pointer.fromAddress(result).cast<Void>();
 
-    _nativeTonWallet = NativeTonWallet(ptr);
+    _ptr = Pointer.fromAddress(result).cast<Void>();
+
+    await _initialize(
+      transport: transport,
+    );
+  }
+
+  Future<void> _initialize({
+    required Transport transport,
+  }) async {
+    onMessageSentStream = _onMessageSentPort.asBroadcastStream().cast<String>().map((e) {
+      final json = jsonDecode(e) as Map<String, dynamic>;
+      final payload = OnMessageSentPayload.fromJson(json);
+      return payload;
+    });
+
+    onMessageExpiredStream = _onMessageExpiredPort.asBroadcastStream().cast<String>().map((e) {
+      final json = jsonDecode(e) as Map<String, dynamic>;
+      final payload = OnMessageExpiredPayload.fromJson(json);
+      return payload;
+    });
+
+    onStateChangedStream = _onStateChangedPort.asBroadcastStream().cast<String>().map((e) {
+      final json = jsonDecode(e) as Map<String, dynamic>;
+      final payload = OnStateChangedPayload.fromJson(json);
+      return payload;
+    });
+
+    onTransactionsFoundStream = _onTransactionsFoundPort.asBroadcastStream().cast<String>().map((e) {
+      final json = jsonDecode(e) as Map<String, dynamic>;
+      final payload = OnTonWalletTransactionsFoundPayload.fromJson(json);
+      return payload;
+    });
+
+    _transport = transport;
+
+    _onMessageSentSubscription = onMessageSentStream.listen(_onMessageSentListener);
+    _onMessageExpiredSubscription = onMessageExpiredStream.listen(_onMessageExpiredListener);
+    _onTransactionsFoundSubscription = onTransactionsFoundStream.listen(_onTransactionsFoundListener);
 
     workchain = await _workchain;
     address = await _address;
@@ -679,85 +646,64 @@ class TonWallet {
     walletType = await _walletType;
     details = await _details;
 
-    _timer = Timer.periodic(
-      kGqlRefreshPeriod,
-      _refreshTimer,
-    );
-  }
-
-  Future<void> _subscriptionListener(dynamic data) async {
-    try {
-      if (data is! String) return;
-
-      final json = jsonDecode(data) as Map<String, dynamic>;
-      final message = SubscriptionHandlerMessage.fromJson(json);
-
-      switch (message.event) {
-        case 'on_message_sent':
-          final json = jsonDecode(message.payload) as Map<String, dynamic>;
-          final payload = OnMessageSentPayload.fromJson(json);
-
-          _onMessageSentSubject.add(payload);
-          break;
-        case 'on_message_expired':
-          final json = jsonDecode(message.payload) as Map<String, dynamic>;
-          final payload = OnMessageExpiredPayload.fromJson(json);
-
-          _onMessageExpiredSubject.add(payload);
-          break;
-        case 'on_state_changed':
-          final json = jsonDecode(message.payload) as Map<String, dynamic>;
-          final payload = OnStateChangedPayload.fromJson(json);
-
-          _onStateChangedSubject.add(payload);
-          break;
-        case 'on_transactions_found':
-          final json = jsonDecode(message.payload) as Map<String, dynamic>;
-          final payload = OnTonWalletTransactionsFoundPayload.fromJson(json);
-
-          _onTransactionsFoundSubject.add(payload);
-          break;
-      }
-    } catch (err, st) {
-      logger?.e(err, err, st);
-    }
-  }
-
-  Future<void> _refreshTimer(Timer timer) async {
-    try {
-      if (_nativeTonWallet.isNull) {
-        timer.cancel();
-        return;
-      }
-
-      if (await pollingMethod == PollingMethod.reliable) return;
-
-      await refresh();
-    } catch (err, st) {
-      logger?.e(err, err, st);
-    }
+    _refreshCycle();
   }
 
   void _onMessageSentListener(OnMessageSentPayload value) {
-    final pending = [..._pendingTransactionsSubject.value.where((e) => e != value.pendingTransaction)];
+    final pending = [
+      ..._pendingTransactionsSubject.value.where((e) => e != value.pendingTransaction),
+    ]..sort();
 
     _pendingTransactionsSubject.add(pending);
   }
 
   void _onMessageExpiredListener(OnMessageExpiredPayload value) {
-    final pending = [..._pendingTransactionsSubject.value.where((e) => e != value.pendingTransaction)];
+    final pending = [
+      ..._pendingTransactionsSubject.value.where((e) => e != value.pendingTransaction),
+    ]..sort();
 
     _pendingTransactionsSubject.add(pending);
 
-    final expired = [..._expiredTransactionsSubject.value, value.pendingTransaction];
+    final expired = [
+      ..._expiredTransactionsSubject.value,
+      value.pendingTransaction,
+    ]..sort();
 
     _expiredTransactionsSubject.add(expired);
   }
 
   void _onTransactionsFoundListener(OnTonWalletTransactionsFoundPayload value) {
-    final transactions = [..._transactionsSubject.value, ...value.transactions]
-      ..sort((a, b) => b.transaction.createdAt.compareTo(a.transaction.createdAt));
+    final transactions = [
+      ..._transactionsSubject.value,
+      ...value.transactions,
+    ]..sort();
 
     _transactionsSubject.add(transactions);
+  }
+
+  Future<void> _refreshCycle() async {
+    while (_ptr != null) {
+      try {
+        if (_transport.connectionData.type == TransportType.gql && await _pollingMethod == PollingMethod.reliable) {
+          final transport = _transport as GqlTransport;
+
+          final currentBlockId = await transport.getLatestBlockId(address);
+
+          final nextId = await transport.waitForNextBlockId(
+            currentBlockId: currentBlockId,
+            address: address,
+            timeout: kGqlTimeout.inMilliseconds,
+          );
+
+          await _handleBlock(nextId);
+        } else {
+          await refresh();
+
+          await Future.delayed(await _pollingMethod == PollingMethod.reliable ? kRefreshPeriod : kJrpcRefreshPeriod);
+        }
+      } catch (err, st) {
+        nekotonErrorsSubject.add(Tuple2(err, st));
+      }
+    }
   }
 }
