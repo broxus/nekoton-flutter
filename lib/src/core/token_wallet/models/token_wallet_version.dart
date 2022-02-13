@@ -6,15 +6,9 @@ part 'token_wallet_version.g.dart';
 @HiveType(typeId: 218)
 enum TokenWalletVersion {
   @HiveField(0)
-  @JsonValue('Tip3v1')
-  tip3v1,
+  @JsonValue('OldTip3v4')
+  oldTip3v4,
   @HiveField(1)
-  @JsonValue('Tip3v2')
-  tip3v2,
-  @HiveField(2)
-  @JsonValue('Tip3v3')
-  tip3v3,
-  @HiveField(3)
-  @JsonValue('Tip3v4')
-  tip3v4,
+  @JsonValue('Tip3')
+  tip3,
 }

@@ -28,6 +28,7 @@ use nekoton::{
     transport::{gql::GqlTransport, models::RawContractState, Transport},
 };
 use nekoton_abi::{create_boc_payload, create_comment_payload, TransactionId};
+use nekoton_utils::SimpleClock;
 use std::{
     ffi::c_void,
     os::raw::{c_char, c_longlong, c_schar, c_uchar, c_uint, c_ulonglong},
@@ -97,9 +98,16 @@ async fn internal_ton_wallet_subscribe(
     let handler = TonWalletSubscriptionHandlerImpl { port: Some(port) };
     let handler = Arc::new(handler);
 
-    let ton_wallet = TonWallet::subscribe(transport, workchain, public_key, contract, handler)
-        .await
-        .handle_error(NativeStatus::TonWalletError)?;
+    let ton_wallet = TonWallet::subscribe(
+        Arc::new(SimpleClock {}),
+        transport,
+        workchain,
+        public_key,
+        contract,
+        handler,
+    )
+    .await
+    .handle_error(NativeStatus::TonWalletError)?;
 
     let ton_wallet = Mutex::new(Some(ton_wallet));
     let ton_wallet = Arc::new(ton_wallet);
@@ -157,9 +165,10 @@ async fn internal_ton_wallet_subscribe_by_address(
     let handler = TonWalletSubscriptionHandlerImpl { port: Some(port) };
     let handler = Arc::new(handler);
 
-    let ton_wallet = TonWallet::subscribe_by_address(transport, address, handler)
-        .await
-        .handle_error(NativeStatus::TonWalletError)?;
+    let ton_wallet =
+        TonWallet::subscribe_by_address(Arc::new(SimpleClock {}), transport, address, handler)
+            .await
+            .handle_error(NativeStatus::TonWalletError)?;
 
     let ton_wallet = Mutex::new(Some(ton_wallet));
     let ton_wallet = Arc::new(ton_wallet);
@@ -219,10 +228,14 @@ async fn internal_ton_wallet_subscribe_by_existing(
     let handler = TonWalletSubscriptionHandlerImpl { port: Some(port) };
     let handler = Arc::new(handler);
 
-    let ton_wallet =
-        TonWallet::subscribe_by_existing(transport, existing_wallet.to_core(), handler)
-            .await
-            .handle_error(NativeStatus::TonWalletError)?;
+    let ton_wallet = TonWallet::subscribe_by_existing(
+        Arc::new(SimpleClock {}),
+        transport,
+        existing_wallet.to_core(),
+        handler,
+    )
+    .await
+    .handle_error(NativeStatus::TonWalletError)?;
 
     let ton_wallet = Mutex::new(Some(ton_wallet));
     let ton_wallet = Arc::new(ton_wallet);
@@ -342,9 +355,10 @@ async fn internal_get_ton_wallet_info(
     let handler = TonWalletSubscriptionHandlerImpl { port: None };
     let handler = Arc::new(handler);
 
-    let ton_wallet = TonWallet::subscribe_by_address(transport, address, handler)
-        .await
-        .handle_error(NativeStatus::TokenWalletError)?;
+    let ton_wallet =
+        TonWallet::subscribe_by_address(Arc::new(SimpleClock {}), transport, address, handler)
+            .await
+            .handle_error(NativeStatus::TokenWalletError)?;
 
     let workchain = ton_wallet.workchain();
     let address = ton_wallet.address().clone();
@@ -1189,72 +1203,6 @@ pub async fn internal_ton_wallet_prepare_confirm_transaction(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn prepare_add_ordinary_stake(
-    result_port: c_longlong,
-    depool: *mut c_char,
-    depool_fee: c_ulonglong,
-    stake: c_ulonglong,
-) {
-    let depool = depool.from_ptr();
-
-    let rt = runtime!();
-    rt.spawn(async move {
-        let result = internal_prepare_add_ordinary_stake(depool, depool_fee, stake).await;
-        let result = match_result(result);
-
-        send_to_result_port(result_port, result);
-    });
-}
-
-async fn internal_prepare_add_ordinary_stake(
-    depool: String,
-    depool_fee: c_ulonglong,
-    stake: c_ulonglong,
-) -> Result<u64, NativeError> {
-    let depool = parse_address(&depool)?;
-
-    let message = nekoton_depool::prepare_add_ordinary_stake(depool, depool_fee, stake)
-        .handle_error(NativeStatus::AbiError)?;
-    let message = super::InternalMessage::from_core(message);
-    let message = serde_json::to_string(&message).handle_error(NativeStatus::ConversionError)?;
-
-    Ok(message.to_ptr() as c_ulonglong)
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn prepare_withdraw_part(
-    result_port: c_longlong,
-    depool: *mut c_char,
-    depool_fee: c_ulonglong,
-    withdraw_value: c_ulonglong,
-) {
-    let depool = depool.from_ptr();
-
-    let rt = runtime!();
-    rt.spawn(async move {
-        let result = internal_prepare_withdraw_part(depool, depool_fee, withdraw_value).await;
-        let result = match_result(result);
-
-        send_to_result_port(result_port, result);
-    });
-}
-
-async fn internal_prepare_withdraw_part(
-    depool: String,
-    depool_fee: c_ulonglong,
-    withdraw_value: c_ulonglong,
-) -> Result<u64, NativeError> {
-    let depool = parse_address(&depool)?;
-
-    let message = nekoton_depool::prepare_withdraw_part(depool, depool_fee, withdraw_value)
-        .handle_error(NativeStatus::AbiError)?;
-    let message = super::InternalMessage::from_core(message);
-    let message = serde_json::to_string(&message).handle_error(NativeStatus::ConversionError)?;
-
-    Ok(message.to_ptr() as c_ulonglong)
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn ton_wallet_estimate_fees(
     result_port: c_longlong,
     ton_wallet: *mut c_void,
@@ -1308,7 +1256,9 @@ async fn internal_ton_wallet_estimate_fees(
     let fees = ton_wallet
         .estimate_fees(&message)
         .await
-        .handle_error(NativeStatus::TonWalletError)?;
+        .handle_error(NativeStatus::TonWalletError)?
+        .to_string()
+        .to_ptr() as c_ulonglong;
 
     Ok(fees)
 }
@@ -1383,7 +1333,7 @@ async fn internal_ton_wallet_send(
     let message = message.lock().await;
     let mut message = dyn_clone::clone_box(&**message);
 
-    message.refresh_timeout();
+    message.refresh_timeout(&SimpleClock {});
 
     let hash = message.hash();
 

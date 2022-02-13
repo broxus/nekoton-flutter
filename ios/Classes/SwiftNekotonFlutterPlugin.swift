@@ -93,7 +93,7 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         get_token_wallet_contract_state(0, nil);
 
-        token_wallet_prepare_transfer(0, nil, nil, nil, nil, 0, nil);
+        token_wallet_prepare_transfer(0, nil, nil, nil, 0, nil);
 
         token_wallet_refresh(0, nil);
 
@@ -141,10 +141,6 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         ton_wallet_prepare_confirm_transaction(0, nil, nil, nil, nil, nil);
 
-        prepare_add_ordinary_stake(0, nil, 0, 0);
-
-        prepare_withdraw_part(0, nil, 0, 0);
-
         ton_wallet_estimate_fees(0, nil, nil);
 
         ton_wallet_send(0, nil, nil, nil, nil);
@@ -162,14 +158,6 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
         get_hints(nil);
 
         derive_from_phrase(nil, nil);
-
-        get_participant_info(0, nil, nil, nil);
-
-        get_depool_info(0, nil, nil);
-
-        get_adnl_connection(0, nil);
-
-        free_adnl_connection(0, nil);
 
         get_gql_connection(nil);
 
@@ -189,7 +177,7 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         parse_message_body_data(nil);
 
-        run_local(nil, nil, nil, nil, nil, nil);
+        run_local(nil, nil, nil, nil);
 
         get_expected_address(nil, nil, 0, nil, nil);
 
@@ -222,10 +210,6 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
         get_full_account_state(0, nil, nil);
 
         get_transactions(0, nil, nil, nil, 0);
-
-        get_adnl_transport(0, nil);
-
-        free_adnl_transport(0, nil);
 
         get_gql_transport(0, nil);
 

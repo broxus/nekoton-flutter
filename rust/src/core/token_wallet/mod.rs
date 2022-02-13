@@ -14,6 +14,7 @@ use nekoton::{
     transport::gql::GqlTransport,
 };
 use nekoton_abi::{num_bigint::BigUint, TransactionId};
+use nekoton_utils::SimpleClock;
 use std::{
     ffi::c_void,
     os::raw::{c_char, c_longlong, c_uint, c_ulonglong},
@@ -78,9 +79,15 @@ async fn internal_token_wallet_subscribe(
     let handler = TokenWalletSubscriptionHandlerImpl { port: Some(port) };
     let handler = Arc::new(handler);
 
-    let token_wallet = TokenWallet::subscribe(transport, owner, root_token_contract, handler)
-        .await
-        .handle_error(NativeStatus::TokenWalletError)?;
+    let token_wallet = TokenWallet::subscribe(
+        Arc::new(SimpleClock {}),
+        transport,
+        owner,
+        root_token_contract,
+        handler,
+    )
+    .await
+    .handle_error(NativeStatus::TokenWalletError)?;
 
     let token_wallet = Mutex::new(Some(token_wallet));
     let token_wallet = Arc::new(token_wallet);
@@ -141,10 +148,15 @@ async fn internal_get_token_wallet_info(
     let handler = TokenWalletSubscriptionHandlerImpl { port: None };
     let handler = Arc::new(handler);
 
-    let token_wallet =
-        TokenWallet::subscribe(transport, owner, root_token_contract.clone(), handler)
-            .await
-            .handle_error(NativeStatus::TokenWalletError)?;
+    let token_wallet = TokenWallet::subscribe(
+        Arc::new(SimpleClock {}),
+        transport,
+        owner,
+        root_token_contract.clone(),
+        handler,
+    )
+    .await
+    .handle_error(NativeStatus::TokenWalletError)?;
 
     let owner: ton_block::MsgAddressInt = token_wallet.owner().clone();
     let address: ton_block::MsgAddressInt = token_wallet.address().clone();

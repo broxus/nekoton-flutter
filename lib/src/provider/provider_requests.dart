@@ -207,13 +207,11 @@ Future<RunLocalOutput> runLocal({
     throw AccountNotFoundException();
   }
 
-  if (!contractState.isDeployed || contractState.lastTransactionId == null) {
+  if (!contractState.isDeployed) {
     throw AccountNotDeployedException();
   }
 
   return helpers.runLocal(
-    genTimings: contractState.genTimings,
-    lastTransactionId: contractState.lastTransactionId!,
     accountStuffBoc: contractState.boc,
     contractAbi: input.functionCall.abi,
     method: input.functionCall.method,
@@ -502,7 +500,7 @@ Future<EstimateFeesOutput> estimateFees({
   final fees = await tonWallet.estimateFees(unsignedMessage);
 
   return EstimateFeesOutput(
-    fees: fees.toString(),
+    fees: fees,
   );
 }
 

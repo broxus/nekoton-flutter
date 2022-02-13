@@ -22,6 +22,7 @@ use nekoton::{
     transport::gql::GqlTransport,
 };
 use nekoton_abi::TransactionId;
+use nekoton_utils::SimpleClock;
 use std::{
     ffi::c_void,
     os::raw::{c_char, c_longlong, c_ulonglong},
@@ -79,9 +80,10 @@ async fn internal_generic_contract_subscribe(
     let handler = GenericContractSubscriptionHandlerImpl { port: Some(port) };
     let handler = Arc::new(handler);
 
-    let generic_contract = GenericContract::subscribe(transport, address, handler)
-        .await
-        .handle_error(NativeStatus::GenericContractError)?;
+    let generic_contract =
+        GenericContract::subscribe(Arc::new(SimpleClock {}), transport, address, handler)
+            .await
+            .handle_error(NativeStatus::GenericContractError)?;
 
     let generic_contract = Mutex::new(Some(generic_contract));
     let generic_contract = Arc::new(generic_contract);
@@ -336,9 +338,9 @@ async fn internal_generic_contract_send(
     sign_input: String,
 ) -> Result<u64, NativeError> {
     let message = message.lock().await;
-    let mut message = dyn_clone::clone_box(&**message);
+    let mut message = message.clone();
 
-    message.refresh_timeout();
+    message.refresh_timeout(&SimpleClock {});
 
     let hash = message.hash();
 
@@ -603,7 +605,9 @@ async fn internal_generic_contract_estimate_fees(
     let fees = generic_contract
         .estimate_fees(&message)
         .await
-        .handle_error(NativeStatus::GenericContractError)?;
+        .handle_error(NativeStatus::GenericContractError)?
+        .to_string()
+        .to_ptr() as c_ulonglong;
 
     Ok(fees)
 }
@@ -690,7 +694,7 @@ async fn internal_generic_contract_execute_transaction_locally(
     let options = serde_json::from_str::<TransactionExecutionOptions>(&options)
         .handle_error(NativeStatus::ConversionError)?;
 
-    message.refresh_timeout();
+    message.refresh_timeout(&SimpleClock {});
 
     let hash = message.hash();
 

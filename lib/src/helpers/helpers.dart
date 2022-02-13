@@ -3,8 +3,6 @@ import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
 
-import '../core/models/gen_timings.dart';
-import '../core/models/last_transaction_id.dart';
 import '../core/models/native_unsigned_message.dart';
 import '../core/models/transaction.dart';
 import '../core/models/unsigned_message.dart';
@@ -90,21 +88,15 @@ MessageBodyData? parseMessageBodyData(String data) {
 }
 
 ExecutionOutput runLocal({
-  required GenTimings genTimings,
-  required LastTransactionId lastTransactionId,
   required String accountStuffBoc,
   required String contractAbi,
   required String method,
   required TokensObject input,
 }) {
-  final genTimingsStr = jsonEncode(genTimings);
-  final lastTransactionIdStr = jsonEncode(lastTransactionId);
   final inputStr = jsonEncode(input);
 
   final result = proceedSync(
     () => nativeLibraryInstance.bindings.run_local(
-      genTimingsStr.toNativeUtf8().cast<Int8>(),
-      lastTransactionIdStr.toNativeUtf8().cast<Int8>(),
       accountStuffBoc.toNativeUtf8().cast<Int8>(),
       contractAbi.toNativeUtf8().cast<Int8>(),
       method.toNativeUtf8().cast<Int8>(),

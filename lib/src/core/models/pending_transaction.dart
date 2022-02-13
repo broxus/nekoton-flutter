@@ -7,7 +7,6 @@ part 'pending_transaction.g.dart';
 class PendingTransaction with _$PendingTransaction {
   const factory PendingTransaction({
     required String messageHash,
-    required String bodyHash,
     String? src,
     required int expireAt,
   }) = _PendingTransaction;

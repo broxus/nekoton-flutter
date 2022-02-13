@@ -12,8 +12,9 @@ use crate::{
 use nekoton::core::models::Transaction;
 use nekoton_abi::{
     create_boc_payload, get_state_init_hash, guess_method_by_input, parse_comment_payload,
-    FunctionBuilder, FunctionExt, GenTimings, LastTransactionId, MethodName,
+    FunctionBuilder, FunctionExt, MethodName,
 };
+use nekoton_utils::SimpleClock;
 use serde_json::json;
 use std::{
     borrow::Cow,
@@ -272,41 +273,26 @@ fn serialize_tokens(data_type: &str, tokens: Vec<Token>) -> Result<String, Nativ
 
 #[no_mangle]
 pub unsafe extern "C" fn run_local(
-    gen_timings: *mut c_char,
-    last_transaction_id: *mut c_char,
     account_stuff_boc: *mut c_char,
     contract_abi: *mut c_char,
     method: *mut c_char,
     input: *mut c_char,
 ) -> *mut c_void {
-    let gen_timings = gen_timings.from_ptr();
-    let last_transaction_id = last_transaction_id.from_ptr();
     let account_stuff_boc = account_stuff_boc.from_ptr();
     let contract_abi = contract_abi.from_ptr();
     let method = method.from_ptr();
     let input = input.from_ptr();
 
-    let result = internal_run_local(
-        gen_timings,
-        last_transaction_id,
-        account_stuff_boc,
-        contract_abi,
-        method,
-        input,
-    );
+    let result = internal_run_local(account_stuff_boc, contract_abi, method, input);
     match_result(result)
 }
 
 fn internal_run_local(
-    gen_timings: String,
-    last_transaction_id: String,
     account_stuff_boc: String,
     contract_abi: String,
     method: String,
     input: String,
 ) -> Result<u64, NativeError> {
-    let gen_timings = parse_gen_timings(&gen_timings)?;
-    let last_transaction_id = parse_last_transaction_id(&last_transaction_id)?;
     let account_stuff = parse_account_stuff(&account_stuff_boc)?;
     let contract_abi = parse_contract_abi(&contract_abi)?;
     let method = contract_abi
@@ -317,7 +303,7 @@ fn internal_run_local(
         .handle_error(NativeStatus::ConversionError)?;
 
     let output = method
-        .run_local(account_stuff, gen_timings, &last_transaction_id, &input)
+        .run_local(&SimpleClock {}, account_stuff, &input)
         .handle_error(NativeStatus::AbiError)?;
 
     let tokens = output
@@ -898,6 +884,7 @@ fn internal_create_external_message(
     }
 
     let message = nekoton::core::utils::make_labs_unsigned_message(
+        &SimpleClock {},
         message,
         nekoton::core::models::Expiration::Timeout(timeout),
         &public_key,
@@ -921,14 +908,6 @@ fn parse_account_stuff(boc: &str) -> Result<ton_block::AccountStuff, NativeError
 fn parse_contract_abi(contract_abi: &str) -> Result<ton_abi::Contract, NativeError> {
     ton_abi::Contract::load(&mut std::io::Cursor::new(contract_abi))
         .handle_error(NativeStatus::ConversionError)
-}
-
-fn parse_last_transaction_id(data: &str) -> Result<LastTransactionId, NativeError> {
-    serde_json::from_str::<LastTransactionId>(&data).handle_error(NativeStatus::ConversionError)
-}
-
-fn parse_gen_timings(data: &str) -> Result<GenTimings, NativeError> {
-    serde_json::from_str::<GenTimings>(&data).handle_error(NativeStatus::ConversionError)
 }
 
 fn parse_params_list(data: &str) -> Result<Vec<ton_abi::Param>, NativeError> {

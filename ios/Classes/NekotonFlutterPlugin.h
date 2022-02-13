@@ -124,7 +124,6 @@ void get_token_wallet_contract_state(long long result_port, void *token_wallet);
 
 void token_wallet_prepare_transfer(long long result_port,
                                    void *token_wallet,
-                                   void *transport,
                                    char *destination,
                                    char *tokens,
                                    unsigned int notify_receiver,
@@ -210,16 +209,6 @@ void ton_wallet_prepare_confirm_transaction(long long result_port,
                                             char *transaction_id,
                                             char *expiration);
 
-void prepare_add_ordinary_stake(long long result_port,
-                                char *depool,
-                                unsigned long long depool_fee,
-                                unsigned long long stake);
-
-void prepare_withdraw_part(long long result_port,
-                           char *depool,
-                           unsigned long long depool_fee,
-                           unsigned long long withdraw_value);
-
 void ton_wallet_estimate_fees(long long result_port, void *ton_wallet, void *message);
 
 void ton_wallet_send(long long result_port,
@@ -242,17 +231,6 @@ void *get_hints(char *input);
 
 void *derive_from_phrase(char *phrase, char *mnemonic_type);
 
-void get_participant_info(long long result_port,
-                          void *transport,
-                          char *address,
-                          char *wallet_address);
-
-void get_depool_info(long long result_port, void *transport, char *address);
-
-void get_adnl_connection(long long result_port, char *adnl_config);
-
-void free_adnl_connection(long long result_port, void *adnl_connection);
-
 void *get_gql_connection(char *url);
 
 void free_gql_connection(long long result_port, void *gql_connection);
@@ -271,12 +249,7 @@ void *repack_address(char *address);
 
 void *parse_message_body_data(char *data);
 
-void *run_local(char *gen_timings,
-                char *last_transaction_id,
-                char *account_stuff_boc,
-                char *contract_abi,
-                char *method,
-                char *input);
+void *run_local(char *account_stuff_boc, char *contract_abi, char *method, char *input);
 
 void *get_expected_address(char *tvc,
                            char *contract_abi,
@@ -323,10 +296,6 @@ void get_transactions(long long result_port,
                       char *address,
                       char *continuation,
                       unsigned char limit);
-
-void get_adnl_transport(long long result_port, void *connection);
-
-void free_adnl_transport(long long result_port, void *adnl_transport);
 
 void get_gql_transport(long long result_port, void *connection);
 

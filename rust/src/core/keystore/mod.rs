@@ -3,21 +3,19 @@ pub mod models;
 use crate::{
     core::keystore::models::{KeySigner, MutexKeyStore},
     crypto::{
-        derived_key::{DerivedKeyExportParams, DerivedKeyUpdateParams},
-        encrypted_key::{EncryptedKeyPassword, EncryptedKeyUpdateParams},
+        derived_key::{
+            DerivedKeyCreateInput, DerivedKeyExportParams, DerivedKeySignParams,
+            DerivedKeyUpdateParams,
+        },
+        encrypted_key::{
+            EncryptedKeyCreateInput, EncryptedKeyExportOutput, EncryptedKeyPassword,
+            EncryptedKeyUpdateParams,
+        },
     },
-    external::storage::{StorageImpl, STORAGE_NOT_FOUND},
+    external::storage::{MutexStorage, StorageImpl, STORAGE_NOT_FOUND},
     match_result,
-    models::{NativeError, NativeStatus},
+    models::{HandleError, NativeError, NativeStatus},
     parse_public_key, runtime, send_to_result_port, FromPtr, ToPtr, RUNTIME,
-};
-use crate::{
-    crypto::{
-        derived_key::{DerivedKeyCreateInput, DerivedKeySignParams},
-        encrypted_key::{EncryptedKeyCreateInput, EncryptedKeyExportOutput},
-    },
-    external::storage::MutexStorage,
-    models::HandleError,
 };
 use anyhow::anyhow;
 use nekoton::{
@@ -66,7 +64,7 @@ pub unsafe extern "C" fn get_keystore(result_port: c_longlong, storage: *mut c_v
 }
 
 async fn internal_get_keystore(storage: Arc<StorageImpl>) -> Result<u64, NativeError> {
-    let keystore = KeyStore::builder(storage)
+    let keystore = KeyStore::builder()
         .with_signer::<EncryptedKeySigner>(
             &KeySigner::EncryptedKeySigner.to_string(),
             EncryptedKeySigner::new(),
@@ -77,7 +75,7 @@ async fn internal_get_keystore(storage: Arc<StorageImpl>) -> Result<u64, NativeE
             DerivedKeySigner::new(),
         )
         .handle_error(NativeStatus::KeyStoreError)?
-        .load()
+        .load(storage)
         .await
         .handle_error(NativeStatus::KeyStoreError)?;
 

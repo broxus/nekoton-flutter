@@ -1,6 +1,5 @@
 pub mod core;
 pub mod crypto;
-pub mod depool;
 pub mod external;
 pub mod helpers;
 pub mod models;

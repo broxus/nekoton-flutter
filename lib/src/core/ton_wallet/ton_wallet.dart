@@ -16,7 +16,6 @@ import '../../transport/gql_transport.dart';
 import '../accounts_storage/models/wallet_type.dart';
 import '../models/contract_state.dart';
 import '../models/expiration.dart';
-import '../models/internal_message.dart';
 import '../models/native_unsigned_message.dart';
 import '../models/on_message_expired_payload.dart';
 import '../models/on_message_sent_payload.dart';
@@ -386,59 +385,23 @@ class TonWallet {
     return unsignedMessage;
   }
 
-  Future<InternalMessage> prepareAddOrdinaryStake({
-    required String depool,
-    required int depoolFee,
-    required int stake,
-  }) async {
-    final result = await proceedAsync(
-      (port) => nativeLibraryInstance.bindings.prepare_add_ordinary_stake(
-        port,
-        depool.toNativeUtf8().cast<Int8>(),
-        depoolFee,
-        stake,
-      ),
-    );
-
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>;
-    final internalMessage = InternalMessage.fromJson(json);
-
-    return internalMessage;
-  }
-
-  Future<InternalMessage> prepareWithdrawPart({
-    required String depool,
-    required int depoolFee,
-    required int withdrawValue,
-  }) async {
-    final result = await proceedAsync(
-      (port) => nativeLibraryInstance.bindings.prepare_withdraw_part(
-        port,
-        depool.toNativeUtf8().cast<Int8>(),
-        depoolFee,
-        withdrawValue,
-      ),
-    );
-
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>;
-    final internalMessage = InternalMessage.fromJson(json);
-
-    return internalMessage;
-  }
-
-  Future<int> estimateFees(UnsignedMessage message) => _nativeTonWallet.use(
-        (ptr) => message.nativeUnsignedMessage.use(
-          (nativeUnsignedMessagePtr) => proceedAsync(
-            (port) => nativeLibraryInstance.bindings.ton_wallet_estimate_fees(
-              port,
-              ptr,
-              nativeUnsignedMessagePtr,
-            ),
+  Future<String> estimateFees(UnsignedMessage message) async {
+    final result = await _nativeTonWallet.use(
+      (ptr) => message.nativeUnsignedMessage.use(
+        (nativeUnsignedMessagePtr) => proceedAsync(
+          (port) => nativeLibraryInstance.bindings.ton_wallet_estimate_fees(
+            port,
+            ptr,
+            nativeUnsignedMessagePtr,
           ),
         ),
-      );
+      ),
+    );
+
+    final fees = cStringToDart(result);
+
+    return fees;
+  }
 
   Future<PendingTransaction> send({
     required UnsignedMessage message,

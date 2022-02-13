@@ -2,8 +2,7 @@ use crate::core::token_wallet::models::TokenOutgoingTransfer;
 use nekoton::core::{
     models::{
         self, ContractState, DePoolOnRoundCompleteNotification, DePoolReceiveAnswerNotification,
-        EthEventStatus, PendingTransaction, TokenWalletDeployedNotification, TonEventStatus,
-        Transaction,
+        PendingTransaction, TokenWalletDeployedNotification, Transaction,
     },
     ton_wallet::{self, MultisigType, TonWallet},
 };
@@ -45,12 +44,6 @@ pub enum TransactionAdditionalInfo {
     TokenWalletDeployed {
         notification: TokenWalletDeployedNotification,
     },
-    EthEventStatusChanged {
-        status: EthEventStatus,
-    },
-    TonEventStatusChanged {
-        status: TonEventStatus,
-    },
     WalletInteraction {
         info: WalletInteractionInfo,
     },
@@ -68,12 +61,6 @@ impl TransactionAdditionalInfo {
             }
             models::TransactionAdditionalInfo::TokenWalletDeployed(notification) => {
                 Self::TokenWalletDeployed { notification }
-            }
-            models::TransactionAdditionalInfo::EthEventStatusChanged(status) => {
-                Self::EthEventStatusChanged { status }
-            }
-            models::TransactionAdditionalInfo::TonEventStatusChanged(status) => {
-                Self::TonEventStatusChanged { status }
             }
             models::TransactionAdditionalInfo::WalletInteraction(info) => Self::WalletInteraction {
                 info: WalletInteractionInfo::from_core(info),

@@ -194,17 +194,23 @@ class GenericContract {
     );
   }
 
-  Future<int> estimateFees(UnsignedMessage message) => _nativeGenericContract.use(
-        (ptr) => message.nativeUnsignedMessage.use(
-          (nativeUnsignedMessagePtr) => proceedAsync(
-            (port) => nativeLibraryInstance.bindings.generic_contract_estimate_fees(
-              port,
-              ptr,
-              nativeUnsignedMessagePtr,
-            ),
+  Future<String> estimateFees(UnsignedMessage message) async {
+    final result = await _nativeGenericContract.use(
+      (ptr) => message.nativeUnsignedMessage.use(
+        (nativeUnsignedMessagePtr) => proceedAsync(
+          (port) => nativeLibraryInstance.bindings.generic_contract_estimate_fees(
+            port,
+            ptr,
+            nativeUnsignedMessagePtr,
           ),
         ),
-      );
+      ),
+    );
+
+    final fees = cStringToDart(result);
+
+    return fees;
+  }
 
   Future<Transaction> executeTransactionLocally({
     required UnsignedMessage message,

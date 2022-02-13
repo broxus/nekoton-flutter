@@ -1,4 +1,3 @@
-pub mod adnl_transport;
 pub mod gql_transport;
 pub mod models;
 
@@ -85,7 +84,10 @@ async fn internal_get_full_account_state(
                 last_transaction_id: Some(state.last_transaction_id),
                 is_deployed: matches!(
                     &state.account.storage.state,
-                    ton_block::AccountState::AccountActive(_)
+                    ton_block::AccountState::AccountActive {
+                        init_code_hash: _,
+                        state_init: _,
+                    }
                 ),
                 boc,
             };
