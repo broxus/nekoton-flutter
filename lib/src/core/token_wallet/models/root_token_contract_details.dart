@@ -8,6 +8,7 @@ part 'root_token_contract_details.g.dart';
 
 @freezed
 class RootTokenContractDetails with _$RootTokenContractDetails {
+  @JsonSerializable(fieldRename: FieldRename.snake)
   @HiveType(typeId: 210)
   const factory RootTokenContractDetails({
     @HiveField(0) required TokenWalletVersion version,
