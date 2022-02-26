@@ -3,25 +3,25 @@ import 'dart:convert';
 import 'dart:ffi';
 import 'dart:isolate';
 
+import 'package:async/async.dart';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:recase/recase.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:synchronized/synchronized.dart';
-import 'package:tuple/tuple.dart';
 
 import '../../bindings.dart';
 import '../../constants.dart';
 import '../../ffi_utils.dart';
 import '../../models/pointed.dart';
 import '../../transport/transport.dart';
+import '../../utils.dart';
 import '../models/contract_state.dart';
 import '../models/internal_message.dart';
 import '../models/transaction_id.dart';
 import 'models/on_balance_changed_payload.dart';
 import 'models/on_token_wallet_transactions_found_payload.dart';
 import 'models/symbol.dart';
-import 'models/token_wallet_transaction_with_data.dart';
 import 'models/token_wallet_version.dart';
 
 class TokenWallet implements Pointed {
@@ -31,12 +31,11 @@ class TokenWallet implements Pointed {
   final _onTransactionsFoundPort = ReceivePort();
   late final Stream<OnBalanceChangedPayload> onBalanceChangedStream;
   late final Stream<OnTokenWalletTransactionsFoundPayload> onTransactionsFoundStream;
-  late final StreamSubscription _onTransactionsFoundSubscription;
-  late final String owner;
-  late final String address;
-  late final Symbol symbol;
-  late final TokenWalletVersion version;
-  final _transactionsSubject = BehaviorSubject<List<TokenWalletTransactionWithData>>.seeded([]);
+  late final CustomRestartableTimer _backgroundRefreshTimer;
+  final _ownerMemo = AsyncMemoizer<String>();
+  final _addressMemo = AsyncMemoizer<String>();
+  final _symbolMemo = AsyncMemoizer<Symbol>();
+  final _versionMemo = AsyncMemoizer<TokenWalletVersion>();
 
   TokenWallet._();
 
@@ -45,80 +44,78 @@ class TokenWallet implements Pointed {
     required String owner,
     required String rootTokenContract,
   }) async {
-    final tokenWallet = TokenWallet._();
-    await tokenWallet._initialize(
+    final instance = TokenWallet._();
+    await instance._initialize(
       transport: transport,
       owner: owner,
       rootTokenContract: rootTokenContract,
     );
-    return tokenWallet;
+    return instance;
   }
 
-  Stream<List<TokenWalletTransactionWithData>> get transactionsStream => _transactionsSubject.stream;
+  Future<String> get owner => _ownerMemo.runOnce(() async {
+        final ptr = await clonePtr();
 
-  Future<String> get _owner async {
-    final ptr = await clonePtr();
+        final result = await executeAsync(
+          (port) => bindings().get_token_wallet_owner(
+            port,
+            ptr,
+          ),
+        );
 
-    final result = await executeAsync(
-      (port) => bindings().get_token_wallet_owner(
-        port,
-        ptr,
-      ),
-    );
+        final owner = cStringToDart(result);
 
-    final owner = cStringToDart(result);
+        return owner;
+      });
 
-    return owner;
-  }
+  Future<String> get address => _addressMemo.runOnce(() async {
+        final ptr = await clonePtr();
 
-  Future<String> get _address async {
-    final ptr = await clonePtr();
+        final result = await executeAsync(
+          (port) => bindings().get_token_wallet_address(
+            port,
+            ptr,
+          ),
+        );
 
-    final result = await executeAsync(
-      (port) => bindings().get_token_wallet_address(
-        port,
-        ptr,
-      ),
-    );
+        final address = cStringToDart(result);
 
-    final address = cStringToDart(result);
+        return address;
+      });
 
-    return address;
-  }
+  Future<Symbol> get symbol => _symbolMemo.runOnce(() async {
+        final ptr = await clonePtr();
 
-  Future<Symbol> get _symbol async {
-    final ptr = await clonePtr();
+        final result = await executeAsync(
+          (port) => bindings().get_token_wallet_symbol(
+            port,
+            ptr,
+          ),
+        );
 
-    final result = await executeAsync(
-      (port) => bindings().get_token_wallet_symbol(
-        port,
-        ptr,
-      ),
-    );
+        final string = cStringToDart(result);
+        final json = jsonDecode(string) as Map<String, dynamic>;
+        final symbol = Symbol.fromJson(json);
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>;
-    final symbol = Symbol.fromJson(json);
+        return symbol;
+      });
 
-    return symbol;
-  }
+  Future<TokenWalletVersion> get version => _versionMemo.runOnce(() async {
+        final ptr = await clonePtr();
 
-  Future<TokenWalletVersion> get _version async {
-    final ptr = await clonePtr();
+        final result = await executeAsync(
+          (port) => bindings().get_token_wallet_version(
+            port,
+            ptr,
+          ),
+        );
 
-    final result = await executeAsync(
-      (port) => bindings().get_token_wallet_version(
-        port,
-        ptr,
-      ),
-    );
+        final string = cStringToDart(result);
+        final json = jsonDecode(string);
+        final version = TokenWalletVersion.values.firstWhere((e) => describeEnum(e).pascalCase == json);
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string);
-    final version = TokenWalletVersion.values.firstWhere((e) => describeEnum(e).pascalCase == json);
-
-    return version;
-  }
+        return version;
+      });
 
   Future<String> get balance async {
     final ptr = await clonePtr();
@@ -191,7 +188,6 @@ class TokenWallet implements Pointed {
 
   Future<void> preloadTransactions(TransactionId from) async {
     final ptr = await clonePtr();
-
     final fromStr = jsonEncode(from);
 
     await executeAsync(
@@ -218,12 +214,10 @@ class TokenWallet implements Pointed {
   Future<void> freePtr() => _lock.synchronized(() {
         if (_ptr == null) throw Exception('Token wallet use after free');
 
-        _onTransactionsFoundSubscription.cancel();
-
-        _transactionsSubject.close();
-
         _onBalanceChangedPort.close();
         _onTransactionsFoundPort.close();
+
+        _backgroundRefreshTimer.cancel();
 
         bindings().free_token_wallet_ptr(
           _ptr!,
@@ -236,65 +230,53 @@ class TokenWallet implements Pointed {
     required Transport transport,
     required String owner,
     required String rootTokenContract,
-  }) async {
-    final transportPtr = await transport.clonePtr();
+  }) =>
+      _lock.synchronized(() async {
+        onBalanceChangedStream = _onBalanceChangedPort.cast<String>().map((e) {
+          final json = jsonDecode(e) as Map<String, dynamic>;
+          final payload = OnBalanceChangedPayload.fromJson(json);
+          return payload;
+        }).shareValue();
 
-    final transportType = transport.connectionData.type;
+        onTransactionsFoundStream = _onTransactionsFoundPort.cast<String>().map((e) {
+          final json = jsonDecode(e) as Map<String, dynamic>;
+          final payload = OnTokenWalletTransactionsFoundPayload.fromJson(json);
+          return payload;
+        }).shareValue();
 
-    final result = await executeAsync(
-      (port) => bindings().token_wallet_subscribe(
-        port,
-        _onBalanceChangedPort.sendPort.nativePort,
-        _onTransactionsFoundPort.sendPort.nativePort,
-        transportPtr,
-        transportType.index,
-        owner.toNativeUtf8().cast<Int8>(),
-        rootTokenContract.toNativeUtf8().cast<Int8>(),
-      ),
-    );
+        final transportPtr = await transport.clonePtr();
+        final transportType = transport.connectionData.type;
 
-    _ptr = Pointer.fromAddress(result).cast<Void>();
+        final result = await executeAsync(
+          (port) => bindings().token_wallet_subscribe(
+            port,
+            _onBalanceChangedPort.sendPort.nativePort,
+            _onTransactionsFoundPort.sendPort.nativePort,
+            transportPtr,
+            transportType.index,
+            owner.toNativeUtf8().cast<Int8>(),
+            rootTokenContract.toNativeUtf8().cast<Int8>(),
+          ),
+        );
 
-    onBalanceChangedStream = _onBalanceChangedPort.asBroadcastStream().cast<String>().map((e) {
-      final json = jsonDecode(e) as Map<String, dynamic>;
-      final payload = OnBalanceChangedPayload.fromJson(json);
-      return payload;
-    });
+        _ptr = Pointer.fromAddress(result).cast<Void>();
 
-    onTransactionsFoundStream = _onTransactionsFoundPort.asBroadcastStream().cast<String>().map((e) {
-      final json = jsonDecode(e) as Map<String, dynamic>;
-      final payload = OnTokenWalletTransactionsFoundPayload.fromJson(json);
-      return payload;
-    });
+        _backgroundRefreshTimer = CustomRestartableTimer(Duration.zero, _backgroundRefreshTimerCallback);
+      });
 
-    _onTransactionsFoundSubscription = onTransactionsFoundStream.listen(_onTransactionsFoundListener);
+  Future<void> _backgroundRefreshTimerCallback() async {
+    if (_ptr == null) {
+      _backgroundRefreshTimer.cancel();
+      return;
+    }
 
-    this.owner = await _owner;
-    address = await _address;
-    symbol = await _symbol;
-    version = await _version;
+    try {
+      await refresh();
 
-    _refreshCycle();
-  }
-
-  void _onTransactionsFoundListener(OnTokenWalletTransactionsFoundPayload value) {
-    final transactions = [
-      ..._transactionsSubject.value,
-      ...value.transactions,
-    ]..sort();
-
-    _transactionsSubject.add(transactions);
-  }
-
-  Future<void> _refreshCycle() async {
-    while (_ptr != null) {
-      try {
-        await refresh();
-
-        await Future.delayed(kRefreshPeriod);
-      } catch (err, st) {
-        nekotonErrorsSubject.add(Tuple2(err, st));
-      }
+      _backgroundRefreshTimer.reset(kRefreshInterval);
+    } catch (err, st) {
+      logger?.w(err, err, st);
+      _backgroundRefreshTimer.reset(Duration.zero);
     }
   }
 }

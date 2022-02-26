@@ -3,11 +3,11 @@ import 'dart:convert';
 import 'dart:ffi';
 import 'dart:isolate';
 
+import 'package:async/async.dart';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:synchronized/synchronized.dart';
-import 'package:tuple/tuple.dart';
 
 import '../../bindings.dart';
 import '../../constants.dart';
@@ -18,6 +18,7 @@ import '../../models/pointed.dart';
 import '../../transport/gql_transport.dart';
 import '../../transport/models/transport_type.dart';
 import '../../transport/transport.dart';
+import '../../utils.dart';
 import '../models/contract_state.dart';
 import '../models/on_message_expired_payload.dart';
 import '../models/on_message_sent_payload.dart';
@@ -37,18 +38,15 @@ class GenericContract implements Pointed {
   final _onMessageExpiredPort = ReceivePort();
   final _onStateChangedPort = ReceivePort();
   final _onTransactionsFoundPort = ReceivePort();
+  final _pendingTransactionsSubject = BehaviorSubject<List<PendingTransaction>>.seeded([]);
   late final Stream<OnMessageSentPayload> onMessageSentStream;
   late final Stream<OnMessageExpiredPayload> onMessageExpiredStream;
   late final Stream<OnStateChangedPayload> onStateChangedStream;
   late final Stream<OnTransactionsFoundPayload> onTransactionsFoundStream;
+  late final Stream<List<PendingTransaction>> pendingTransactionsStream;
   late final Transport _transport;
-  late final StreamSubscription _onMessageSentSubscription;
-  late final StreamSubscription _onMessageExpiredSubscription;
-  late final StreamSubscription _onTransactionsFoundSubscription;
-  late final String address;
-  final _transactionsSubject = BehaviorSubject<List<Transaction>>.seeded([]);
-  final _pendingTransactionsSubject = BehaviorSubject<List<PendingTransaction>>.seeded([]);
-  final _expiredTransactionsSubject = BehaviorSubject<List<PendingTransaction>>.seeded([]);
+  late final CustomRestartableTimer _backgroundRefreshTimer;
+  final _addressMemo = AsyncMemoizer<String>();
 
   GenericContract._();
 
@@ -56,34 +54,28 @@ class GenericContract implements Pointed {
     required Transport transport,
     required String address,
   }) async {
-    final genericContract = GenericContract._();
-    await genericContract._initialize(
+    final instance = GenericContract._();
+    await instance._initialize(
       transport: transport,
       address: address,
     );
-    return genericContract;
+    return instance;
   }
 
-  Stream<List<Transaction>> get transactionsStream => _transactionsSubject.stream;
+  Future<String> get address => _addressMemo.runOnce(() async {
+        final ptr = await clonePtr();
 
-  Stream<List<PendingTransaction>> get pendingTransactionsStream => _pendingTransactionsSubject.stream;
+        final result = await executeAsync(
+          (port) => bindings().get_generic_contract_address(
+            port,
+            ptr,
+          ),
+        );
 
-  Stream<List<PendingTransaction>> get expiredTransactionsStream => _expiredTransactionsSubject.stream;
+        final address = cStringToDart(result);
 
-  Future<String> get _address async {
-    final ptr = await clonePtr();
-
-    final result = await executeAsync(
-      (port) => bindings().get_generic_contract_address(
-        port,
-        ptr,
-      ),
-    );
-
-    final address = cStringToDart(result);
-
-    return address;
-  }
+        return address;
+      });
 
   Future<ContractState> get contractState async {
     final ptr = await clonePtr();
@@ -120,7 +112,7 @@ class GenericContract implements Pointed {
     return pendingTransactions;
   }
 
-  Future<PollingMethod> get _pollingMethod async {
+  Future<PollingMethod> get pollingMethod async {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
@@ -139,7 +131,6 @@ class GenericContract implements Pointed {
 
   Future<String> estimateFees(UnsignedMessage message) async {
     final ptr = await clonePtr();
-
     final unsignedMessagePtr = await message.clonePtr();
 
     final result = await executeAsync(
@@ -161,11 +152,8 @@ class GenericContract implements Pointed {
     required SignInput signInput,
   }) async {
     final ptr = await clonePtr();
-
     final keystorePtr = await keystore.clonePtr();
-
     final unsignedMessagePtr = await message.clonePtr();
-
     final signInputStr = jsonEncode(signInput);
 
     final result = await executeAsync(
@@ -182,12 +170,7 @@ class GenericContract implements Pointed {
     final json = jsonDecode(string) as Map<String, dynamic>;
     final pendingTransaction = PendingTransaction.fromJson(json);
 
-    final pending = [
-      pendingTransaction,
-      ..._pendingTransactionsSubject.value,
-    ]..sort();
-
-    _pendingTransactionsSubject.add(pending);
+    _pendingTransactionsSubject.add(await pendingTransactions);
 
     return pendingTransaction;
   }
@@ -199,13 +182,9 @@ class GenericContract implements Pointed {
     required TransactionExecutionOptions options,
   }) async {
     final ptr = await clonePtr();
-
     final keystorePtr = await keystore.clonePtr();
-
     final unsignedMessagePtr = await message.clonePtr();
-
     final signInputStr = jsonEncode(signInput);
-
     final optionsStr = jsonEncode(options);
 
     final result = await executeAsync(
@@ -235,11 +214,12 @@ class GenericContract implements Pointed {
         ptr,
       ),
     );
+
+    _pendingTransactionsSubject.add(await pendingTransactions);
   }
 
   Future<void> preloadTransactions(TransactionId from) async {
     final ptr = await clonePtr();
-
     final fromStr = jsonEncode(from);
 
     await executeAsync(
@@ -251,11 +231,9 @@ class GenericContract implements Pointed {
     );
   }
 
-  Future<void> _handleBlock(String id) async {
+  Future<void> handleBlock(String id) async {
     final ptr = await clonePtr();
-
     final transportPtr = await _transport.clonePtr();
-
     final transportType = _transport.connectionData.type;
 
     await executeAsync(
@@ -284,18 +262,12 @@ class GenericContract implements Pointed {
   Future<void> freePtr() => _lock.synchronized(() {
         if (_ptr == null) throw Exception('Generic contract use after free');
 
-        _onMessageSentSubscription.cancel();
-        _onMessageExpiredSubscription.cancel();
-        _onTransactionsFoundSubscription.cancel();
-
-        _transactionsSubject.close();
-        _pendingTransactionsSubject.close();
-        _expiredTransactionsSubject.close();
-
         _onMessageSentPort.close();
         _onMessageExpiredPort.close();
         _onStateChangedPort.close();
         _onTransactionsFoundPort.close();
+
+        _backgroundRefreshTimer.cancel();
 
         bindings().free_generic_contract_ptr(
           _ptr!,
@@ -307,116 +279,93 @@ class GenericContract implements Pointed {
   Future<void> _initialize({
     required Transport transport,
     required String address,
-  }) async {
-    final transportPtr = await transport.clonePtr();
+  }) =>
+      _lock.synchronized(() async {
+        onMessageSentStream = _onMessageSentPort.cast<String>().map((e) {
+          final json = jsonDecode(e) as Map<String, dynamic>;
+          final payload = OnMessageSentPayload.fromJson(json);
+          return payload;
+        }).shareValue();
 
-    final transportType = transport.connectionData.type;
+        onMessageExpiredStream = _onMessageExpiredPort.cast<String>().map((e) {
+          final json = jsonDecode(e) as Map<String, dynamic>;
+          final payload = OnMessageExpiredPayload.fromJson(json);
+          return payload;
+        }).shareValue();
 
-    final result = await executeAsync(
-      (port) => bindings().generic_contract_subscribe(
-        port,
-        _onMessageSentPort.sendPort.nativePort,
-        _onMessageExpiredPort.sendPort.nativePort,
-        _onStateChangedPort.sendPort.nativePort,
-        _onTransactionsFoundPort.sendPort.nativePort,
-        transportPtr,
-        transportType.index,
-        address.toNativeUtf8().cast<Int8>(),
-      ),
-    );
+        onStateChangedStream = _onStateChangedPort.cast<String>().map((e) {
+          final json = jsonDecode(e) as Map<String, dynamic>;
+          final payload = OnStateChangedPayload.fromJson(json);
+          return payload;
+        }).shareValue();
 
-    _ptr = Pointer.fromAddress(result).cast<Void>();
+        onTransactionsFoundStream = _onTransactionsFoundPort.cast<String>().map((e) {
+          final json = jsonDecode(e) as Map<String, dynamic>;
+          final payload = OnTransactionsFoundPayload.fromJson(json);
+          return payload;
+        }).shareValue();
 
-    onMessageSentStream = _onMessageSentPort.asBroadcastStream().cast<String>().map((e) {
-      final json = jsonDecode(e) as Map<String, dynamic>;
-      final payload = OnMessageSentPayload.fromJson(json);
-      return payload;
-    });
+        pendingTransactionsStream = _pendingTransactionsSubject.stream;
 
-    onMessageExpiredStream = _onMessageExpiredPort.asBroadcastStream().cast<String>().map((e) {
-      final json = jsonDecode(e) as Map<String, dynamic>;
-      final payload = OnMessageExpiredPayload.fromJson(json);
-      return payload;
-    });
+        _transport = transport;
 
-    onStateChangedStream = _onStateChangedPort.asBroadcastStream().cast<String>().map((e) {
-      final json = jsonDecode(e) as Map<String, dynamic>;
-      final payload = OnStateChangedPayload.fromJson(json);
-      return payload;
-    });
+        final transportPtr = await transport.clonePtr();
+        final transportType = transport.connectionData.type;
 
-    onTransactionsFoundStream = _onTransactionsFoundPort.asBroadcastStream().cast<String>().map((e) {
-      final json = jsonDecode(e) as Map<String, dynamic>;
-      final payload = OnTransactionsFoundPayload.fromJson(json);
-      return payload;
-    });
+        final result = await executeAsync(
+          (port) => bindings().generic_contract_subscribe(
+            port,
+            _onMessageSentPort.sendPort.nativePort,
+            _onMessageExpiredPort.sendPort.nativePort,
+            _onStateChangedPort.sendPort.nativePort,
+            _onTransactionsFoundPort.sendPort.nativePort,
+            transportPtr,
+            transportType.index,
+            address.toNativeUtf8().cast<Int8>(),
+          ),
+        );
 
-    _transport = transport;
+        _ptr = Pointer.fromAddress(result).cast<Void>();
 
-    _onMessageSentSubscription = onMessageSentStream.listen(_onMessageSentListener);
-    _onMessageExpiredSubscription = onMessageExpiredStream.listen(_onMessageExpiredListener);
-    _onTransactionsFoundSubscription = onTransactionsFoundStream.listen(_onTransactionsFoundListener);
+        _backgroundRefreshTimer = CustomRestartableTimer(Duration.zero, _backgroundRefreshTimerCallback);
+      });
 
-    this.address = await _address;
+  Future<void> _backgroundRefreshTimerCallback() async {
+    if (_ptr == null) {
+      _backgroundRefreshTimer.cancel();
+      return;
+    }
 
-    _refreshCycle();
-  }
+    try {
+      final isGql = _transport.connectionData.type == TransportType.gql;
+      final isReliable = await pollingMethod == PollingMethod.reliable;
 
-  void _onMessageSentListener(OnMessageSentPayload value) {
-    final pending = [
-      ..._pendingTransactionsSubject.value.where((e) => e != value.pendingTransaction),
-    ]..sort();
+      if (isGql && isReliable) {
+        final transport = _transport as GqlTransport;
+        final address = await this.address;
 
-    _pendingTransactionsSubject.add(pending);
-  }
+        final currentBlockId = await transport.getLatestBlockId(address);
 
-  void _onMessageExpiredListener(OnMessageExpiredPayload value) {
-    final pending = [
-      ..._pendingTransactionsSubject.value.where((e) => e != value.pendingTransaction),
-    ]..sort();
+        final nextId = await transport.waitForNextBlockId(
+          currentBlockId: currentBlockId,
+          address: address,
+          timeout: kGqlTimeout.inMilliseconds,
+        );
 
-    _pendingTransactionsSubject.add(pending);
+        await handleBlock(nextId);
 
-    final expired = [
-      ..._expiredTransactionsSubject.value,
-      value.pendingTransaction,
-    ]..sort();
+        _backgroundRefreshTimer.reset(Duration.zero);
+      } else {
+        await refresh();
 
-    _expiredTransactionsSubject.add(expired);
-  }
+        final isReliable = await pollingMethod == PollingMethod.reliable;
+        final duration = isReliable ? kShortRefreshInterval : kRefreshInterval;
 
-  void _onTransactionsFoundListener(OnTransactionsFoundPayload value) {
-    final transactions = [
-      ..._transactionsSubject.value,
-      ...value.transactions,
-    ]..sort();
-
-    _transactionsSubject.add(transactions);
-  }
-
-  Future<void> _refreshCycle() async {
-    while (_ptr != null) {
-      try {
-        if (_transport.connectionData.type == TransportType.gql && await _pollingMethod == PollingMethod.reliable) {
-          final transport = _transport as GqlTransport;
-
-          final currentBlockId = await transport.getLatestBlockId(address);
-
-          final nextId = await transport.waitForNextBlockId(
-            currentBlockId: currentBlockId,
-            address: address,
-            timeout: kGqlTimeout.inMilliseconds,
-          );
-
-          await _handleBlock(nextId);
-        } else {
-          await refresh();
-
-          await Future.delayed(await _pollingMethod == PollingMethod.reliable ? kRefreshPeriod : kJrpcRefreshPeriod);
-        }
-      } catch (err, st) {
-        nekotonErrorsSubject.add(Tuple2(err, st));
+        _backgroundRefreshTimer.reset(duration);
       }
+    } catch (err, st) {
+      logger?.w(err, err, st);
+      _backgroundRefreshTimer.reset(Duration.zero);
     }
   }
 }

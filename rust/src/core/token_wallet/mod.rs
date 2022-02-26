@@ -5,7 +5,7 @@ use crate::{
     core::{models::InternalMessage, token_wallet::handler::TokenWalletSubscriptionHandlerImpl},
     models::{HandleError, MatchResult},
     parse_address, runtime, send_to_result_port,
-    transport::models::match_transport,
+    transport::match_transport,
     FromPtr, ToPtr, RUNTIME,
 };
 use nekoton::{
@@ -352,6 +352,130 @@ pub unsafe extern "C" fn token_wallet_preload_transactions(
         let mut token_wallet = token_wallet.lock().await;
 
         let result = internal_fn(&mut token_wallet, from).await.match_result();
+
+        send_to_result_port(result_port, result);
+    });
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn get_token_root_details(
+    result_port: c_longlong,
+    transport: *mut c_void,
+    transport_type: c_int,
+    root_token_contract: *mut c_char,
+) {
+    let transport = match_transport(transport, transport_type);
+
+    let root_token_contract = root_token_contract.from_ptr();
+
+    runtime!().spawn(async move {
+        async fn internal_fn(
+            transport: Arc<dyn Transport>,
+            root_token_contract: String,
+        ) -> Result<u64, String> {
+            let root_token_contract = parse_address(&root_token_contract)?;
+
+            let token_root_details = nekoton::core::token_wallet::get_token_root_details(
+                &SimpleClock {},
+                transport.as_ref(),
+                &root_token_contract,
+            )
+            .await
+            .handle_error()?;
+
+            let token_root_details = serde_json::to_string(&token_root_details)
+                .handle_error()?
+                .to_ptr() as c_ulonglong;
+
+            Ok(token_root_details)
+        }
+
+        let result = internal_fn(transport, root_token_contract)
+            .await
+            .match_result();
+
+        send_to_result_port(result_port, result);
+    });
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn get_token_wallet_details(
+    result_port: c_longlong,
+    transport: *mut c_void,
+    transport_type: c_int,
+    token_wallet: *mut c_char,
+) {
+    let transport = match_transport(transport, transport_type);
+
+    let token_wallet = token_wallet.from_ptr();
+
+    runtime!().spawn(async move {
+        async fn internal_fn(
+            transport: Arc<dyn Transport>,
+            token_wallet: String,
+        ) -> Result<u64, String> {
+            let token_wallet = parse_address(&token_wallet)?;
+
+            let (token_wallet_details, root_contract_details) =
+                nekoton::core::token_wallet::get_token_wallet_details(
+                    &SimpleClock {},
+                    transport.as_ref(),
+                    &token_wallet,
+                )
+                .await
+                .handle_error()?;
+
+            let result = serde_json::to_string(&(token_wallet_details, root_contract_details))
+                .handle_error()?
+                .to_ptr() as c_ulonglong;
+
+            Ok(result)
+        }
+
+        let result = internal_fn(transport, token_wallet).await.match_result();
+
+        send_to_result_port(result_port, result);
+    });
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn get_token_root_details_from_token_wallet(
+    result_port: c_longlong,
+    transport: *mut c_void,
+    transport_type: c_int,
+    token_wallet_address: *mut c_char,
+) {
+    let transport = match_transport(transport, transport_type);
+
+    let token_wallet_address = token_wallet_address.from_ptr();
+
+    runtime!().spawn(async move {
+        async fn internal_fn(
+            transport: Arc<dyn Transport>,
+            token_wallet_address: String,
+        ) -> Result<u64, String> {
+            let token_wallet_address = parse_address(&token_wallet_address)?;
+
+            let (root_token_contract, root_contract_details) =
+                nekoton::core::token_wallet::get_token_root_details_from_token_wallet(
+                    &SimpleClock {},
+                    transport.as_ref(),
+                    &token_wallet_address,
+                )
+                .await
+                .handle_error()?;
+
+            let result =
+                serde_json::to_string(&(root_token_contract.to_string(), root_contract_details))
+                    .handle_error()?
+                    .to_ptr() as c_ulonglong;
+
+            Ok(result)
+        }
+
+        let result = internal_fn(transport, token_wallet_address)
+            .await
+            .match_result();
 
         send_to_result_port(result_port, result);
     });

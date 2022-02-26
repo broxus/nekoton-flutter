@@ -15,7 +15,6 @@ use nekoton::core::{
 };
 use nekoton_abi::{get_state_init_hash, guess_method_by_input, FunctionExt, MethodName};
 use nekoton_utils::SimpleClock;
-use serde_json::json;
 use std::{
     borrow::Cow,
     ffi::c_void,
@@ -651,5 +650,5 @@ fn parse_transaction(data: &str) -> Result<Transaction, String> {
 }
 
 fn get_null_string() -> Result<String, String> {
-    serde_json::to_string(&json!(null)).handle_error()
+    serde_json::to_string(&serde_json::Value::Null).handle_error()
 }

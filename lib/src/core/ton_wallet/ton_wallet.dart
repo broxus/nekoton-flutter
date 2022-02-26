@@ -3,11 +3,11 @@ import 'dart:convert';
 import 'dart:ffi';
 import 'dart:isolate';
 
+import 'package:async/async.dart';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:synchronized/synchronized.dart';
-import 'package:tuple/tuple.dart';
 
 import '../../bindings.dart';
 import '../../constants.dart';
@@ -18,6 +18,7 @@ import '../../models/pointed.dart';
 import '../../transport/gql_transport.dart';
 import '../../transport/models/transport_type.dart';
 import '../../transport/transport.dart';
+import '../../utils.dart';
 import '../accounts_storage/models/wallet_type.dart';
 import '../models/contract_state.dart';
 import '../models/expiration.dart';
@@ -32,7 +33,6 @@ import 'models/existing_wallet_info.dart';
 import 'models/multisig_pending_transaction.dart';
 import 'models/on_ton_wallet_transactions_found_payload.dart';
 import 'models/ton_wallet_details.dart';
-import 'models/ton_wallet_transaction_with_data.dart';
 
 class TonWallet implements Pointed {
   final _lock = Lock();
@@ -41,22 +41,21 @@ class TonWallet implements Pointed {
   final _onMessageExpiredPort = ReceivePort();
   final _onStateChangedPort = ReceivePort();
   final _onTransactionsFoundPort = ReceivePort();
+  final _pendingTransactionsSubject = BehaviorSubject<List<PendingTransaction>>.seeded([]);
+  final _unconfirmedTransactionsSubject = BehaviorSubject<List<MultisigPendingTransaction>>.seeded([]);
   late final Stream<OnMessageSentPayload> onMessageSentStream;
   late final Stream<OnMessageExpiredPayload> onMessageExpiredStream;
   late final Stream<OnStateChangedPayload> onStateChangedStream;
   late final Stream<OnTonWalletTransactionsFoundPayload> onTransactionsFoundStream;
+  late final Stream<List<PendingTransaction>> pendingTransactionsStream;
+  late final Stream<List<MultisigPendingTransaction>> unconfirmedTransactionsStream;
   late final Transport _transport;
-  late final StreamSubscription _onMessageSentSubscription;
-  late final StreamSubscription _onMessageExpiredSubscription;
-  late final StreamSubscription _onTransactionsFoundSubscription;
-  late final int workchain;
-  late final String address;
-  late final String publicKey;
-  late final WalletType walletType;
-  late final TonWalletDetails details;
-  final _transactionsSubject = BehaviorSubject<List<TonWalletTransactionWithData>>.seeded([]);
-  final _pendingTransactionsSubject = BehaviorSubject<List<PendingTransaction>>.seeded([]);
-  final _expiredTransactionsSubject = BehaviorSubject<List<PendingTransaction>>.seeded([]);
+  late final CustomRestartableTimer _backgroundRefreshTimer;
+  final _workchainMemo = AsyncMemoizer<int>();
+  final _addressMemo = AsyncMemoizer<String>();
+  final _publicKeyMemo = AsyncMemoizer<String>();
+  final _walletTypeMemo = AsyncMemoizer<WalletType>();
+  final _detailsMemo = AsyncMemoizer<TonWalletDetails>();
 
   TonWallet._();
 
@@ -66,105 +65,99 @@ class TonWallet implements Pointed {
     required String publicKey,
     required WalletType walletType,
   }) async {
-    final tonWallet = TonWallet._();
-    await tonWallet._subscribe(
+    final instance = TonWallet._();
+    await instance._subscribe(
       transport: transport,
       workchain: workchain,
       publicKey: publicKey,
       walletType: walletType,
     );
-    return tonWallet;
+    return instance;
   }
 
   static Future<TonWallet> subscribeByAddress({
     required Transport transport,
     required String address,
   }) async {
-    final tonWallet = TonWallet._();
-    await tonWallet._subscribeByAddress(
+    final instance = TonWallet._();
+    await instance._subscribeByAddress(
       transport: transport,
       address: address,
     );
-    return tonWallet;
+    return instance;
   }
 
   static Future<TonWallet> subscribeByExisting({
     required Transport transport,
     required ExistingWalletInfo existingWalletInfo,
   }) async {
-    final tonWallet = TonWallet._();
-    await tonWallet._subscribeByExisting(
+    final instance = TonWallet._();
+    await instance._subscribeByExisting(
       transport: transport,
       existingWalletInfo: existingWalletInfo,
     );
-    return tonWallet;
+    return instance;
   }
 
-  Stream<List<TonWalletTransactionWithData>> get transactionsStream => _transactionsSubject.stream;
+  Future<int> get workchain => _workchainMemo.runOnce(() async {
+        final ptr = await clonePtr();
 
-  Stream<List<PendingTransaction>> get pendingTransactionsStream => _pendingTransactionsSubject.stream;
+        final result = await executeAsync(
+          (port) => bindings().get_ton_wallet_workchain(
+            port,
+            ptr,
+          ),
+        );
 
-  Stream<List<PendingTransaction>> get expiredTransactionsStream => _expiredTransactionsSubject.stream;
+        return result;
+      });
 
-  Future<int> get _workchain async {
-    final ptr = await clonePtr();
+  Future<String> get address => _addressMemo.runOnce(() async {
+        final ptr = await clonePtr();
 
-    final result = await executeAsync(
-      (port) => bindings().get_ton_wallet_workchain(
-        port,
-        ptr,
-      ),
-    );
+        final result = await executeAsync(
+          (port) => bindings().get_ton_wallet_address(
+            port,
+            ptr,
+          ),
+        );
 
-    return result;
-  }
+        final address = cStringToDart(result);
 
-  Future<String> get _address async {
-    final ptr = await clonePtr();
+        return address;
+      });
 
-    final result = await executeAsync(
-      (port) => bindings().get_ton_wallet_address(
-        port,
-        ptr,
-      ),
-    );
+  Future<String> get publicKey => _publicKeyMemo.runOnce(() async {
+        final ptr = await clonePtr();
 
-    final address = cStringToDart(result);
+        final result = await executeAsync(
+          (port) => bindings().get_ton_wallet_public_key(
+            port,
+            ptr,
+          ),
+        );
 
-    return address;
-  }
+        final publicKey = cStringToDart(result);
 
-  Future<String> get _publicKey async {
-    final ptr = await clonePtr();
+        return publicKey;
+      });
 
-    final result = await executeAsync(
-      (port) => bindings().get_ton_wallet_public_key(
-        port,
-        ptr,
-      ),
-    );
+  Future<WalletType> get walletType => _walletTypeMemo.runOnce(() async {
+        final ptr = await clonePtr();
 
-    final publicKey = cStringToDart(result);
+        final result = await executeAsync(
+          (port) => bindings().get_ton_wallet_wallet_type(
+            port,
+            ptr,
+          ),
+        );
 
-    return publicKey;
-  }
+        final string = cStringToDart(result);
+        final json = jsonDecode(string) as Map<String, dynamic>;
+        final walletType = WalletType.fromJson(json);
 
-  Future<WalletType> get _walletType async {
-    final ptr = await clonePtr();
-
-    final result = await executeAsync(
-      (port) => bindings().get_ton_wallet_wallet_type(
-        port,
-        ptr,
-      ),
-    );
-
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>;
-    final walletType = WalletType.fromJson(json);
-
-    return walletType;
-  }
+        return walletType;
+      });
 
   Future<ContractState> get contractState async {
     final ptr = await clonePtr();
@@ -201,7 +194,7 @@ class TonWallet implements Pointed {
     return pendingTransactions;
   }
 
-  Future<PollingMethod> get _pollingMethod async {
+  Future<PollingMethod> get pollingMethod async {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
@@ -218,22 +211,22 @@ class TonWallet implements Pointed {
     return pollingMethod;
   }
 
-  Future<TonWalletDetails> get _details async {
-    final ptr = await clonePtr();
+  Future<TonWalletDetails> get details => _detailsMemo.runOnce(() async {
+        final ptr = await clonePtr();
 
-    final result = await executeAsync(
-      (port) => bindings().get_ton_wallet_details(
-        port,
-        ptr,
-      ),
-    );
+        final result = await executeAsync(
+          (port) => bindings().get_ton_wallet_details(
+            port,
+            ptr,
+          ),
+        );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>;
-    final details = TonWalletDetails.fromJson(json);
+        final string = cStringToDart(result);
+        final json = jsonDecode(string) as Map<String, dynamic>;
+        final details = TonWalletDetails.fromJson(json);
 
-    return details;
-  }
+        return details;
+      });
 
   Future<List<MultisigPendingTransaction>> get unconfirmedTransactions async {
     final ptr = await clonePtr();
@@ -272,7 +265,6 @@ class TonWallet implements Pointed {
 
   Future<UnsignedMessage> prepareDeploy(Expiration expiration) async {
     final ptr = await clonePtr();
-
     final expirationStr = jsonEncode(expiration);
 
     final result = await executeAsync(
@@ -295,7 +287,6 @@ class TonWallet implements Pointed {
     required int reqConfirms,
   }) async {
     final ptr = await clonePtr();
-
     final expirationStr = jsonEncode(expiration);
     final custodiansStr = jsonEncode(custodians);
 
@@ -320,15 +311,11 @@ class TonWallet implements Pointed {
     required String destination,
     required String amount,
     String? body,
-    bool isComment = true,
     required Expiration expiration,
   }) async {
     final ptr = await clonePtr();
-
     final transportPtr = await _transport.clonePtr();
-
     final transportType = _transport.connectionData.type;
-
     final expirationStr = jsonEncode(expiration);
 
     final result = await executeAsync(
@@ -357,11 +344,8 @@ class TonWallet implements Pointed {
     required Expiration expiration,
   }) async {
     final ptr = await clonePtr();
-
     final transportPtr = await _transport.clonePtr();
-
     final transportType = _transport.connectionData.type;
-
     final expirationStr = jsonEncode(expiration);
 
     final result = await executeAsync(
@@ -384,7 +368,6 @@ class TonWallet implements Pointed {
 
   Future<String> estimateFees(UnsignedMessage message) async {
     final ptr = await clonePtr();
-
     final unsignedMessagePtr = await message.clonePtr();
 
     final result = await executeAsync(
@@ -406,11 +389,8 @@ class TonWallet implements Pointed {
     required SignInput signInput,
   }) async {
     final ptr = await clonePtr();
-
     final keystorePtr = await keystore.clonePtr();
-
     final unsignedMessagePtr = await message.clonePtr();
-
     final signInputStr = jsonEncode(signInput);
 
     final result = await executeAsync(
@@ -427,12 +407,7 @@ class TonWallet implements Pointed {
     final json = jsonDecode(string) as Map<String, dynamic>;
     final pendingTransaction = PendingTransaction.fromJson(json);
 
-    final pending = [
-      pendingTransaction,
-      ..._pendingTransactionsSubject.value,
-    ]..sort();
-
-    _pendingTransactionsSubject.add(pending);
+    _pendingTransactionsSubject.add(await pendingTransactions);
 
     return pendingTransaction;
   }
@@ -446,11 +421,14 @@ class TonWallet implements Pointed {
         ptr,
       ),
     );
+
+    _pendingTransactionsSubject.add(await pendingTransactions);
+
+    _unconfirmedTransactionsSubject.add(await unconfirmedTransactions);
   }
 
   Future<void> preloadTransactions(TransactionId from) async {
     final ptr = await clonePtr();
-
     final fromStr = jsonEncode(from);
 
     await executeAsync(
@@ -462,11 +440,9 @@ class TonWallet implements Pointed {
     );
   }
 
-  Future<void> _handleBlock(String id) async {
+  Future<void> handleBlock(String id) async {
     final ptr = await clonePtr();
-
     final transportPtr = await _transport.clonePtr();
-
     final transportType = _transport.connectionData.type;
 
     await executeAsync(
@@ -495,18 +471,15 @@ class TonWallet implements Pointed {
   Future<void> freePtr() => _lock.synchronized(() {
         if (_ptr == null) throw Exception('Ton wallet use after free');
 
-        _onMessageSentSubscription.cancel();
-        _onMessageExpiredSubscription.cancel();
-        _onTransactionsFoundSubscription.cancel();
-
-        _transactionsSubject.close();
-        _pendingTransactionsSubject.close();
-        _expiredTransactionsSubject.close();
-
         _onMessageSentPort.close();
         _onMessageExpiredPort.close();
         _onStateChangedPort.close();
         _onTransactionsFoundPort.close();
+
+        _pendingTransactionsSubject.close();
+        _unconfirmedTransactionsSubject.close();
+
+        _backgroundRefreshTimer.cancel();
 
         bindings().free_ton_wallet_ptr(
           _ptr!,
@@ -520,190 +493,157 @@ class TonWallet implements Pointed {
     required int workchain,
     required String publicKey,
     required WalletType walletType,
-  }) async {
-    final transportPtr = await transport.clonePtr();
+  }) =>
+      _initialize(
+        transport: transport,
+        subscribe: () async {
+          final transportPtr = await transport.clonePtr();
+          final transportType = transport.connectionData.type;
+          final walletTypeStr = jsonEncode(walletType);
 
-    final transportType = transport.connectionData.type;
-
-    final walletTypeStr = jsonEncode(walletType);
-
-    final result = await executeAsync(
-      (port) => bindings().ton_wallet_subscribe(
-        port,
-        _onMessageSentPort.sendPort.nativePort,
-        _onMessageExpiredPort.sendPort.nativePort,
-        _onStateChangedPort.sendPort.nativePort,
-        _onTransactionsFoundPort.sendPort.nativePort,
-        transportPtr,
-        transportType.index,
-        workchain,
-        publicKey.toNativeUtf8().cast<Int8>(),
-        walletTypeStr.toNativeUtf8().cast<Int8>(),
-      ),
-    );
-
-    _ptr = Pointer.fromAddress(result).cast<Void>();
-
-    await _initialize(
-      transport: transport,
-    );
-  }
+          return executeAsync(
+            (port) => bindings().ton_wallet_subscribe(
+              port,
+              _onMessageSentPort.sendPort.nativePort,
+              _onMessageExpiredPort.sendPort.nativePort,
+              _onStateChangedPort.sendPort.nativePort,
+              _onTransactionsFoundPort.sendPort.nativePort,
+              transportPtr,
+              transportType.index,
+              workchain,
+              publicKey.toNativeUtf8().cast<Int8>(),
+              walletTypeStr.toNativeUtf8().cast<Int8>(),
+            ),
+          );
+        },
+      );
 
   Future<void> _subscribeByAddress({
     required Transport transport,
     required String address,
-  }) async {
-    final transportPtr = await transport.clonePtr();
+  }) =>
+      _initialize(
+        transport: transport,
+        subscribe: () async {
+          final transportPtr = await transport.clonePtr();
+          final transportType = transport.connectionData.type;
 
-    final transportType = transport.connectionData.type;
-
-    final result = await executeAsync(
-      (port) => bindings().ton_wallet_subscribe_by_address(
-        port,
-        _onMessageSentPort.sendPort.nativePort,
-        _onMessageExpiredPort.sendPort.nativePort,
-        _onStateChangedPort.sendPort.nativePort,
-        _onTransactionsFoundPort.sendPort.nativePort,
-        transportPtr,
-        transportType.index,
-        address.toNativeUtf8().cast<Int8>(),
-      ),
-    );
-
-    _ptr = Pointer.fromAddress(result).cast<Void>();
-
-    await _initialize(
-      transport: transport,
-    );
-  }
+          return executeAsync(
+            (port) => bindings().ton_wallet_subscribe_by_address(
+              port,
+              _onMessageSentPort.sendPort.nativePort,
+              _onMessageExpiredPort.sendPort.nativePort,
+              _onStateChangedPort.sendPort.nativePort,
+              _onTransactionsFoundPort.sendPort.nativePort,
+              transportPtr,
+              transportType.index,
+              address.toNativeUtf8().cast<Int8>(),
+            ),
+          );
+        },
+      );
 
   Future<void> _subscribeByExisting({
     required Transport transport,
     required ExistingWalletInfo existingWalletInfo,
-  }) async {
-    final transportPtr = await transport.clonePtr();
+  }) =>
+      _initialize(
+        transport: transport,
+        subscribe: () async {
+          final transportPtr = await transport.clonePtr();
+          final transportType = transport.connectionData.type;
+          final existingWalletInfoStr = jsonEncode(existingWalletInfo);
 
-    final transportType = transport.connectionData.type;
-
-    final existingWalletInfoStr = jsonEncode(existingWalletInfo);
-
-    final result = await executeAsync(
-      (port) => bindings().ton_wallet_subscribe_by_existing(
-        port,
-        _onMessageSentPort.sendPort.nativePort,
-        _onMessageExpiredPort.sendPort.nativePort,
-        _onStateChangedPort.sendPort.nativePort,
-        _onTransactionsFoundPort.sendPort.nativePort,
-        transportPtr,
-        transportType.index,
-        existingWalletInfoStr.toNativeUtf8().cast<Int8>(),
-      ),
-    );
-
-    _ptr = Pointer.fromAddress(result).cast<Void>();
-
-    await _initialize(
-      transport: transport,
-    );
-  }
+          return executeAsync(
+            (port) => bindings().ton_wallet_subscribe_by_existing(
+              port,
+              _onMessageSentPort.sendPort.nativePort,
+              _onMessageExpiredPort.sendPort.nativePort,
+              _onStateChangedPort.sendPort.nativePort,
+              _onTransactionsFoundPort.sendPort.nativePort,
+              transportPtr,
+              transportType.index,
+              existingWalletInfoStr.toNativeUtf8().cast<Int8>(),
+            ),
+          );
+        },
+      );
 
   Future<void> _initialize({
     required Transport transport,
+    required Future<int> Function() subscribe,
   }) async {
-    onMessageSentStream = _onMessageSentPort.asBroadcastStream().cast<String>().map((e) {
+    onMessageSentStream = _onMessageSentPort.cast<String>().map((e) {
       final json = jsonDecode(e) as Map<String, dynamic>;
       final payload = OnMessageSentPayload.fromJson(json);
       return payload;
-    });
+    }).shareValue();
 
-    onMessageExpiredStream = _onMessageExpiredPort.asBroadcastStream().cast<String>().map((e) {
+    onMessageExpiredStream = _onMessageExpiredPort.cast<String>().map((e) {
       final json = jsonDecode(e) as Map<String, dynamic>;
       final payload = OnMessageExpiredPayload.fromJson(json);
       return payload;
-    });
+    }).shareValue();
 
-    onStateChangedStream = _onStateChangedPort.asBroadcastStream().cast<String>().map((e) {
+    onStateChangedStream = _onStateChangedPort.cast<String>().map((e) {
       final json = jsonDecode(e) as Map<String, dynamic>;
       final payload = OnStateChangedPayload.fromJson(json);
       return payload;
-    });
+    }).shareValue();
 
-    onTransactionsFoundStream = _onTransactionsFoundPort.asBroadcastStream().cast<String>().map((e) {
+    onTransactionsFoundStream = _onTransactionsFoundPort.cast<String>().map((e) {
       final json = jsonDecode(e) as Map<String, dynamic>;
       final payload = OnTonWalletTransactionsFoundPayload.fromJson(json);
       return payload;
-    });
+    }).shareValue();
+
+    pendingTransactionsStream = _pendingTransactionsSubject.stream;
+
+    unconfirmedTransactionsStream = _unconfirmedTransactionsSubject.stream;
 
     _transport = transport;
 
-    _onMessageSentSubscription = onMessageSentStream.listen(_onMessageSentListener);
-    _onMessageExpiredSubscription = onMessageExpiredStream.listen(_onMessageExpiredListener);
-    _onTransactionsFoundSubscription = onTransactionsFoundStream.listen(_onTransactionsFoundListener);
+    _ptr = Pointer.fromAddress(await subscribe()).cast<Void>();
 
-    workchain = await _workchain;
-    address = await _address;
-    publicKey = await _publicKey;
-    walletType = await _walletType;
-    details = await _details;
-
-    _refreshCycle();
+    _backgroundRefreshTimer = CustomRestartableTimer(Duration.zero, _backgroundRefreshTimerCallback);
   }
 
-  void _onMessageSentListener(OnMessageSentPayload value) {
-    final pending = [
-      ..._pendingTransactionsSubject.value.where((e) => e != value.pendingTransaction),
-    ]..sort();
+  Future<void> _backgroundRefreshTimerCallback() async {
+    if (_ptr == null) {
+      _backgroundRefreshTimer.cancel();
+      return;
+    }
 
-    _pendingTransactionsSubject.add(pending);
-  }
+    try {
+      final isGql = _transport.connectionData.type == TransportType.gql;
+      final isReliable = await pollingMethod == PollingMethod.reliable;
 
-  void _onMessageExpiredListener(OnMessageExpiredPayload value) {
-    final pending = [
-      ..._pendingTransactionsSubject.value.where((e) => e != value.pendingTransaction),
-    ]..sort();
+      if (isGql && isReliable) {
+        final transport = _transport as GqlTransport;
+        final address = await this.address;
 
-    _pendingTransactionsSubject.add(pending);
+        final currentBlockId = await transport.getLatestBlockId(address);
 
-    final expired = [
-      ..._expiredTransactionsSubject.value,
-      value.pendingTransaction,
-    ]..sort();
+        final nextId = await transport.waitForNextBlockId(
+          currentBlockId: currentBlockId,
+          address: address,
+          timeout: kGqlTimeout.inMilliseconds,
+        );
 
-    _expiredTransactionsSubject.add(expired);
-  }
+        await handleBlock(nextId);
 
-  void _onTransactionsFoundListener(OnTonWalletTransactionsFoundPayload value) {
-    final transactions = [
-      ..._transactionsSubject.value,
-      ...value.transactions,
-    ]..sort();
+        _backgroundRefreshTimer.reset(Duration.zero);
+      } else {
+        await refresh();
 
-    _transactionsSubject.add(transactions);
-  }
+        final isReliable = await pollingMethod == PollingMethod.reliable;
+        final duration = isReliable ? kShortRefreshInterval : kRefreshInterval;
 
-  Future<void> _refreshCycle() async {
-    while (_ptr != null) {
-      try {
-        if (_transport.connectionData.type == TransportType.gql && await _pollingMethod == PollingMethod.reliable) {
-          final transport = _transport as GqlTransport;
-
-          final currentBlockId = await transport.getLatestBlockId(address);
-
-          final nextId = await transport.waitForNextBlockId(
-            currentBlockId: currentBlockId,
-            address: address,
-            timeout: kGqlTimeout.inMilliseconds,
-          );
-
-          await _handleBlock(nextId);
-        } else {
-          await refresh();
-
-          await Future.delayed(await _pollingMethod == PollingMethod.reliable ? kRefreshPeriod : kJrpcRefreshPeriod);
-        }
-      } catch (err, st) {
-        nekotonErrorsSubject.add(Tuple2(err, st));
+        _backgroundRefreshTimer.reset(duration);
       }
+    } catch (err, st) {
+      logger?.w(err, err, st);
+      _backgroundRefreshTimer.reset(Duration.zero);
     }
   }
 }

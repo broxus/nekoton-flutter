@@ -10,13 +10,13 @@ use crate::{
     crypto::{derived_key::DerivedKeySignParams, encrypted_key::EncryptedKeyPassword},
     models::{HandleError, MatchResult},
     parse_address, parse_public_key, runtime, send_to_result_port,
-    transport::models::{match_transport, TransportType},
+    transport::{match_transport, models::TransportType},
     FromPtr, ToPtr, RUNTIME,
 };
 use nekoton::{
     core::{
         keystore::KeyStore,
-        ton_wallet::{TonWallet, TransferAction},
+        ton_wallet::{self, TonWallet, TransferAction},
     },
     crypto::{DerivedKeySigner, EncryptedKeySigner, UnsignedMessage},
     transport::{gql::GqlTransport, models::RawContractState, Transport},
@@ -248,52 +248,6 @@ pub unsafe extern "C" fn free_ton_wallet_ptr(ton_wallet: *mut c_void) {
     let ton_wallet = ton_wallet as *mut Arc<Mutex<TonWallet>>;
 
     let _ = Box::from_raw(ton_wallet);
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn find_existing_wallets(
-    result_port: c_longlong,
-    transport: *mut c_void,
-    transport_type: c_int,
-    public_key: *mut c_char,
-    workchain_id: c_schar,
-) {
-    let transport = match_transport(transport, transport_type);
-
-    let public_key = public_key.from_ptr();
-
-    runtime!().spawn(async move {
-        async fn internal_fn(
-            transport: Arc<dyn Transport>,
-            public_key: String,
-            workchain_id: i8,
-        ) -> Result<u64, String> {
-            let public_key = parse_public_key(&public_key)?;
-
-            let existing_wallets = nekoton::core::ton_wallet::find_existing_wallets(
-                transport.as_ref(),
-                &public_key,
-                workchain_id,
-            )
-            .await
-            .handle_error()?
-            .into_iter()
-            .map(|e| ExistingWalletInfo::from_core(e))
-            .collect::<Vec<_>>();
-
-            let existing_wallets = serde_json::to_string(&existing_wallets)
-                .handle_error()?
-                .to_ptr() as c_ulonglong;
-
-            Ok(existing_wallets)
-        }
-
-        let result = internal_fn(transport, public_key, workchain_id)
-            .await
-            .match_result();
-
-        send_to_result_port(result_port, result);
-    });
 }
 
 #[no_mangle]
@@ -1013,6 +967,162 @@ pub unsafe extern "C" fn ton_wallet_handle_block(
         let result = internal_fn(&mut ton_wallet, transport, id)
             .await
             .match_result();
+
+        send_to_result_port(result_port, result);
+    });
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn find_existing_wallets(
+    result_port: c_longlong,
+    transport: *mut c_void,
+    transport_type: c_int,
+    public_key: *mut c_char,
+    workchain_id: c_schar,
+) {
+    let transport = match_transport(transport, transport_type);
+
+    let public_key = public_key.from_ptr();
+
+    runtime!().spawn(async move {
+        async fn internal_fn(
+            transport: Arc<dyn Transport>,
+            public_key: String,
+            workchain_id: i8,
+        ) -> Result<u64, String> {
+            let public_key = parse_public_key(&public_key)?;
+
+            let existing_wallets = nekoton::core::ton_wallet::find_existing_wallets(
+                transport.as_ref(),
+                &public_key,
+                workchain_id,
+            )
+            .await
+            .handle_error()?
+            .into_iter()
+            .map(|e| ExistingWalletInfo::from_core(e))
+            .collect::<Vec<_>>();
+
+            let existing_wallets = serde_json::to_string(&existing_wallets)
+                .handle_error()?
+                .to_ptr() as c_ulonglong;
+
+            Ok(existing_wallets)
+        }
+
+        let result = internal_fn(transport, public_key, workchain_id)
+            .await
+            .match_result();
+
+        send_to_result_port(result_port, result);
+    });
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn get_existing_wallet_info(
+    result_port: c_longlong,
+    transport: *mut c_void,
+    transport_type: c_int,
+    address: *mut c_char,
+) {
+    let transport = match_transport(transport, transport_type);
+
+    let address = address.from_ptr();
+
+    runtime!().spawn(async move {
+        async fn internal_fn(
+            transport: Arc<dyn Transport>,
+            address: String,
+        ) -> Result<u64, String> {
+            let address = parse_address(&address)?;
+
+            let raw_contract_state = transport
+                .get_contract_state(&address)
+                .await
+                .handle_error()?;
+
+            let existing_contract = match raw_contract_state {
+                RawContractState::Exists(state) => state,
+                RawContractState::NotExists => {
+                    return Err(String::from("Account not exists"));
+                }
+            };
+
+            let (public_key, wallet_type) =
+                ton_wallet::extract_wallet_init_data(&existing_contract).handle_error()?;
+
+            let existing_wallet_info = ton_wallet::ExistingWalletInfo {
+                address: existing_contract.account.addr.clone(),
+                public_key,
+                wallet_type,
+                contract_state: existing_contract.brief(),
+            };
+            let existing_wallet_info = ExistingWalletInfo::from_core(existing_wallet_info);
+
+            let existing_wallet_info = serde_json::to_string(&existing_wallet_info)
+                .handle_error()?
+                .to_ptr() as c_ulonglong;
+
+            Ok(existing_wallet_info)
+        }
+
+        let result = internal_fn(transport, address).await.match_result();
+
+        send_to_result_port(result_port, result);
+    });
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn get_wallet_custodians(
+    result_port: c_longlong,
+    transport: *mut c_void,
+    transport_type: c_int,
+    address: *mut c_char,
+) {
+    let transport = match_transport(transport, transport_type);
+
+    let address = address.from_ptr();
+
+    runtime!().spawn(async move {
+        async fn internal_fn(
+            transport: Arc<dyn Transport>,
+            address: String,
+        ) -> Result<u64, String> {
+            let address = parse_address(&address)?;
+
+            let raw_contract_state = transport
+                .get_contract_state(&address)
+                .await
+                .handle_error()?;
+
+            let existing_contract = match raw_contract_state {
+                RawContractState::Exists(state) => state,
+                RawContractState::NotExists => {
+                    return Err(String::from("Account not exists"));
+                }
+            };
+
+            let (public_key, wallet_type) =
+                ton_wallet::extract_wallet_init_data(&existing_contract).handle_error()?;
+
+            let custodians = ton_wallet::get_wallet_custodians(
+                &SimpleClock {},
+                &existing_contract,
+                &public_key,
+                wallet_type,
+            )
+            .handle_error()?
+            .into_iter()
+            .map(|e| e.to_hex_string())
+            .collect::<Vec<_>>();
+
+            let custodians =
+                serde_json::to_string(&custodians).handle_error()?.to_ptr() as c_ulonglong;
+
+            Ok(custodians)
+        }
+
+        let result = internal_fn(transport, address).await.match_result();
 
         send_to_result_port(result_port, result);
     });

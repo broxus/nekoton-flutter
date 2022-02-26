@@ -3,8 +3,8 @@ import 'dart:ffi';
 
 import '../core/models/transaction_id.dart';
 import '../models/pointed.dart';
-import '../utils/models/full_contract_state.dart';
-import '../utils/models/transactions_list.dart';
+import '../utils/models/common/full_contract_state.dart';
+import '../utils/models/common/transactions_list.dart';
 import 'models/connection_data.dart';
 
 abstract class Transport implements Pointed {

@@ -1,10 +1,13 @@
 import 'dart:ffi';
 import 'dart:io';
 
-import 'package:rxdart/subjects.dart';
-import 'package:tuple/tuple.dart';
+import 'package:logger/logger.dart';
 
 import 'bindings.g.dart';
+
+Logger? logger;
+
+void setNekotonLogger(Logger nekotonLogger) => logger = nekotonLogger;
 
 Bindings? _bindings;
 
@@ -32,7 +35,3 @@ DynamicLibrary _dlOpenPlatformSpecific() {
     throw Exception('Invalid platform');
   }
 }
-
-final nekotonErrorsSubject = PublishSubject<Tuple2<Object, StackTrace>>();
-
-final nekotonErrorsStream = nekotonErrorsSubject.stream;

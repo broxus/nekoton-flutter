@@ -49,7 +49,6 @@ class AccountsStorage implements Pointed {
     required int workchain,
   }) async {
     final ptr = await clonePtr();
-
     final walletTypeStr = jsonEncode(walletType);
 
     final result = await executeAsync(
@@ -191,16 +190,16 @@ class AccountsStorage implements Pointed {
         _ptr = null;
       });
 
-  Future<void> _initialize(Storage storage) async {
-    final storagePtr = await storage.clonePtr();
+  Future<void> _initialize(Storage storage) => _lock.synchronized(() async {
+        final storagePtr = await storage.clonePtr();
 
-    final result = await executeAsync(
-      (port) => bindings().create_accounts_storage(
-        port,
-        storagePtr,
-      ),
-    );
+        final result = await executeAsync(
+          (port) => bindings().create_accounts_storage(
+            port,
+            storagePtr,
+          ),
+        );
 
-    _ptr = Pointer.fromAddress(result).cast<Void>();
-  }
+        _ptr = Pointer.fromAddress(result).cast<Void>();
+      });
 }

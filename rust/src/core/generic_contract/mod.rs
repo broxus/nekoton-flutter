@@ -6,7 +6,7 @@ use crate::{
     crypto::{derived_key::DerivedKeySignParams, encrypted_key::EncryptedKeyPassword},
     models::{HandleError, MatchResult},
     parse_address, runtime, send_to_result_port,
-    transport::models::{match_transport, TransportType},
+    transport::{match_transport, models::TransportType},
     FromPtr, ToPtr, RUNTIME,
 };
 use nekoton::{

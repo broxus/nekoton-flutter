@@ -1,4 +1,4 @@
-import {EventEmitter} from "events";
+import { EventEmitter } from "events";
 
 export class NotificationEmitter {
     emitter?: EventEmitter
@@ -11,19 +11,13 @@ export class NotificationEmitter {
         }
 
         this.emitter?.emit(method, typeof params === 'string' ? JSON.parse(params) : undefined)
-
-        // TODO: remove
-        console.log(`${method} ${JSON.stringify(params)}`);
     }
 }
 
 export const notificationEmitter = new NotificationEmitter();
 
-/**
- * Provider Events
- */
-
 (window as any).__dartNotifications = {
+    connected: async () => notificationEmitter.emit('connected', undefined),
     disconnected: async (event: string) => notificationEmitter.emit('disconnected', event),
     transactionsFound: async (event: string) => notificationEmitter.emit('transactionsFound', event),
     contractStateChanged: async (event: string) => notificationEmitter.emit('contractStateChanged', event),

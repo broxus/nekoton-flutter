@@ -1,4 +1,10 @@
+;(window as Record<string, any>).__hasEverscaleProvider = true
+
+// TODO: remove in future
 ;(window as Record<string, any>).hasTonProvider = true
+
+import { Buffer } from 'buffer';
+window.Buffer = Buffer;
 
 // @ts-ignore
 let __define: Define | undefined
@@ -30,7 +36,6 @@ import { initializeProvider } from './provider'
 
 restoreContextAfterImports()
 
-// TODO: somehow determine log level
 log.setDefaultLevel('debug')
 
 initializeProvider({

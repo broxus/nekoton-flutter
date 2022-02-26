@@ -52,7 +52,6 @@ class Keystore implements Pointed {
 
   Future<KeyStoreEntry> addKey(CreateKeyInput createKeyInput) async {
     final ptr = await clonePtr();
-
     final createKeyInputStr = jsonEncode(createKeyInput);
 
     final result = await executeAsync(
@@ -72,7 +71,6 @@ class Keystore implements Pointed {
 
   Future<KeyStoreEntry> updateKey(UpdateKeyInput updateKeyInput) async {
     final ptr = await clonePtr();
-
     final updateKeyInputStr = jsonEncode(updateKeyInput);
 
     final result = await executeAsync(
@@ -92,7 +90,6 @@ class Keystore implements Pointed {
 
   Future<ExportKeyOutput> exportKey(ExportKeyInput exportKeyInput) async {
     final ptr = await clonePtr();
-
     final exportKeyInputStr = jsonEncode(exportKeyInput);
 
     final result = await executeAsync(
@@ -121,7 +118,6 @@ class Keystore implements Pointed {
 
   Future<bool> checkKeyPassword(SignInput signInput) async {
     final ptr = await clonePtr();
-
     final signInputStr = jsonEncode(signInput);
 
     final result = await executeAsync(
@@ -188,16 +184,16 @@ class Keystore implements Pointed {
         _ptr = null;
       });
 
-  Future<void> _initialize(Storage storage) async {
-    final storagePtr = await storage.clonePtr();
+  Future<void> _initialize(Storage storage) => _lock.synchronized(() async {
+        final storagePtr = await storage.clonePtr();
 
-    final result = await executeAsync(
-      (port) => bindings().create_keystore(
-        port,
-        storagePtr,
-      ),
-    );
+        final result = await executeAsync(
+          (port) => bindings().create_keystore(
+            port,
+            storagePtr,
+          ),
+        );
 
-    _ptr = Pointer.fromAddress(result).cast<Void>();
-  }
+        _ptr = Pointer.fromAddress(result).cast<Void>();
+      });
 }

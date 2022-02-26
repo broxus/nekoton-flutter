@@ -8,16 +8,16 @@ import '../core/models/transaction.dart';
 import '../core/ton_wallet/models/known_payload.dart';
 import '../core/unsigned_message.dart';
 import '../ffi_utils.dart';
-import 'models/abi_param.dart';
-import 'models/decoded_event.dart';
-import 'models/decoded_input.dart';
-import 'models/decoded_output.dart';
-import 'models/decoded_transaction.dart';
-import 'models/decoded_transaction_event.dart';
-import 'models/execution_output.dart';
-import 'models/method_name.dart';
-import 'models/splitted_tvc.dart';
-import 'models/tokens_object.dart';
+import 'models/common/abi_param.dart';
+import 'models/common/decoded_event.dart';
+import 'models/common/decoded_input.dart';
+import 'models/common/decoded_output.dart';
+import 'models/common/decoded_transaction.dart';
+import 'models/common/decoded_transaction_event.dart';
+import 'models/common/execution_output.dart';
+import 'models/common/method_name.dart';
+import 'models/common/splitted_tvc.dart';
+import 'models/common/tokens_object.dart';
 
 ExecutionOutput runLocal({
   required String accountStuffBoc,

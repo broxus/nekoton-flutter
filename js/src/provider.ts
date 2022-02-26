@@ -43,6 +43,10 @@ export const initializeProvider = ({
 export function setGlobalProvider(
     providerInstance: NekotonInpageProvider
 ): void {
+    ;(window as Record<string, any>).__ever = providerInstance
+    window.dispatchEvent(new Event('ever#initialized'))
+
+    // TODO: remove later
     ;(window as Record<string, any>).ton = providerInstance
     window.dispatchEvent(new Event('ton#initialized'))
 }

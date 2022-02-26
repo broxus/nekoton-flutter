@@ -12,7 +12,6 @@ use std::{
     os::raw::{c_char, c_longlong, c_schar, c_ulonglong},
     sync::Arc,
 };
-use ton_block::AccountStorage;
 
 #[no_mangle]
 pub unsafe extern "C" fn create_accounts_storage(result_port: c_longlong, storage: *mut c_void) {
@@ -38,7 +37,7 @@ pub unsafe extern "C" fn create_accounts_storage(result_port: c_longlong, storag
 
 #[no_mangle]
 pub unsafe extern "C" fn clone_accounts_storage_ptr(accounts_storage: *mut c_void) -> *mut c_void {
-    let accounts_storage = accounts_storage as *mut Arc<AccountStorage>;
+    let accounts_storage = accounts_storage as *mut Arc<AccountsStorage>;
     let cloned = Arc::clone(&*accounts_storage);
 
     Arc::into_raw(cloned) as *mut c_void
@@ -46,7 +45,7 @@ pub unsafe extern "C" fn clone_accounts_storage_ptr(accounts_storage: *mut c_voi
 
 #[no_mangle]
 pub unsafe extern "C" fn free_accounts_storage_ptr(accounts_storage: *mut c_void) {
-    let accounts_storage = accounts_storage as *mut Arc<AccountStorage>;
+    let accounts_storage = accounts_storage as *mut Arc<AccountsStorage>;
 
     let _ = Box::from_raw(accounts_storage);
 }

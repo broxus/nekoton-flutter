@@ -1,7 +1,7 @@
 import safeStringify from 'fast-safe-stringify'
-import {EventEmitter} from 'events'
+import { EventEmitter } from 'events'
 
-import {RpcErrorCode} from './errors'
+import { RpcErrorCode } from './errors'
 import { PendingJsonRpcResponse } from './jrpc'
 
 export type Maybe<T> = Partial<T> | null | undefined

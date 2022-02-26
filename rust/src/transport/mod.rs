@@ -2,7 +2,7 @@ pub mod gql_transport;
 pub mod jrpc_transport;
 pub mod models;
 
-use self::models::match_transport;
+use self::models::TransportType;
 use crate::{
     models::{FromPtr, HandleError, MatchResult, ToPtr},
     parse_address, runtime, send_to_result_port,
@@ -11,15 +11,30 @@ use crate::{
 };
 use nekoton::{
     core::models::{Transaction, TransactionsBatchInfo, TransactionsBatchType},
-    transport::{models::RawContractState, Transport},
+    transport::{gql::GqlTransport, jrpc::JrpcTransport, models::RawContractState, Transport},
 };
 use nekoton_abi::TransactionId;
+use num_traits::FromPrimitive;
 use std::{
     convert::TryFrom,
     ffi::c_void,
     os::raw::{c_char, c_int, c_longlong, c_uchar, c_ulonglong},
     sync::Arc,
 };
+
+pub unsafe fn match_transport(transport: *mut c_void, transport_type: i32) -> Arc<dyn Transport> {
+    match FromPrimitive::from_i32(transport_type) {
+        Some(TransportType::Jrpc) => {
+            let jrpc_transport = transport as *mut JrpcTransport;
+            Arc::from_raw(jrpc_transport) as Arc<dyn Transport>
+        }
+        Some(TransportType::Gql) => {
+            let gql_transport = transport as *mut GqlTransport;
+            Arc::from_raw(gql_transport) as Arc<dyn Transport>
+        }
+        None => panic!(),
+    }
+}
 
 #[no_mangle]
 pub unsafe extern "C" fn get_full_account_state(
@@ -63,6 +78,7 @@ pub unsafe extern "C" fn get_full_account_state(
                                 state_init: _,
                             }
                         ),
+                        code_hash: None,
                         boc,
                     };
 

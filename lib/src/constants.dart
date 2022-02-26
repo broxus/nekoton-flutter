@@ -1,5 +1,5 @@
-const kRefreshPeriod = Duration(seconds: 10);
+const kRefreshInterval = Duration(seconds: 10);
 
-const kJrpcRefreshPeriod = Duration(seconds: 1);
+const kShortRefreshInterval = Duration(seconds: 1);
 
 const kGqlTimeout = Duration(seconds: 60);

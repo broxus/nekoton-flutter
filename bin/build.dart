@@ -1,17 +1,15 @@
 import 'dart:io';
 
 import 'package:collection/collection.dart';
-import 'package:path/path.dart';
 
-Future<void> main(List<String> arguments) async {
-  final androidNdkHome = arguments.firstOrNull;
+Future<void> main(List<String> args) async {
+  final androidNdkHome = args.firstOrNull;
 
-  final currentDirname = dirname(Platform.script.path);
-  final flutterProjectDirectory = normalize('$currentDirname/../');
-  final rustProjectDirectory = normalize('$currentDirname/../rust');
-  final jsProjectDirectory = normalize('$currentDirname/../js');
+  final flutterProjectDirectory = Directory.current.absolute.path;
+  final rustProjectDirectory = '$flutterProjectDirectory/rust';
+  final jsProjectDirectory = '$flutterProjectDirectory/js';
 
-  Future<int> execute({
+  Future<void> execute({
     required String executable,
     required List<String> arguments,
     Map<String, String>? environment,
@@ -25,10 +23,11 @@ Future<void> main(List<String> arguments) async {
       runInShell: true,
       mode: ProcessStartMode.inheritStdio,
     );
-    return process.exitCode;
-  }
 
-  int exitCode;
+    final exitCode = await process.exitCode;
+
+    if (exitCode != 0) exit(exitCode);
+  }
 
   await execute(
     executable: 'make',
@@ -36,7 +35,7 @@ Future<void> main(List<String> arguments) async {
     workingDirectory: rustProjectDirectory,
   );
 
-  exitCode = await execute(
+  await execute(
     executable: 'make',
     arguments: ['all'],
     environment: {
@@ -44,36 +43,18 @@ Future<void> main(List<String> arguments) async {
     },
     workingDirectory: rustProjectDirectory,
   );
-  if (exitCode != 0) {
-    exit(exitCode);
-  }
 
-  exitCode = await execute(
+  await execute(
     executable: 'npm',
     arguments: ['install'],
     workingDirectory: jsProjectDirectory,
   );
-  if (exitCode != 0) {
-    exit(exitCode);
-  }
 
-  exitCode = await execute(
+  await execute(
     executable: 'npm',
     arguments: ['run', 'build'],
     workingDirectory: jsProjectDirectory,
   );
-  if (exitCode != 0) {
-    exit(exitCode);
-  }
-
-  exitCode = await execute(
-    executable: 'flutter',
-    arguments: ['pub', 'run', 'ffigen'],
-    workingDirectory: flutterProjectDirectory,
-  );
-  if (exitCode != 0) {
-    exit(exitCode);
-  }
 
   await execute(
     executable: 'flutter',
@@ -81,14 +62,15 @@ Future<void> main(List<String> arguments) async {
     workingDirectory: flutterProjectDirectory,
   );
 
-  exitCode = await execute(
+  await execute(
     executable: 'flutter',
     arguments: ['pub', 'run', 'build_runner', 'build', '--delete-conflicting-outputs'],
     workingDirectory: flutterProjectDirectory,
   );
-  if (exitCode != 0) {
-    exit(exitCode);
-  }
 
-  exit(0);
+  await execute(
+    executable: 'flutter',
+    arguments: ['pub', 'run', 'ffigen'],
+    workingDirectory: flutterProjectDirectory,
+  );
 }
