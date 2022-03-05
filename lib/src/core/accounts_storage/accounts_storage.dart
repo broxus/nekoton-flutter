@@ -181,7 +181,7 @@ class AccountsStorage implements Pointed {
 
   @override
   Future<void> freePtr() => _lock.synchronized(() {
-        if (_ptr == null) throw Exception('Accounts storage use after free');
+        if (_ptr == null) return;
 
         bindings().free_accounts_storage_ptr(
           _ptr!,

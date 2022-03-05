@@ -128,7 +128,7 @@ class GqlTransport extends Transport {
 
   @override
   Future<void> freePtr() => _lock.synchronized(() {
-        if (_ptr == null) throw Exception('Gql transport use after free');
+        if (_ptr == null) return;
 
         bindings().free_gql_transport_ptr(
           _ptr!,

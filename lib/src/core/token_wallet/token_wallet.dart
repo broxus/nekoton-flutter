@@ -212,7 +212,7 @@ class TokenWallet implements Pointed {
 
   @override
   Future<void> freePtr() => _lock.synchronized(() {
-        if (_ptr == null) throw Exception('Token wallet use after free');
+        if (_ptr == null) return;
 
         _onBalanceChangedPort.close();
         _onTransactionsFoundPort.close();

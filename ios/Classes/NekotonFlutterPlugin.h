@@ -149,6 +149,21 @@ void token_wallet_refresh(long long result_port, void *token_wallet);
 
 void token_wallet_preload_transactions(long long result_port, void *token_wallet, char *from);
 
+void get_token_root_details(long long result_port,
+                            void *transport,
+                            int transport_type,
+                            char *root_token_contract);
+
+void get_token_wallet_details(long long result_port,
+                              void *transport,
+                              int transport_type,
+                              char *token_wallet);
+
+void get_token_root_details_from_token_wallet(long long result_port,
+                                              void *transport,
+                                              int transport_type,
+                                              char *token_wallet_address);
+
 void ton_wallet_subscribe(long long result_port,
                           long long on_message_sent_port,
                           long long on_message_expired_port,
@@ -181,12 +196,6 @@ void ton_wallet_subscribe_by_existing(long long result_port,
 void *clone_ton_wallet_ptr(void *ton_wallet);
 
 void free_ton_wallet_ptr(void *ton_wallet);
-
-void find_existing_wallets(long long result_port,
-                           void *transport,
-                           int transport_type,
-                           char *public_key,
-                           signed char workchain_id);
 
 void get_ton_wallet_workchain(long long result_port, void *ton_wallet);
 
@@ -251,6 +260,22 @@ void ton_wallet_handle_block(long long result_port,
                              void *transport,
                              int transport_type,
                              char *id);
+
+void find_existing_wallets(long long result_port,
+                           void *transport,
+                           int transport_type,
+                           char *public_key,
+                           signed char workchain_id);
+
+void get_existing_wallet_info(long long result_port,
+                              void *transport,
+                              int transport_type,
+                              char *address);
+
+void get_wallet_custodians(long long result_port,
+                           void *transport,
+                           int transport_type,
+                           char *address);
 
 void *generate_key(char *mnemonic_type);
 

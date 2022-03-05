@@ -175,7 +175,7 @@ class Keystore implements Pointed {
 
   @override
   Future<void> freePtr() => _lock.synchronized(() {
-        if (_ptr == null) throw Exception('Keystore use after free');
+        if (_ptr == null) return;
 
         bindings().free_keystore_ptr(
           _ptr!,

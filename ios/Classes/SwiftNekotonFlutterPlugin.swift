@@ -111,6 +111,12 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         token_wallet_preload_transactions(0, nil, nil);
 
+        get_token_root_details(0, nil, 0, nil);
+
+        get_token_wallet_details(0, nil, 0, nil);
+
+        get_token_root_details_from_token_wallet(0, nil, 0, nil);
+
         ton_wallet_subscribe(0, 0, 0, 0, 0, nil, 0, 0, nil, nil);
 
         ton_wallet_subscribe_by_address(0, 0, 0, 0, 0, nil, 0, nil);
@@ -120,8 +126,6 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
         clone_ton_wallet_ptr(nil);
 
         free_ton_wallet_ptr(nil);
-
-        find_existing_wallets(0, nil, 0, nil, 0);
 
         get_ton_wallet_workchain(0, nil);
 
@@ -160,6 +164,12 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
         ton_wallet_preload_transactions(0, nil, nil);
 
         ton_wallet_handle_block(0, nil, nil, 0, nil);
+
+        find_existing_wallets(0, nil, 0, nil, 0);
+
+        get_existing_wallet_info(0, nil, 0, nil);
+
+        get_wallet_custodians(0, nil, 0, nil);
 
         generate_key(nil);
 

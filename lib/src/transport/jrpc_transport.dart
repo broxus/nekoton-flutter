@@ -88,7 +88,7 @@ class JrpcTransport extends Transport {
 
   @override
   Future<void> freePtr() => _lock.synchronized(() {
-        if (_ptr == null) throw Exception('Jrpc transport use after free');
+        if (_ptr == null) return;
 
         bindings().free_jrpc_transport_ptr(
           _ptr!,

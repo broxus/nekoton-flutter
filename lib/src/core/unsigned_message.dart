@@ -24,7 +24,7 @@ class UnsignedMessage implements Pointed {
 
   @override
   Future<void> freePtr() => _lock.synchronized(() {
-        if (_ptr == null) throw Exception('Unsigned message use after free');
+        if (_ptr == null) return;
 
         bindings().free_unsigned_message_ptr(
           _ptr!,

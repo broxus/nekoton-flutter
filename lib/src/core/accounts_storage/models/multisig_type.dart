@@ -15,9 +15,12 @@ enum MultisigType {
   @JsonValue('SetcodeMultisigWallet')
   setcodeMultisigWallet,
   @HiveField(3)
+  @JsonValue('SetcodeMultisigWallet24h')
+  setcodeMultisigWallet24h,
+  @HiveField(4)
   @JsonValue('BridgeMultisigWallet')
   bridgeMultisigWallet,
-  @HiveField(4)
+  @HiveField(5)
   @JsonValue('SurfWallet')
   surfWallet,
 }

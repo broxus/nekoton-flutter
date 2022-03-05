@@ -469,7 +469,7 @@ class TonWallet implements Pointed {
 
   @override
   Future<void> freePtr() => _lock.synchronized(() {
-        if (_ptr == null) throw Exception('Ton wallet use after free');
+        if (_ptr == null) return;
 
         _onMessageSentPort.close();
         _onMessageExpiredPort.close();

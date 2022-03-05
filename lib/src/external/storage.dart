@@ -34,7 +34,7 @@ class Storage implements Pointed {
 
   @override
   Future<void> freePtr() => _lock.synchronized(() {
-        if (_ptr == null) throw Exception('Storage use after free');
+        if (_ptr == null) return;
 
         bindings().free_storage_ptr(
           _ptr!,
