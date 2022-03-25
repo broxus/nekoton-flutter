@@ -22,9 +22,9 @@ class GqlTransport extends Transport {
   GqlTransport._();
 
   static Future<GqlTransport> create(ConnectionData connectionData) async {
-    final storage = GqlTransport._();
-    await storage._initialize(connectionData);
-    return storage;
+    final instance = GqlTransport._();
+    await instance._initialize(connectionData);
+    return instance;
   }
 
   @override
@@ -34,7 +34,7 @@ class GqlTransport extends Transport {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => bindings().get_full_account_state(
+      (port) => NekotonFlutter.bindings.get_full_account_state(
         port,
         ptr,
         connectionData.type.index,
@@ -60,7 +60,7 @@ class GqlTransport extends Transport {
     final fromStr = continuation != null ? jsonEncode(continuation) : null;
 
     final result = await executeAsync(
-      (port) => bindings().get_transactions(
+      (port) => NekotonFlutter.bindings.get_transactions(
         port,
         ptr,
         connectionData.type.index,
@@ -81,7 +81,7 @@ class GqlTransport extends Transport {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => bindings().get_latest_block_id(
+      (port) => NekotonFlutter.bindings.get_latest_block_id(
         port,
         ptr,
         address.toNativeUtf8().cast<Int8>(),
@@ -101,7 +101,7 @@ class GqlTransport extends Transport {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => bindings().wait_for_next_block_id(
+      (port) => NekotonFlutter.bindings.wait_for_next_block_id(
         port,
         ptr,
         currentBlockId.toNativeUtf8().cast<Int8>(),
@@ -119,7 +119,7 @@ class GqlTransport extends Transport {
   Future<Pointer<Void>> clonePtr() => _lock.synchronized(() {
         if (_ptr == null) throw Exception('Gql transport use after free');
 
-        final ptr = bindings().clone_gql_transport_ptr(
+        final ptr = NekotonFlutter.bindings.clone_gql_transport_ptr(
           _ptr!,
         );
 
@@ -130,7 +130,7 @@ class GqlTransport extends Transport {
   Future<void> freePtr() => _lock.synchronized(() {
         if (_ptr == null) return;
 
-        bindings().free_gql_transport_ptr(
+        NekotonFlutter.bindings.free_gql_transport_ptr(
           _ptr!,
         );
 
@@ -151,7 +151,7 @@ class GqlTransport extends Transport {
     final settingsStr = jsonEncode(settings);
 
     final result = executeSync(
-      () => bindings().create_gql_transport(
+      () => NekotonFlutter.bindings.create_gql_transport(
         settingsStr.toNativeUtf8().cast<Int8>(),
       ),
     );

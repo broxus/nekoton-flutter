@@ -17,7 +17,7 @@ Future<List<ExistingWalletInfo>> findExistingWallets({
   final transportType = transport.connectionData.type;
 
   final result = await executeAsync(
-    (port) => bindings().find_existing_wallets(
+    (port) => NekotonFlutter.bindings.find_existing_wallets(
       port,
       ptr,
       transportType.index,

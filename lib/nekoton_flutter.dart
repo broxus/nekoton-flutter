@@ -1,6 +1,6 @@
 library nekoton_flutter;
 
-export 'src/bindings.dart' show loadNekotonLibrary, setNekotonLogger;
+export 'src/bindings.dart';
 export 'src/core/accounts_storage/accounts_storage.dart';
 export 'src/core/accounts_storage/models/additional_assets.dart';
 export 'src/core/accounts_storage/models/assets_list.dart';

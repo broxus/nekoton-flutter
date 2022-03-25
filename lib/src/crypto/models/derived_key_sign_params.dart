@@ -16,7 +16,7 @@ class DerivedKeySignParams with _$DerivedKeySignParams implements SignInput {
     required String masterKey,
     required int accountId,
     required Password password,
-  }) = _ByAccountId;
+  }) = _DerivedKeySignParamsByAccountId;
 
   @JsonSerializable(
     fieldRename: FieldRename.snake,
@@ -26,7 +26,7 @@ class DerivedKeySignParams with _$DerivedKeySignParams implements SignInput {
     required String masterKey,
     required String publicKey,
     required Password password,
-  }) = _ByPublicKey;
+  }) = _DerivedKeySignParamsByPublicKey;
 
   factory DerivedKeySignParams.fromJson(Map<String, dynamic> json) => _$DerivedKeySignParamsFromJson(json);
 }

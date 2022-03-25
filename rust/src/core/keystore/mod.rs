@@ -14,7 +14,7 @@ use crate::{
     },
     external::storage::StorageImpl,
     models::{HandleError, MatchResult},
-    parse_public_key, runtime, send_to_result_port, FromPtr, ToPtr, RUNTIME,
+    parse_public_key, runtime, send_to_result_port, ToPtr, ToStringFromPtr, RUNTIME,
 };
 use nekoton::{
     core::keystore::KeyStore,
@@ -23,7 +23,7 @@ use nekoton::{
 };
 use std::{
     ffi::c_void,
-    os::raw::{c_char, c_longlong, c_ulonglong},
+    os::raw::{c_char, c_longlong},
     sync::Arc,
 };
 
@@ -49,9 +49,7 @@ pub unsafe extern "C" fn create_keystore(result_port: c_longlong, storage: *mut 
                 .await
                 .handle_error()?;
 
-            let keystore = Box::new(Arc::new(keystore));
-
-            let ptr = Box::into_raw(keystore) as *mut c_void as c_ulonglong;
+            let ptr = Box::into_raw(Box::new(Arc::new(keystore))) as *mut c_void as u64;
 
             Ok(ptr)
         }
@@ -86,7 +84,7 @@ pub unsafe extern "C" fn get_entries(result_port: c_longlong, keystore: *mut c_v
         async fn internal_fn(keystore: &KeyStore) -> Result<u64, String> {
             let entries = keystore.get_entries().await;
 
-            let entries = serde_json::to_string(&entries).handle_error()?.to_ptr() as c_ulonglong;
+            let entries = serde_json::to_string(&entries).handle_error()?.to_ptr() as u64;
 
             Ok(entries)
         }
@@ -106,7 +104,7 @@ pub unsafe extern "C" fn add_key(
     let keystore = keystore as *mut KeyStore;
     let keystore = Arc::from_raw(keystore) as Arc<KeyStore>;
 
-    let create_key_input = create_key_input.from_ptr();
+    let create_key_input = create_key_input.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(keystore: &KeyStore, create_key_input: String) -> Result<u64, String> {
@@ -129,7 +127,7 @@ pub unsafe extern "C" fn add_key(
             } else {
                 panic!()
             }
-            .to_ptr() as c_ulonglong;
+            .to_ptr() as u64;
 
             Ok(entry)
         }
@@ -151,7 +149,7 @@ pub unsafe extern "C" fn update_key(
     let keystore = keystore as *mut KeyStore;
     let keystore = Arc::from_raw(keystore) as Arc<KeyStore>;
 
-    let update_key_input = update_key_input.from_ptr();
+    let update_key_input = update_key_input.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(keystore: &KeyStore, update_key_input: String) -> Result<u64, String> {
@@ -174,7 +172,7 @@ pub unsafe extern "C" fn update_key(
             } else {
                 panic!()
             }
-            .to_ptr() as c_ulonglong;
+            .to_ptr() as u64;
 
             Ok(entry)
         }
@@ -196,7 +194,7 @@ pub unsafe extern "C" fn export_key(
     let keystore = keystore as *mut KeyStore;
     let keystore = Arc::from_raw(keystore) as Arc<KeyStore>;
 
-    let export_key_input = export_key_input.from_ptr();
+    let export_key_input = export_key_input.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(keystore: &KeyStore, export_key_input: String) -> Result<u64, String> {
@@ -209,8 +207,8 @@ pub unsafe extern "C" fn export_key(
                     .handle_error()?;
 
                 let output = EncryptedKeyExportOutput::from_core(output);
-                let output = serde_json::to_string(&output).handle_error()?;
-                output
+
+                serde_json::to_string(&output).handle_error()?
             } else if let Ok(export_key_input) =
                 serde_json::from_str::<DerivedKeyExportParams>(&export_key_input)
             {
@@ -219,12 +217,11 @@ pub unsafe extern "C" fn export_key(
                     .await
                     .handle_error()?;
 
-                let output = serde_json::to_string(&output).handle_error()?;
-                output
+                serde_json::to_string(&output).handle_error()?
             } else {
                 panic!()
             }
-            .to_ptr() as c_ulonglong;
+            .to_ptr() as u64;
 
             Ok(phrase)
         }
@@ -246,7 +243,7 @@ pub unsafe extern "C" fn check_key_password(
     let keystore = keystore as *mut KeyStore;
     let keystore = Arc::from_raw(keystore) as Arc<KeyStore>;
 
-    let sign_input = sign_input.from_ptr();
+    let sign_input = sign_input.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(keystore: &KeyStore, sign_input: String) -> Result<u64, String> {
@@ -267,7 +264,7 @@ pub unsafe extern "C" fn check_key_password(
                 panic!()
             };
 
-            let is_valid = result.is_ok() as c_ulonglong;
+            let is_valid = result.is_ok() as u64;
 
             Ok(is_valid)
         }
@@ -287,7 +284,7 @@ pub unsafe extern "C" fn remove_key(
     let keystore = keystore as *mut KeyStore;
     let keystore = Arc::from_raw(keystore) as Arc<KeyStore>;
 
-    let public_key = public_key.from_ptr();
+    let public_key = public_key.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(keystore: &KeyStore, public_key: String) -> Result<u64, String> {
@@ -295,7 +292,7 @@ pub unsafe extern "C" fn remove_key(
 
             let entry = keystore.remove_key(&public_key).await.handle_error()?;
 
-            let entry = serde_json::to_string(&entry).handle_error()?.to_ptr() as c_ulonglong;
+            let entry = serde_json::to_string(&entry).handle_error()?.to_ptr() as u64;
 
             Ok(entry)
         }

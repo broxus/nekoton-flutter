@@ -22,6 +22,7 @@ import '../models/transaction_id.dart';
 import 'models/on_balance_changed_payload.dart';
 import 'models/on_token_wallet_transactions_found_payload.dart';
 import 'models/symbol.dart';
+import 'models/token_wallet_transaction_with_data.dart';
 import 'models/token_wallet_version.dart';
 
 class TokenWallet implements Pointed {
@@ -29,8 +30,10 @@ class TokenWallet implements Pointed {
   Pointer<Void>? _ptr;
   final _onBalanceChangedPort = ReceivePort();
   final _onTransactionsFoundPort = ReceivePort();
-  late final Stream<OnBalanceChangedPayload> onBalanceChangedStream;
-  late final Stream<OnTokenWalletTransactionsFoundPayload> onTransactionsFoundStream;
+  final _transactionsSubject = BehaviorSubject<List<TokenWalletTransactionWithData>>.seeded([]);
+  late final Stream<String> balanceChangesStream;
+  late final Stream<List<TokenWalletTransactionWithData>> transactionsStream = _transactionsSubject;
+  late final Transport transport;
   late final CustomRestartableTimer _backgroundRefreshTimer;
   final _ownerMemo = AsyncMemoizer<String>();
   final _addressMemo = AsyncMemoizer<String>();
@@ -57,7 +60,7 @@ class TokenWallet implements Pointed {
         final ptr = await clonePtr();
 
         final result = await executeAsync(
-          (port) => bindings().get_token_wallet_owner(
+          (port) => NekotonFlutter.bindings.get_token_wallet_owner(
             port,
             ptr,
           ),
@@ -72,7 +75,7 @@ class TokenWallet implements Pointed {
         final ptr = await clonePtr();
 
         final result = await executeAsync(
-          (port) => bindings().get_token_wallet_address(
+          (port) => NekotonFlutter.bindings.get_token_wallet_address(
             port,
             ptr,
           ),
@@ -87,7 +90,7 @@ class TokenWallet implements Pointed {
         final ptr = await clonePtr();
 
         final result = await executeAsync(
-          (port) => bindings().get_token_wallet_symbol(
+          (port) => NekotonFlutter.bindings.get_token_wallet_symbol(
             port,
             ptr,
           ),
@@ -104,7 +107,7 @@ class TokenWallet implements Pointed {
         final ptr = await clonePtr();
 
         final result = await executeAsync(
-          (port) => bindings().get_token_wallet_version(
+          (port) => NekotonFlutter.bindings.get_token_wallet_version(
             port,
             ptr,
           ),
@@ -121,7 +124,7 @@ class TokenWallet implements Pointed {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => bindings().get_token_wallet_balance(
+      (port) => NekotonFlutter.bindings.get_token_wallet_balance(
         port,
         ptr,
       ),
@@ -136,7 +139,7 @@ class TokenWallet implements Pointed {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => bindings().get_token_wallet_contract_state(
+      (port) => NekotonFlutter.bindings.get_token_wallet_contract_state(
         port,
         ptr,
       ),
@@ -158,7 +161,7 @@ class TokenWallet implements Pointed {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => bindings().token_wallet_prepare_transfer(
+      (port) => NekotonFlutter.bindings.token_wallet_prepare_transfer(
         port,
         ptr,
         destination.toNativeUtf8().cast<Int8>(),
@@ -179,7 +182,7 @@ class TokenWallet implements Pointed {
     final ptr = await clonePtr();
 
     await executeAsync(
-      (port) => bindings().token_wallet_refresh(
+      (port) => NekotonFlutter.bindings.token_wallet_refresh(
         port,
         ptr,
       ),
@@ -191,7 +194,7 @@ class TokenWallet implements Pointed {
     final fromStr = jsonEncode(from);
 
     await executeAsync(
-      (port) => bindings().token_wallet_preload_transactions(
+      (port) => NekotonFlutter.bindings.token_wallet_preload_transactions(
         port,
         ptr,
         fromStr.toNativeUtf8().cast<Int8>(),
@@ -203,7 +206,7 @@ class TokenWallet implements Pointed {
   Future<Pointer<Void>> clonePtr() => _lock.synchronized(() {
         if (_ptr == null) throw Exception('Token wallet use after free');
 
-        final ptr = bindings().clone_token_wallet_ptr(
+        final ptr = NekotonFlutter.bindings.clone_token_wallet_ptr(
           _ptr!,
         );
 
@@ -217,9 +220,11 @@ class TokenWallet implements Pointed {
         _onBalanceChangedPort.close();
         _onTransactionsFoundPort.close();
 
+        _transactionsSubject.close();
+
         _backgroundRefreshTimer.cancel();
 
-        bindings().free_token_wallet_ptr(
+        NekotonFlutter.bindings.free_token_wallet_ptr(
           _ptr!,
         );
 
@@ -232,23 +237,36 @@ class TokenWallet implements Pointed {
     required String rootTokenContract,
   }) =>
       _lock.synchronized(() async {
-        onBalanceChangedStream = _onBalanceChangedPort.cast<String>().map((e) {
-          final json = jsonDecode(e) as Map<String, dynamic>;
-          final payload = OnBalanceChangedPayload.fromJson(json);
-          return payload;
-        }).shareValue();
+        this.transport = transport;
 
-        onTransactionsFoundStream = _onTransactionsFoundPort.cast<String>().map((e) {
+        balanceChangesStream = _onBalanceChangedPort
+            .cast<String>()
+            .map((e) {
+              final json = jsonDecode(e) as Map<String, dynamic>;
+              final payload = OnBalanceChangedPayload.fromJson(json);
+              return payload;
+            })
+            .map((event) => event.balance)
+            .asBroadcastStream();
+
+        _onTransactionsFoundPort.cast<String>().map((e) {
           final json = jsonDecode(e) as Map<String, dynamic>;
           final payload = OnTokenWalletTransactionsFoundPayload.fromJson(json);
           return payload;
-        }).shareValue();
+        }).listen(
+          (event) => _transactionsSubject.add(
+            [
+              ..._transactionsSubject.value,
+              ...event.transactions,
+            ]..sort((a, b) => a.transaction.compareTo(b.transaction)),
+          ),
+        );
 
         final transportPtr = await transport.clonePtr();
         final transportType = transport.connectionData.type;
 
         final result = await executeAsync(
-          (port) => bindings().token_wallet_subscribe(
+          (port) => NekotonFlutter.bindings.token_wallet_subscribe(
             port,
             _onBalanceChangedPort.sendPort.nativePort,
             _onTransactionsFoundPort.sendPort.nativePort,
@@ -275,7 +293,7 @@ class TokenWallet implements Pointed {
 
       _backgroundRefreshTimer.reset(kRefreshInterval);
     } catch (err, st) {
-      logger?.w(err, err, st);
+      NekotonFlutter.logger?.e('Token wallet background refresh', err, st);
       _backgroundRefreshTimer.reset(Duration.zero);
     }
   }

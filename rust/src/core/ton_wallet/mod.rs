@@ -11,7 +11,7 @@ use crate::{
     models::{HandleError, MatchResult},
     parse_address, parse_public_key, runtime, send_to_result_port,
     transport::{match_transport, models::TransportType},
-    FromPtr, ToPtr, RUNTIME,
+    ToPtr, ToStringFromPtr, RUNTIME,
 };
 use nekoton::{
     core::{
@@ -26,7 +26,7 @@ use nekoton_utils::SimpleClock;
 use num_traits::FromPrimitive;
 use std::{
     ffi::c_void,
-    os::raw::{c_char, c_int, c_longlong, c_schar, c_uchar, c_ulonglong},
+    os::raw::{c_char, c_int, c_longlong, c_schar, c_uchar},
     sync::Arc,
 };
 use tokio::sync::Mutex;
@@ -46,15 +46,15 @@ pub unsafe extern "C" fn ton_wallet_subscribe(
 ) {
     let transport = match_transport(transport, transport_type);
 
-    let public_key = public_key.from_ptr();
-    let contract = contract.from_ptr();
+    let public_key = public_key.to_string_from_ptr();
+    let contract = contract.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
-            on_message_sent_port: c_longlong,
-            on_message_expired_port: c_longlong,
-            on_state_changed_port: c_longlong,
-            on_transactions_found_port: c_longlong,
+            on_message_sent_port: i64,
+            on_message_expired_port: i64,
+            on_state_changed_port: i64,
+            on_transactions_found_port: i64,
             transport: Arc<dyn Transport>,
             workchain: i8,
             public_key: String,
@@ -81,9 +81,7 @@ pub unsafe extern "C" fn ton_wallet_subscribe(
                     .await
                     .handle_error()?;
 
-            let ton_wallet = Box::new(Arc::new(Mutex::new(ton_wallet)));
-
-            let ptr = Box::into_raw(ton_wallet) as c_ulonglong;
+            let ptr = Box::into_raw(Box::new(Arc::new(Mutex::new(ton_wallet)))) as u64;
 
             Ok(ptr)
         }
@@ -118,14 +116,14 @@ pub unsafe extern "C" fn ton_wallet_subscribe_by_address(
 ) {
     let transport = match_transport(transport, transport_type);
 
-    let address = address.from_ptr();
+    let address = address.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
-            on_message_sent_port: c_longlong,
-            on_message_expired_port: c_longlong,
-            on_state_changed_port: c_longlong,
-            on_transactions_found_port: c_longlong,
+            on_message_sent_port: i64,
+            on_message_expired_port: i64,
+            on_state_changed_port: i64,
+            on_transactions_found_port: i64,
             transport: Arc<dyn Transport>,
             address: String,
         ) -> Result<u64, String> {
@@ -145,9 +143,7 @@ pub unsafe extern "C" fn ton_wallet_subscribe_by_address(
                 .await
                 .handle_error()?;
 
-            let ton_wallet = Box::new(Arc::new(Mutex::new(ton_wallet)));
-
-            let ptr = Box::into_raw(ton_wallet) as c_ulonglong;
+            let ptr = Box::into_raw(Box::new(Arc::new(Mutex::new(ton_wallet)))) as u64;
 
             Ok(ptr)
         }
@@ -180,14 +176,14 @@ pub unsafe extern "C" fn ton_wallet_subscribe_by_existing(
 ) {
     let transport = match_transport(transport, transport_type);
 
-    let existing_wallet = existing_wallet.from_ptr();
+    let existing_wallet = existing_wallet.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
-            on_message_sent_port: c_longlong,
-            on_message_expired_port: c_longlong,
-            on_state_changed_port: c_longlong,
-            on_transactions_found_port: c_longlong,
+            on_message_sent_port: i64,
+            on_message_expired_port: i64,
+            on_state_changed_port: i64,
+            on_transactions_found_port: i64,
             transport: Arc<dyn Transport>,
             existing_wallet: String,
         ) -> Result<u64, String> {
@@ -213,9 +209,7 @@ pub unsafe extern "C" fn ton_wallet_subscribe_by_existing(
             .await
             .handle_error()?;
 
-            let ton_wallet = Box::new(Arc::new(Mutex::new(ton_wallet)));
-
-            let ptr = Box::into_raw(ton_wallet) as c_ulonglong;
+            let ptr = Box::into_raw(Box::new(Arc::new(Mutex::new(ton_wallet)))) as u64;
 
             Ok(ptr)
         }
@@ -260,7 +254,7 @@ pub unsafe extern "C" fn get_ton_wallet_workchain(
 
     runtime!().spawn(async move {
         async fn internal_fn(ton_wallet: &mut TonWallet) -> Result<u64, String> {
-            let workchain = ton_wallet.workchain() as c_ulonglong;
+            let workchain = ton_wallet.workchain() as u64;
 
             Ok(workchain)
         }
@@ -280,7 +274,7 @@ pub unsafe extern "C" fn get_ton_wallet_address(result_port: c_longlong, ton_wal
 
     runtime!().spawn(async move {
         async fn internal_fn(ton_wallet: &mut TonWallet) -> Result<u64, String> {
-            let address = ton_wallet.address().to_string().to_ptr() as c_ulonglong;
+            let address = ton_wallet.address().to_string().to_ptr() as u64;
 
             Ok(address)
         }
@@ -304,7 +298,7 @@ pub unsafe extern "C" fn get_ton_wallet_public_key(
     runtime!().spawn(async move {
         async fn internal_fn(ton_wallet: &mut TonWallet) -> Result<u64, String> {
             let public_key = ton_wallet.public_key();
-            let public_key = hex::encode(public_key.to_bytes()).to_ptr() as c_ulonglong;
+            let public_key = hex::encode(public_key.to_bytes()).to_ptr() as u64;
 
             Ok(public_key)
         }
@@ -329,7 +323,7 @@ pub unsafe extern "C" fn get_ton_wallet_wallet_type(
         async fn internal_fn(ton_wallet: &mut TonWallet) -> Result<u64, String> {
             let contract = ton_wallet.wallet_type();
             let contract = WalletType::from_core(contract);
-            let contract = serde_json::to_string(&contract).handle_error()?.to_ptr() as c_ulonglong;
+            let contract = serde_json::to_string(&contract).handle_error()?.to_ptr() as u64;
 
             Ok(contract)
         }
@@ -355,7 +349,7 @@ pub unsafe extern "C" fn get_ton_wallet_contract_state(
             let contract_state = ton_wallet.contract_state();
             let contract_state = serde_json::to_string(&contract_state)
                 .handle_error()?
-                .to_ptr() as c_ulonglong;
+                .to_ptr() as u64;
 
             Ok(contract_state)
         }
@@ -381,7 +375,7 @@ pub unsafe extern "C" fn get_ton_wallet_pending_transactions(
             let pending_transactions = ton_wallet.pending_transactions();
             let pending_transactions = serde_json::to_string(pending_transactions)
                 .handle_error()?
-                .to_ptr() as c_ulonglong;
+                .to_ptr() as u64;
 
             Ok(pending_transactions)
         }
@@ -407,7 +401,7 @@ pub unsafe extern "C" fn get_ton_wallet_polling_method(
             let polling_method = ton_wallet.polling_method();
             let polling_method = serde_json::to_string(&polling_method)
                 .handle_error()?
-                .to_ptr() as c_ulonglong;
+                .to_ptr() as u64;
 
             Ok(polling_method)
         }
@@ -428,7 +422,7 @@ pub unsafe extern "C" fn get_ton_wallet_details(result_port: c_longlong, ton_wal
     runtime!().spawn(async move {
         async fn internal_fn(ton_wallet: &mut TonWallet) -> Result<u64, String> {
             let details = ton_wallet.details();
-            let details = serde_json::to_string(&details).handle_error()?.to_ptr() as c_ulonglong;
+            let details = serde_json::to_string(&details).handle_error()?.to_ptr() as u64;
 
             Ok(details)
         }
@@ -454,7 +448,7 @@ pub unsafe extern "C" fn get_ton_wallet_unconfirmed_transactions(
             let unconfirmed_transactions = ton_wallet.get_unconfirmed_transactions();
             let unconfirmed_transactions = serde_json::to_string(&unconfirmed_transactions)
                 .handle_error()?
-                .to_ptr() as c_ulonglong;
+                .to_ptr() as u64;
 
             Ok(unconfirmed_transactions)
         }
@@ -482,8 +476,7 @@ pub unsafe extern "C" fn get_ton_wallet_custodians(
                 .clone()
                 .map(|e| e.iter().map(|e| e.to_hex_string()).collect::<Vec<_>>());
 
-            let custodians =
-                serde_json::to_string(&custodians).handle_error()?.to_ptr() as c_ulonglong;
+            let custodians = serde_json::to_string(&custodians).handle_error()?.to_ptr() as u64;
 
             Ok(custodians)
         }
@@ -505,7 +498,7 @@ pub unsafe extern "C" fn ton_wallet_prepare_deploy(
     let ton_wallet = ton_wallet as *mut Mutex<TonWallet>;
     let ton_wallet = Arc::from_raw(ton_wallet) as Arc<Mutex<TonWallet>>;
 
-    let expiration = expiration.from_ptr();
+    let expiration = expiration.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -518,8 +511,7 @@ pub unsafe extern "C" fn ton_wallet_prepare_deploy(
 
             let message = ton_wallet.prepare_deploy(expiration).handle_error()?;
 
-            let message = Box::new(Arc::new(message));
-            let ptr = Box::into_raw(message) as c_ulonglong;
+            let ptr = Box::into_raw(Box::new(Arc::new(message))) as u64;
 
             Ok(ptr)
         }
@@ -545,8 +537,8 @@ pub unsafe extern "C" fn ton_wallet_prepare_deploy_with_multiple_owners(
     let ton_wallet = ton_wallet as *mut Mutex<TonWallet>;
     let ton_wallet = Arc::from_raw(ton_wallet) as Arc<Mutex<TonWallet>>;
 
-    let expiration = expiration.from_ptr();
-    let custodians = custodians.from_ptr();
+    let expiration = expiration.to_string_from_ptr();
+    let custodians = custodians.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -569,8 +561,7 @@ pub unsafe extern "C" fn ton_wallet_prepare_deploy_with_multiple_owners(
                 .prepare_deploy_with_multiple_owners(expiration, &custodians, req_confirms)
                 .handle_error()?;
 
-            let message = Box::new(Arc::new(message));
-            let ptr = Box::into_raw(message) as c_ulonglong;
+            let ptr = Box::into_raw(Box::new(Arc::new(message))) as u64;
 
             Ok(ptr)
         }
@@ -602,14 +593,14 @@ pub unsafe extern "C" fn ton_wallet_prepare_transfer(
 
     let transport = match_transport(transport, transport_type);
 
-    let public_key = public_key.from_ptr();
-    let destination = destination.from_ptr();
-    let amount = amount.from_ptr();
+    let public_key = public_key.to_string_from_ptr();
+    let destination = destination.to_string_from_ptr();
+    let amount = amount.to_string_from_ptr();
     let body = match !body.is_null() {
-        true => Some(body.from_ptr()),
+        true => Some(body.to_string_from_ptr()),
         false => None,
     };
-    let expiration = expiration.from_ptr();
+    let expiration = expiration.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -619,7 +610,6 @@ pub unsafe extern "C" fn ton_wallet_prepare_transfer(
             destination: String,
             amount: String,
             body: Option<String>,
-
             expiration: String,
         ) -> Result<u64, String> {
             let public_key = parse_public_key(&public_key)?;
@@ -663,8 +653,7 @@ pub unsafe extern "C" fn ton_wallet_prepare_transfer(
                 TransferAction::Sign(message) => message,
             };
 
-            let message = Box::new(Arc::new(message));
-            let ptr = Box::into_raw(message) as c_ulonglong;
+            let ptr = Box::into_raw(Box::new(Arc::new(message))) as u64;
 
             Ok(ptr)
         }
@@ -702,9 +691,9 @@ pub unsafe extern "C" fn ton_wallet_prepare_confirm_transaction(
 
     let transport = match_transport(transport, transport_type);
 
-    let public_key = public_key.from_ptr();
-    let transaction_id = transaction_id.from_ptr();
-    let expiration = expiration.from_ptr();
+    let public_key = public_key.to_string_from_ptr();
+    let transaction_id = transaction_id.to_string_from_ptr();
+    let expiration = expiration.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -740,8 +729,7 @@ pub unsafe extern "C" fn ton_wallet_prepare_confirm_transaction(
                 )
                 .handle_error()?;
 
-            let message = Box::new(Arc::new(message));
-            let ptr = Box::into_raw(message) as c_ulonglong;
+            let ptr = Box::into_raw(Box::new(Arc::new(message))) as u64;
 
             Ok(ptr)
         }
@@ -817,7 +805,7 @@ pub unsafe extern "C" fn ton_wallet_send(
     let message = Arc::from_raw(message) as Arc<Box<dyn UnsignedMessage>>;
     let message = (*message).clone();
 
-    let sign_input = sign_input.from_ptr();
+    let sign_input = sign_input.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -858,7 +846,7 @@ pub unsafe extern "C" fn ton_wallet_send(
 
             let pending_transaction = serde_json::to_string(&pending_transaction)
                 .handle_error()?
-                .to_ptr() as c_ulonglong;
+                .to_ptr() as u64;
 
             Ok(pending_transaction)
         }
@@ -902,7 +890,7 @@ pub unsafe extern "C" fn ton_wallet_preload_transactions(
     let ton_wallet = ton_wallet as *mut Mutex<TonWallet>;
     let ton_wallet = Arc::from_raw(ton_wallet) as Arc<Mutex<TonWallet>>;
 
-    let from = from.from_ptr();
+    let from = from.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(ton_wallet: &mut TonWallet, from: String) -> Result<u64, String> {
@@ -947,7 +935,7 @@ pub unsafe extern "C" fn ton_wallet_handle_block(
         None => panic!(),
     };
 
-    let id = id.from_ptr();
+    let id = id.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -982,7 +970,7 @@ pub unsafe extern "C" fn find_existing_wallets(
 ) {
     let transport = match_transport(transport, transport_type);
 
-    let public_key = public_key.from_ptr();
+    let public_key = public_key.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -1000,12 +988,12 @@ pub unsafe extern "C" fn find_existing_wallets(
             .await
             .handle_error()?
             .into_iter()
-            .map(|e| ExistingWalletInfo::from_core(e))
+            .map(ExistingWalletInfo::from_core)
             .collect::<Vec<_>>();
 
             let existing_wallets = serde_json::to_string(&existing_wallets)
                 .handle_error()?
-                .to_ptr() as c_ulonglong;
+                .to_ptr() as u64;
 
             Ok(existing_wallets)
         }
@@ -1027,7 +1015,7 @@ pub unsafe extern "C" fn get_existing_wallet_info(
 ) {
     let transport = match_transport(transport, transport_type);
 
-    let address = address.from_ptr();
+    let address = address.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -1061,7 +1049,7 @@ pub unsafe extern "C" fn get_existing_wallet_info(
 
             let existing_wallet_info = serde_json::to_string(&existing_wallet_info)
                 .handle_error()?
-                .to_ptr() as c_ulonglong;
+                .to_ptr() as u64;
 
             Ok(existing_wallet_info)
         }
@@ -1081,7 +1069,7 @@ pub unsafe extern "C" fn get_wallet_custodians(
 ) {
     let transport = match_transport(transport, transport_type);
 
-    let address = address.from_ptr();
+    let address = address.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -1116,8 +1104,7 @@ pub unsafe extern "C" fn get_wallet_custodians(
             .map(|e| e.to_hex_string())
             .collect::<Vec<_>>();
 
-            let custodians =
-                serde_json::to_string(&custodians).handle_error()?.to_ptr() as c_ulonglong;
+            let custodians = serde_json::to_string(&custodians).handle_error()?.to_ptr() as u64;
 
             Ok(custodians)
         }

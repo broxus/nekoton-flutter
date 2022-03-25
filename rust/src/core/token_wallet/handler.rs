@@ -33,7 +33,7 @@ impl TokenWalletSubscriptionHandler for TokenWalletSubscriptionHandlerImpl {
             .map(|e| -> TransactionWithData<TokenWalletTransaction> {
                 TransactionWithData::<TokenWalletTransaction> {
                     transaction: e.transaction.clone(),
-                    data: e.data.clone().map(|e| TokenWalletTransaction::from_core(e)),
+                    data: e.data.clone().map(TokenWalletTransaction::from_core),
                 }
             })
             .collect::<Vec<_>>();

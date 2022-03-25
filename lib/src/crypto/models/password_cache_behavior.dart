@@ -10,9 +10,9 @@ class PasswordCacheBehavior with _$PasswordCacheBehavior {
   )
   const factory PasswordCacheBehavior.store({
     required int duration,
-  }) = _Store;
+  }) = _PasswordCacheBehaviorStore;
 
-  const factory PasswordCacheBehavior.remove() = _Remove;
+  const factory PasswordCacheBehavior.remove() = _PasswordCacheBehaviorRemove;
 
   factory PasswordCacheBehavior.fromJson(Map<String, dynamic> json) => _$PasswordCacheBehaviorFromJson(json);
 }

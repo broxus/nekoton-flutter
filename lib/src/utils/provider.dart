@@ -28,7 +28,7 @@ ExecutionOutput runLocal({
   final inputStr = jsonEncode(input);
 
   final result = executeSync(
-    () => bindings().run_local(
+    () => NekotonFlutter.bindings.run_local(
       accountStuffBoc.toNativeUtf8().cast<Int8>(),
       contractAbi.toNativeUtf8().cast<Int8>(),
       method.toNativeUtf8().cast<Int8>(),
@@ -54,7 +54,7 @@ String getExpectedAddress({
   final initDataStr = jsonEncode(initData);
 
   final result = executeSync(
-    () => bindings().get_expected_address(
+    () => NekotonFlutter.bindings.get_expected_address(
       tvc.toNativeUtf8().cast<Int8>(),
       contractAbi.toNativeUtf8().cast<Int8>(),
       workchainId ?? 0,
@@ -76,7 +76,7 @@ String packIntoCell({
   final tokensStr = jsonEncode(tokens);
 
   final result = executeSync(
-    () => bindings().pack_into_cell(
+    () => NekotonFlutter.bindings.pack_into_cell(
       paramsStr.toNativeUtf8().cast<Int8>(),
       tokensStr.toNativeUtf8().cast<Int8>(),
     ),
@@ -95,7 +95,7 @@ TokensObject unpackFromCell({
   final paramsStr = jsonEncode(params);
 
   final result = executeSync(
-    () => bindings().unpack_from_cell(
+    () => NekotonFlutter.bindings.unpack_from_cell(
       paramsStr.toNativeUtf8().cast<Int8>(),
       boc.toNativeUtf8().cast<Int8>(),
       allowPartial ? 1 : 0,
@@ -111,7 +111,7 @@ TokensObject unpackFromCell({
 
 String extractPublicKey(String boc) {
   final result = executeSync(
-    () => bindings().extract_public_key(
+    () => NekotonFlutter.bindings.extract_public_key(
       boc.toNativeUtf8().cast<Int8>(),
     ),
   );
@@ -123,7 +123,7 @@ String extractPublicKey(String boc) {
 
 String codeToTvc(String code) {
   final result = executeSync(
-    () => bindings().code_to_tvc(
+    () => NekotonFlutter.bindings.code_to_tvc(
       code.toNativeUtf8().cast<Int8>(),
     ),
   );
@@ -135,7 +135,7 @@ String codeToTvc(String code) {
 
 SplittedTvc splitTvc(String tvc) {
   final result = executeSync(
-    () => bindings().split_tvc(
+    () => NekotonFlutter.bindings.split_tvc(
       tvc.toNativeUtf8().cast<Int8>(),
     ),
   );
@@ -155,7 +155,7 @@ String encodeInternalInput({
   final inputStr = jsonEncode(input);
 
   final result = executeSync(
-    () => bindings().encode_internal_input(
+    () => NekotonFlutter.bindings.encode_internal_input(
       contractAbi.toNativeUtf8().cast<Int8>(),
       method.toNativeUtf8().cast<Int8>(),
       inputStr.toNativeUtf8().cast<Int8>(),
@@ -176,7 +176,7 @@ DecodedInput? decodeInput({
   final methodStr = jsonEncode(method);
 
   final result = executeSync(
-    () => bindings().decode_input(
+    () => NekotonFlutter.bindings.decode_input(
       messageBody.toNativeUtf8().cast<Int8>(),
       contractAbi.toNativeUtf8().cast<Int8>(),
       methodStr.toNativeUtf8().cast<Int8>(),
@@ -200,7 +200,7 @@ DecodedOutput? decodeOutput({
   final methodStr = jsonEncode(method);
 
   final result = executeSync(
-    () => bindings().decode_output(
+    () => NekotonFlutter.bindings.decode_output(
       messageBody.toNativeUtf8().cast<Int8>(),
       contractAbi.toNativeUtf8().cast<Int8>(),
       methodStr.toNativeUtf8().cast<Int8>(),
@@ -223,7 +223,7 @@ DecodedEvent? decodeEvent({
   final eventStr = jsonEncode(event);
 
   final result = executeSync(
-    () => bindings().decode_event(
+    () => NekotonFlutter.bindings.decode_event(
       messageBody.toNativeUtf8().cast<Int8>(),
       contractAbi.toNativeUtf8().cast<Int8>(),
       eventStr.toNativeUtf8().cast<Int8>(),
@@ -247,7 +247,7 @@ DecodedTransaction? decodeTransaction({
   final methodStr = jsonEncode(method);
 
   final result = executeSync(
-    () => bindings().decode_transaction(
+    () => NekotonFlutter.bindings.decode_transaction(
       transactionStr.toNativeUtf8().cast<Int8>(),
       contractAbi.toNativeUtf8().cast<Int8>(),
       methodStr.toNativeUtf8().cast<Int8>(),
@@ -269,7 +269,7 @@ List<DecodedTransactionEvent> decodeTransactionEvents({
   final transactionStr = jsonEncode(transaction);
 
   final result = executeSync(
-    () => bindings().decode_transaction_events(
+    () => NekotonFlutter.bindings.decode_transaction_events(
       transactionStr.toNativeUtf8().cast<Int8>(),
       contractAbi.toNativeUtf8().cast<Int8>(),
     ),
@@ -285,7 +285,7 @@ List<DecodedTransactionEvent> decodeTransactionEvents({
 
 KnownPayload? parseKnownPayload(String payload) {
   final result = executeSync(
-    () => bindings().parse_known_payload(
+    () => NekotonFlutter.bindings.parse_known_payload(
       payload.toNativeUtf8().cast<Int8>(),
     ),
   );
@@ -311,7 +311,7 @@ UnsignedMessage createExternalMessage({
   final stateInitPtr = stateInit?.toNativeUtf8().cast<Int8>() ?? nullptr;
 
   final result = executeSync(
-    () => bindings().create_external_message(
+    () => NekotonFlutter.bindings.create_external_message(
       dst.toNativeUtf8().cast<Int8>(),
       contractAbi.toNativeUtf8().cast<Int8>(),
       method.toNativeUtf8().cast<Int8>(),

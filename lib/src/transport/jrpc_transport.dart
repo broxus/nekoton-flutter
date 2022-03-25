@@ -20,9 +20,9 @@ class JrpcTransport extends Transport {
   JrpcTransport._();
 
   static Future<JrpcTransport> create(ConnectionData connectionData) async {
-    final storage = JrpcTransport._();
-    await storage._initialize(connectionData);
-    return storage;
+    final instance = JrpcTransport._();
+    await instance._initialize(connectionData);
+    return instance;
   }
 
   @override
@@ -32,7 +32,7 @@ class JrpcTransport extends Transport {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => bindings().get_full_account_state(
+      (port) => NekotonFlutter.bindings.get_full_account_state(
         port,
         ptr,
         connectionData.type.index,
@@ -58,7 +58,7 @@ class JrpcTransport extends Transport {
     final fromStr = continuation != null ? jsonEncode(continuation) : null;
 
     final result = await executeAsync(
-      (port) => bindings().get_transactions(
+      (port) => NekotonFlutter.bindings.get_transactions(
         port,
         ptr,
         connectionData.type.index,
@@ -79,7 +79,7 @@ class JrpcTransport extends Transport {
   Future<Pointer<Void>> clonePtr() => _lock.synchronized(() {
         if (_ptr == null) throw Exception('Jrpc transport use after free');
 
-        final ptr = bindings().clone_jrpc_transport_ptr(
+        final ptr = NekotonFlutter.bindings.clone_jrpc_transport_ptr(
           _ptr!,
         );
 
@@ -90,7 +90,7 @@ class JrpcTransport extends Transport {
   Future<void> freePtr() => _lock.synchronized(() {
         if (_ptr == null) return;
 
-        bindings().free_jrpc_transport_ptr(
+        NekotonFlutter.bindings.free_jrpc_transport_ptr(
           _ptr!,
         );
 
@@ -103,7 +103,7 @@ class JrpcTransport extends Transport {
     final endpoint = this.connectionData.endpoints.first;
 
     final result = executeSync(
-      () => bindings().create_jrpc_transport(
+      () => NekotonFlutter.bindings.create_jrpc_transport(
         endpoint.toNativeUtf8().cast<Int8>(),
       ),
     );

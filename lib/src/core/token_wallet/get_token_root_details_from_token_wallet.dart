@@ -17,7 +17,7 @@ Future<Tuple2<String, RootTokenContractDetails>> getTokenRootDetailsFromTokenWal
   final transportType = transport.connectionData.type;
 
   final result = await executeAsync(
-    (port) => bindings().get_token_wallet_details(
+    (port) => NekotonFlutter.bindings.get_token_wallet_details(
       port,
       ptr,
       transportType.index,

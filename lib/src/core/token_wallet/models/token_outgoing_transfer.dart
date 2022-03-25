@@ -1,7 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
-import '../../../../nekoton_flutter.dart';
+import 'transfer_recipient.dart';
 
 part 'token_outgoing_transfer.freezed.dart';
 part 'token_outgoing_transfer.g.dart';

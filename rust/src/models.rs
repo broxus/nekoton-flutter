@@ -24,14 +24,13 @@ impl ToPtr for String {
     }
 }
 
-pub trait FromPtr {
-    fn from_ptr(self) -> String;
+pub trait ToStringFromPtr {
+    unsafe fn to_string_from_ptr(self) -> String;
 }
 
-impl FromPtr for *mut c_char {
-    fn from_ptr(self) -> String {
-        let string = unsafe { CStr::from_ptr(self) };
-        string.to_str().unwrap().to_owned()
+impl ToStringFromPtr for *mut c_char {
+    unsafe fn to_string_from_ptr(self) -> String {
+        CStr::from_ptr(self).to_str().unwrap().to_owned()
     }
 }
 

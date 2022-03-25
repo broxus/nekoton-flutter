@@ -67,7 +67,7 @@ impl WalletInteractionInfo {
             recipient: wallet_interaction_info.recipient,
             known_payload: wallet_interaction_info
                 .known_payload
-                .map(|e| KnownPayload::from_core(e)),
+                .map(KnownPayload::from_core),
             method: WalletInteractionMethod::from_core(wallet_interaction_info.method),
         }
     }
@@ -163,6 +163,7 @@ impl MultisigTransaction {
 pub enum WalletType {
     Multisig { multisig_type: MultisigType },
     WalletV3,
+    HighloadWalletV2,
 }
 
 impl WalletType {
@@ -170,6 +171,7 @@ impl WalletType {
         match contract {
             ton_wallet::WalletType::Multisig(multisig_type) => Self::Multisig { multisig_type },
             ton_wallet::WalletType::WalletV3 => Self::WalletV3,
+            ton_wallet::WalletType::HighloadWalletV2 => Self::HighloadWalletV2,
         }
     }
 
@@ -179,6 +181,7 @@ impl WalletType {
                 ton_wallet::WalletType::Multisig(multisig_type)
             }
             WalletType::WalletV3 => ton_wallet::WalletType::WalletV3,
+            WalletType::HighloadWalletV2 => ton_wallet::WalletType::HighloadWalletV2,
         }
     }
 }

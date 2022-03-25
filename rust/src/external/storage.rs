@@ -1,20 +1,16 @@
-use crate::{models::MatchResult, runtime, FromPtr, RUNTIME};
+use crate::{models::MatchResult, runtime, ToStringFromPtr, RUNTIME};
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use nekoton::external::Storage;
 use pickledb::{PickleDb, PickleDbDumpPolicy, SerializationMethod};
-use std::{
-    ffi::c_void,
-    os::raw::{c_char, c_ulonglong},
-    path::Path,
-    sync::Arc,
-};
+use std::{ffi::c_void, os::raw::c_char, path::Path, sync::Arc};
 use tokio::sync::Mutex;
 
 #[no_mangle]
 pub unsafe extern "C" fn create_storage(dir: *mut c_char) -> *mut c_void {
-    fn internal_fn(dir: *mut c_char) -> Result<u64, String> {
-        let dir = dir.from_ptr();
+    let dir = dir.to_string_from_ptr();
+
+    fn internal_fn(dir: String) -> Result<u64, String> {
         let path = Path::new(&dir).join("nekoton_storage.db");
 
         let db = match PickleDb::load(
@@ -32,9 +28,8 @@ pub unsafe extern "C" fn create_storage(dir: *mut c_char) -> *mut c_void {
         let db = Arc::new(Mutex::new(db));
 
         let storage = StorageImpl { db };
-        let storage = Box::new(Arc::new(storage));
 
-        let ptr = Box::into_raw(storage) as *mut c_void as c_ulonglong;
+        let ptr = Box::into_raw(Box::new(Arc::new(storage))) as *mut c_void as u64;
 
         Ok(ptr)
     }

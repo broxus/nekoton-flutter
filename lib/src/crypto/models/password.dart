@@ -14,9 +14,9 @@ class Password with _$Password {
   const factory Password.explicit({
     required String password,
     required PasswordCacheBehavior cacheBehavior,
-  }) = _Explicit;
+  }) = _PasswordExplicit;
 
-  const factory Password.fromCache() = _FromCache;
+  const factory Password.fromCache() = _PasswordFromCache;
 
   factory Password.fromJson(Map<String, dynamic> json) => _$PasswordFromJson(json);
 }

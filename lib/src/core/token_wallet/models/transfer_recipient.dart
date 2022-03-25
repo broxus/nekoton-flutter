@@ -10,13 +10,13 @@ class TransferRecipient with _$TransferRecipient {
   @HiveType(typeId: 24)
   const factory TransferRecipient.ownerWallet({
     @HiveField(0) required String address,
-  }) = _OwnerWalletRecipient;
+  }) = _TransferRecipientOwnerWallet;
 
   @JsonSerializable(fieldRename: FieldRename.snake)
   @HiveType(typeId: 25)
   const factory TransferRecipient.tokenWallet({
     @HiveField(0) required String address,
-  }) = _TokenWalletRecipient;
+  }) = _TransferRecipientTokenWallet;
 
   factory TransferRecipient.fromJson(Map<String, dynamic> json) => _$TransferRecipientFromJson(json);
 }

@@ -4,12 +4,12 @@ use crate::{
     core::{accounts_storage::models::AssetsList, ton_wallet::models::WalletType},
     external::storage::StorageImpl,
     models::{HandleError, MatchResult},
-    parse_address, parse_public_key, runtime, send_to_result_port, FromPtr, ToPtr, RUNTIME,
+    parse_address, parse_public_key, runtime, send_to_result_port, ToPtr, ToStringFromPtr, RUNTIME,
 };
 use nekoton::{core::accounts_storage::AccountsStorage, external::Storage};
 use std::{
     ffi::c_void,
-    os::raw::{c_char, c_longlong, c_schar, c_ulonglong},
+    os::raw::{c_char, c_longlong, c_schar},
     sync::Arc,
 };
 
@@ -22,9 +22,7 @@ pub unsafe extern "C" fn create_accounts_storage(result_port: c_longlong, storag
         async fn internal_fn(storage: Arc<dyn Storage>) -> Result<u64, String> {
             let accounts_storage = AccountsStorage::load(storage).await.handle_error()?;
 
-            let accounts_storage = Box::new(Arc::new(accounts_storage));
-
-            let ptr = Box::into_raw(accounts_storage) as *mut c_void as c_ulonglong;
+            let ptr = Box::into_raw(Box::new(Arc::new(accounts_storage))) as *mut c_void as u64;
 
             Ok(ptr)
         }
@@ -66,7 +64,7 @@ pub unsafe extern "C" fn get_accounts(result_port: c_longlong, accounts_storage:
                 .map(|e| AssetsList::from_core(e.clone()))
                 .collect::<Vec<_>>();
 
-            let accounts = serde_json::to_string(&accounts).handle_error()?.to_ptr() as c_ulonglong;
+            let accounts = serde_json::to_string(&accounts).handle_error()?.to_ptr() as u64;
 
             Ok(accounts)
         }
@@ -89,9 +87,9 @@ pub unsafe extern "C" fn add_account(
     let accounts_storage = accounts_storage as *mut AccountsStorage;
     let accounts_storage = Arc::from_raw(accounts_storage) as Arc<AccountsStorage>;
 
-    let name = name.from_ptr();
-    let public_key = public_key.from_ptr();
-    let contract = contract.from_ptr();
+    let name = name.to_string_from_ptr();
+    let public_key = public_key.to_string_from_ptr();
+    let contract = contract.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -111,9 +109,9 @@ pub unsafe extern "C" fn add_account(
                 .add_account(&name, public_key, contract, workchain)
                 .await
                 .handle_error()
-                .map(|e| AssetsList::from_core(e))?;
+                .map(AssetsList::from_core)?;
 
-            let assets = serde_json::to_string(&assets).handle_error()?.to_ptr() as c_ulonglong;
+            let assets = serde_json::to_string(&assets).handle_error()?.to_ptr() as u64;
 
             Ok(assets)
         }
@@ -136,8 +134,8 @@ pub unsafe extern "C" fn rename_account(
     let accounts_storage = accounts_storage as *mut AccountsStorage;
     let accounts_storage = Arc::from_raw(accounts_storage) as Arc<AccountsStorage>;
 
-    let address = address.from_ptr();
-    let name = name.from_ptr();
+    let address = address.to_string_from_ptr();
+    let name = name.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -149,9 +147,9 @@ pub unsafe extern "C" fn rename_account(
                 .rename_account(&address, name)
                 .await
                 .handle_error()
-                .map(|e| AssetsList::from_core(e.clone()))?;
+                .map(AssetsList::from_core)?;
 
-            let assets = serde_json::to_string(&assets).handle_error()?.to_ptr() as c_ulonglong;
+            let assets = serde_json::to_string(&assets).handle_error()?.to_ptr() as u64;
 
             Ok(assets)
         }
@@ -173,7 +171,7 @@ pub unsafe extern "C" fn remove_account(
     let accounts_storage = accounts_storage as *mut AccountsStorage;
     let accounts_storage = Arc::from_raw(accounts_storage) as Arc<AccountsStorage>;
 
-    let address = address.from_ptr();
+    let address = address.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -184,9 +182,9 @@ pub unsafe extern "C" fn remove_account(
                 .remove_account(&address)
                 .await
                 .handle_error()
-                .map(|e| e.map(|e| AssetsList::from_core(e.clone())))?;
+                .map(|e| e.map(AssetsList::from_core))?;
 
-            let assets = serde_json::to_string(&assets).handle_error()?.to_ptr() as c_ulonglong;
+            let assets = serde_json::to_string(&assets).handle_error()?.to_ptr() as u64;
 
             Ok(assets)
         }
@@ -208,9 +206,9 @@ pub unsafe extern "C" fn add_token_wallet(
     let accounts_storage = accounts_storage as *mut AccountsStorage;
     let accounts_storage = Arc::from_raw(accounts_storage) as Arc<AccountsStorage>;
 
-    let address = address.from_ptr();
-    let network_group = network_group.from_ptr();
-    let root_token_contract = root_token_contract.from_ptr();
+    let address = address.to_string_from_ptr();
+    let network_group = network_group.to_string_from_ptr();
+    let root_token_contract = root_token_contract.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -225,9 +223,9 @@ pub unsafe extern "C" fn add_token_wallet(
                 .add_token_wallet(&address, &network_group, root_token_contract)
                 .await
                 .handle_error()
-                .map(|e| AssetsList::from_core(e.clone()))?;
+                .map(AssetsList::from_core)?;
 
-            let assets = serde_json::to_string(&assets).handle_error()?.to_ptr() as c_ulonglong;
+            let assets = serde_json::to_string(&assets).handle_error()?.to_ptr() as u64;
 
             Ok(assets)
         }
@@ -256,9 +254,9 @@ pub unsafe extern "C" fn remove_token_wallet(
     let accounts_storage = accounts_storage as *mut AccountsStorage;
     let accounts_storage = Arc::from_raw(accounts_storage) as Arc<AccountsStorage>;
 
-    let address = address.from_ptr();
-    let network_group = network_group.from_ptr();
-    let root_token_contract = root_token_contract.from_ptr();
+    let address = address.to_string_from_ptr();
+    let network_group = network_group.to_string_from_ptr();
+    let root_token_contract = root_token_contract.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -273,9 +271,9 @@ pub unsafe extern "C" fn remove_token_wallet(
                 .remove_token_wallet(&address, &network_group, &root_token_contract)
                 .await
                 .handle_error()
-                .map(|e| AssetsList::from_core(e.clone()))?;
+                .map(AssetsList::from_core)?;
 
-            let assets = serde_json::to_string(&assets).handle_error()?.to_ptr() as c_ulonglong;
+            let assets = serde_json::to_string(&assets).handle_error()?.to_ptr() as u64;
 
             Ok(assets)
         }

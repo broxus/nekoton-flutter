@@ -6,7 +6,7 @@ use crate::{
     models::{HandleError, MatchResult},
     parse_address, runtime, send_to_result_port,
     transport::match_transport,
-    FromPtr, ToPtr, RUNTIME,
+    ToPtr, ToStringFromPtr, RUNTIME,
 };
 use nekoton::{
     core::{models::TransferRecipient, token_wallet::TokenWallet},
@@ -16,7 +16,7 @@ use nekoton_abi::{create_boc_or_comment_payload, num_bigint::BigUint, Transactio
 use nekoton_utils::SimpleClock;
 use std::{
     ffi::c_void,
-    os::raw::{c_char, c_int, c_longlong, c_uint, c_ulonglong},
+    os::raw::{c_char, c_int, c_longlong, c_uint},
     str::FromStr,
     sync::Arc,
 };
@@ -34,13 +34,13 @@ pub unsafe extern "C" fn token_wallet_subscribe(
 ) {
     let transport = match_transport(transport, transport_type);
 
-    let owner = owner.from_ptr();
-    let root_token_contract = root_token_contract.from_ptr();
+    let owner = owner.to_string_from_ptr();
+    let root_token_contract = root_token_contract.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
-            on_balance_changed_port: c_longlong,
-            on_transactions_found_port: c_longlong,
+            on_balance_changed_port: i64,
+            on_transactions_found_port: i64,
             transport: Arc<dyn Transport>,
             owner: String,
             root_token_contract: String,
@@ -61,9 +61,7 @@ pub unsafe extern "C" fn token_wallet_subscribe(
                     .await
                     .handle_error()?;
 
-            let token_wallet = Box::new(Arc::new(Mutex::new(token_wallet)));
-
-            let ptr = Box::into_raw(token_wallet) as c_ulonglong;
+            let ptr = Box::into_raw(Box::new(Arc::new(Mutex::new(token_wallet)))) as u64;
 
             Ok(ptr)
         }
@@ -107,7 +105,7 @@ pub unsafe extern "C" fn get_token_wallet_owner(
 
     runtime!().spawn(async move {
         async fn internal_fn(token_wallet: &mut TokenWallet) -> Result<u64, String> {
-            let owner = token_wallet.owner().to_string().to_ptr() as c_ulonglong;
+            let owner = token_wallet.owner().to_string().to_ptr() as u64;
 
             Ok(owner)
         }
@@ -130,7 +128,7 @@ pub unsafe extern "C" fn get_token_wallet_address(
 
     runtime!().spawn(async move {
         async fn internal_fn(token_wallet: &mut TokenWallet) -> Result<u64, String> {
-            let address = token_wallet.address().to_string().to_ptr() as c_ulonglong;
+            let address = token_wallet.address().to_string().to_ptr() as u64;
 
             Ok(address)
         }
@@ -154,7 +152,7 @@ pub unsafe extern "C" fn get_token_wallet_symbol(
     runtime!().spawn(async move {
         async fn internal_fn(token_wallet: &mut TokenWallet) -> Result<u64, String> {
             let symbol = token_wallet.symbol();
-            let symbol = serde_json::to_string(&symbol).handle_error()?.to_ptr() as c_ulonglong;
+            let symbol = serde_json::to_string(&symbol).handle_error()?.to_ptr() as u64;
 
             Ok(symbol)
         }
@@ -178,7 +176,7 @@ pub unsafe extern "C" fn get_token_wallet_version(
     runtime!().spawn(async move {
         async fn internal_fn(token_wallet: &mut TokenWallet) -> Result<u64, String> {
             let version = token_wallet.version();
-            let version = serde_json::to_string(&version).handle_error()?.to_ptr() as c_ulonglong;
+            let version = serde_json::to_string(&version).handle_error()?.to_ptr() as u64;
 
             Ok(version)
         }
@@ -201,7 +199,7 @@ pub unsafe extern "C" fn get_token_wallet_balance(
 
     runtime!().spawn(async move {
         async fn internal_fn(token_wallet: &mut TokenWallet) -> Result<u64, String> {
-            let balance = token_wallet.balance().to_string().to_ptr() as c_ulonglong;
+            let balance = token_wallet.balance().to_string().to_ptr() as u64;
 
             Ok(balance)
         }
@@ -227,7 +225,7 @@ pub unsafe extern "C" fn get_token_wallet_contract_state(
             let contract_state = token_wallet.contract_state();
             let contract_state = serde_json::to_string(&contract_state)
                 .handle_error()?
-                .to_ptr() as c_ulonglong;
+                .to_ptr() as u64;
 
             Ok(contract_state)
         }
@@ -252,11 +250,11 @@ pub unsafe extern "C" fn token_wallet_prepare_transfer(
     let token_wallet = token_wallet as *mut Mutex<TokenWallet>;
     let token_wallet = Arc::from_raw(token_wallet) as Arc<Mutex<TokenWallet>>;
 
-    let destination = destination.from_ptr();
-    let tokens = tokens.from_ptr();
+    let destination = destination.to_string_from_ptr();
+    let tokens = tokens.to_string_from_ptr();
     let notify_receiver = notify_receiver != 0;
     let payload = match !payload.is_null() {
-        true => Some(payload.from_ptr()),
+        true => Some(payload.to_string_from_ptr()),
         false => None,
     };
 
@@ -283,9 +281,9 @@ pub unsafe extern "C" fn token_wallet_prepare_transfer(
             let message = token_wallet
                 .prepare_transfer(destination, tokens, notify_receiver, payload)
                 .handle_error()
-                .map(|e| InternalMessage::from_core(e))?;
+                .map(InternalMessage::from_core)?;
 
-            let message = serde_json::to_string(&message).handle_error()?.to_ptr() as c_ulonglong;
+            let message = serde_json::to_string(&message).handle_error()?.to_ptr() as u64;
 
             Ok(message)
         }
@@ -335,7 +333,7 @@ pub unsafe extern "C" fn token_wallet_preload_transactions(
     let token_wallet = token_wallet as *mut Mutex<TokenWallet>;
     let token_wallet = Arc::from_raw(token_wallet) as Arc<Mutex<TokenWallet>>;
 
-    let from = from.from_ptr();
+    let from = from.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(token_wallet: &mut TokenWallet, from: String) -> Result<u64, String> {
@@ -366,7 +364,7 @@ pub unsafe extern "C" fn get_token_root_details(
 ) {
     let transport = match_transport(transport, transport_type);
 
-    let root_token_contract = root_token_contract.from_ptr();
+    let root_token_contract = root_token_contract.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -385,7 +383,7 @@ pub unsafe extern "C" fn get_token_root_details(
 
             let token_root_details = serde_json::to_string(&token_root_details)
                 .handle_error()?
-                .to_ptr() as c_ulonglong;
+                .to_ptr() as u64;
 
             Ok(token_root_details)
         }
@@ -407,7 +405,7 @@ pub unsafe extern "C" fn get_token_wallet_details(
 ) {
     let transport = match_transport(transport, transport_type);
 
-    let token_wallet = token_wallet.from_ptr();
+    let token_wallet = token_wallet.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -427,7 +425,7 @@ pub unsafe extern "C" fn get_token_wallet_details(
 
             let result = serde_json::to_string(&(token_wallet_details, root_contract_details))
                 .handle_error()?
-                .to_ptr() as c_ulonglong;
+                .to_ptr() as u64;
 
             Ok(result)
         }
@@ -447,7 +445,7 @@ pub unsafe extern "C" fn get_token_root_details_from_token_wallet(
 ) {
     let transport = match_transport(transport, transport_type);
 
-    let token_wallet_address = token_wallet_address.from_ptr();
+    let token_wallet_address = token_wallet_address.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -468,7 +466,7 @@ pub unsafe extern "C" fn get_token_root_details_from_token_wallet(
             let result =
                 serde_json::to_string(&(root_token_contract.to_string(), root_contract_details))
                     .handle_error()?
-                    .to_ptr() as c_ulonglong;
+                    .to_ptr() as u64;
 
             Ok(result)
         }

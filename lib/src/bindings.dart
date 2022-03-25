@@ -5,33 +5,34 @@ import 'package:logger/logger.dart';
 
 import 'bindings.g.dart';
 
-Logger? logger;
+abstract class NekotonFlutter {
+  static Logger? logger;
+  static Bindings? _bindings;
 
-void setNekotonLogger(Logger nekotonLogger) => logger = nekotonLogger;
+  static void initialize([Logger? logger]) {
+    NekotonFlutter.logger = logger;
 
-Bindings? _bindings;
+    final dylib = _dlOpenPlatformSpecific();
+    final ptr = NativeApi.postCObject.cast<Void>();
 
-Bindings bindings() {
-  if (_bindings != null) {
-    return _bindings!;
-  } else {
-    throw Exception("Library isn't loaded");
+    _bindings = Bindings(dylib)..store_post_cobject(ptr);
   }
-}
 
-void loadNekotonLibrary() {
-  final dylib = _dlOpenPlatformSpecific();
-  final ptr = NativeApi.postCObject.cast<Void>();
+  static Bindings get bindings {
+    if (_bindings != null) {
+      return _bindings!;
+    } else {
+      throw Exception("Library isn't loaded");
+    }
+  }
 
-  _bindings = Bindings(dylib)..store_post_cobject(ptr);
-}
-
-DynamicLibrary _dlOpenPlatformSpecific() {
-  if (Platform.isAndroid) {
-    return DynamicLibrary.open('libnekoton_flutter.so');
-  } else if (Platform.isIOS) {
-    return DynamicLibrary.process();
-  } else {
-    throw Exception('Invalid platform');
+  static DynamicLibrary _dlOpenPlatformSpecific() {
+    if (Platform.isAndroid) {
+      return DynamicLibrary.open('libnekoton_flutter.so');
+    } else if (Platform.isIOS) {
+      return DynamicLibrary.process();
+    } else {
+      throw Exception('Invalid platform');
+    }
   }
 }

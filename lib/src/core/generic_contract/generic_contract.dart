@@ -44,7 +44,7 @@ class GenericContract implements Pointed {
   late final Stream<OnStateChangedPayload> onStateChangedStream;
   late final Stream<OnTransactionsFoundPayload> onTransactionsFoundStream;
   late final Stream<List<PendingTransaction>> pendingTransactionsStream;
-  late final Transport _transport;
+  late final Transport transport;
   late final CustomRestartableTimer _backgroundRefreshTimer;
   final _addressMemo = AsyncMemoizer<String>();
 
@@ -66,7 +66,7 @@ class GenericContract implements Pointed {
         final ptr = await clonePtr();
 
         final result = await executeAsync(
-          (port) => bindings().get_generic_contract_address(
+          (port) => NekotonFlutter.bindings.get_generic_contract_address(
             port,
             ptr,
           ),
@@ -81,7 +81,7 @@ class GenericContract implements Pointed {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => bindings().get_generic_contract_contract_state(
+      (port) => NekotonFlutter.bindings.get_generic_contract_contract_state(
         port,
         ptr,
       ),
@@ -98,7 +98,7 @@ class GenericContract implements Pointed {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => bindings().get_generic_contract_pending_transactions(
+      (port) => NekotonFlutter.bindings.get_generic_contract_pending_transactions(
         port,
         ptr,
       ),
@@ -116,7 +116,7 @@ class GenericContract implements Pointed {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => bindings().get_generic_contract_polling_method(
+      (port) => NekotonFlutter.bindings.get_generic_contract_polling_method(
         port,
         ptr,
       ),
@@ -134,7 +134,7 @@ class GenericContract implements Pointed {
     final unsignedMessagePtr = await message.clonePtr();
 
     final result = await executeAsync(
-      (port) => bindings().generic_contract_estimate_fees(
+      (port) => NekotonFlutter.bindings.generic_contract_estimate_fees(
         port,
         ptr,
         unsignedMessagePtr,
@@ -157,7 +157,7 @@ class GenericContract implements Pointed {
     final signInputStr = jsonEncode(signInput);
 
     final result = await executeAsync(
-      (port) => bindings().generic_contract_send(
+      (port) => NekotonFlutter.bindings.generic_contract_send(
         port,
         ptr,
         keystorePtr,
@@ -188,7 +188,7 @@ class GenericContract implements Pointed {
     final optionsStr = jsonEncode(options);
 
     final result = await executeAsync(
-      (port) => bindings().generic_contract_execute_transaction_locally(
+      (port) => NekotonFlutter.bindings.generic_contract_execute_transaction_locally(
         port,
         ptr,
         keystorePtr,
@@ -209,7 +209,7 @@ class GenericContract implements Pointed {
     final ptr = await clonePtr();
 
     await executeAsync(
-      (port) => bindings().generic_contract_refresh(
+      (port) => NekotonFlutter.bindings.generic_contract_refresh(
         port,
         ptr,
       ),
@@ -223,7 +223,7 @@ class GenericContract implements Pointed {
     final fromStr = jsonEncode(from);
 
     await executeAsync(
-      (port) => bindings().generic_contract_preload_transactions(
+      (port) => NekotonFlutter.bindings.generic_contract_preload_transactions(
         port,
         ptr,
         fromStr.toNativeUtf8().cast<Int8>(),
@@ -233,11 +233,11 @@ class GenericContract implements Pointed {
 
   Future<void> handleBlock(String id) async {
     final ptr = await clonePtr();
-    final transportPtr = await _transport.clonePtr();
-    final transportType = _transport.connectionData.type;
+    final transportPtr = await transport.clonePtr();
+    final transportType = transport.connectionData.type;
 
     await executeAsync(
-      (port) => bindings().generic_contract_handle_block(
+      (port) => NekotonFlutter.bindings.generic_contract_handle_block(
         port,
         ptr,
         transportPtr,
@@ -251,7 +251,7 @@ class GenericContract implements Pointed {
   Future<Pointer<Void>> clonePtr() => _lock.synchronized(() {
         if (_ptr == null) throw Exception('Generic contract use after free');
 
-        final ptr = bindings().clone_generic_contract_ptr(
+        final ptr = NekotonFlutter.bindings.clone_generic_contract_ptr(
           _ptr!,
         );
 
@@ -269,7 +269,7 @@ class GenericContract implements Pointed {
 
         _backgroundRefreshTimer.cancel();
 
-        bindings().free_generic_contract_ptr(
+        NekotonFlutter.bindings.free_generic_contract_ptr(
           _ptr!,
         );
 
@@ -281,39 +281,39 @@ class GenericContract implements Pointed {
     required String address,
   }) =>
       _lock.synchronized(() async {
+        this.transport = transport;
+
         onMessageSentStream = _onMessageSentPort.cast<String>().map((e) {
           final json = jsonDecode(e) as Map<String, dynamic>;
           final payload = OnMessageSentPayload.fromJson(json);
           return payload;
-        }).shareValue();
+        }).asBroadcastStream();
 
         onMessageExpiredStream = _onMessageExpiredPort.cast<String>().map((e) {
           final json = jsonDecode(e) as Map<String, dynamic>;
           final payload = OnMessageExpiredPayload.fromJson(json);
           return payload;
-        }).shareValue();
+        }).asBroadcastStream();
 
         onStateChangedStream = _onStateChangedPort.cast<String>().map((e) {
           final json = jsonDecode(e) as Map<String, dynamic>;
           final payload = OnStateChangedPayload.fromJson(json);
           return payload;
-        }).shareValue();
+        }).asBroadcastStream();
 
         onTransactionsFoundStream = _onTransactionsFoundPort.cast<String>().map((e) {
           final json = jsonDecode(e) as Map<String, dynamic>;
           final payload = OnTransactionsFoundPayload.fromJson(json);
           return payload;
-        }).shareValue();
+        }).asBroadcastStream();
 
         pendingTransactionsStream = _pendingTransactionsSubject.stream;
-
-        _transport = transport;
 
         final transportPtr = await transport.clonePtr();
         final transportType = transport.connectionData.type;
 
         final result = await executeAsync(
-          (port) => bindings().generic_contract_subscribe(
+          (port) => NekotonFlutter.bindings.generic_contract_subscribe(
             port,
             _onMessageSentPort.sendPort.nativePort,
             _onMessageExpiredPort.sendPort.nativePort,
@@ -337,11 +337,11 @@ class GenericContract implements Pointed {
     }
 
     try {
-      final isGql = _transport.connectionData.type == TransportType.gql;
+      final isGql = transport.connectionData.type == TransportType.gql;
       final isReliable = await pollingMethod == PollingMethod.reliable;
 
       if (isGql && isReliable) {
-        final transport = _transport as GqlTransport;
+        final transport = this.transport as GqlTransport;
         final address = await this.address;
 
         final currentBlockId = await transport.getLatestBlockId(address);
@@ -364,7 +364,7 @@ class GenericContract implements Pointed {
         _backgroundRefreshTimer.reset(duration);
       }
     } catch (err, st) {
-      logger?.w(err, err, st);
+      NekotonFlutter.logger?.e('Generic contract background refresh', err, st);
       _backgroundRefreshTimer.reset(Duration.zero);
     }
   }

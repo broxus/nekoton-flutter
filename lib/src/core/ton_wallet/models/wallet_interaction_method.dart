@@ -9,7 +9,7 @@ part 'wallet_interaction_method.g.dart';
 @Freezed(unionValueCase: FreezedUnionCase.pascal)
 class WalletInteractionMethod with _$WalletInteractionMethod {
   @HiveType(typeId: 49)
-  const factory WalletInteractionMethod.walletV3Transfer() = _WalletV3Transfer;
+  const factory WalletInteractionMethod.walletV3Transfer() = _WalletInteractionMethodWalletV3Transfer;
 
   @JsonSerializable(
     fieldRename: FieldRename.snake,

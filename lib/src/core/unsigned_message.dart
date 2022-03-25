@@ -15,7 +15,7 @@ class UnsignedMessage implements Pointed {
   Future<Pointer<Void>> clonePtr() => _lock.synchronized(() {
         if (_ptr == null) throw Exception('Unsigned message use after free');
 
-        final ptr = bindings().clone_unsigned_message_ptr(
+        final ptr = NekotonFlutter.bindings.clone_unsigned_message_ptr(
           _ptr!,
         );
 
@@ -26,7 +26,7 @@ class UnsignedMessage implements Pointed {
   Future<void> freePtr() => _lock.synchronized(() {
         if (_ptr == null) return;
 
-        bindings().free_unsigned_message_ptr(
+        NekotonFlutter.bindings.free_unsigned_message_ptr(
           _ptr!,
         );
 

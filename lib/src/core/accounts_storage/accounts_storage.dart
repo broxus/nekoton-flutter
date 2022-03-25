@@ -28,7 +28,7 @@ class AccountsStorage implements Pointed {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => bindings().get_accounts(
+      (port) => NekotonFlutter.bindings.get_accounts(
         port,
         ptr,
       ),
@@ -52,7 +52,7 @@ class AccountsStorage implements Pointed {
     final walletTypeStr = jsonEncode(walletType);
 
     final result = await executeAsync(
-      (port) => bindings().add_account(
+      (port) => NekotonFlutter.bindings.add_account(
         port,
         ptr,
         name.toNativeUtf8().cast<Int8>(),
@@ -76,7 +76,7 @@ class AccountsStorage implements Pointed {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => bindings().rename_account(
+      (port) => NekotonFlutter.bindings.rename_account(
         port,
         ptr,
         address.toNativeUtf8().cast<Int8>(),
@@ -95,7 +95,7 @@ class AccountsStorage implements Pointed {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => bindings().remove_account(
+      (port) => NekotonFlutter.bindings.remove_account(
         port,
         ptr,
         address.toNativeUtf8().cast<Int8>(),
@@ -117,7 +117,7 @@ class AccountsStorage implements Pointed {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => bindings().add_token_wallet(
+      (port) => NekotonFlutter.bindings.add_token_wallet(
         port,
         ptr,
         address.toNativeUtf8().cast<Int8>(),
@@ -141,7 +141,7 @@ class AccountsStorage implements Pointed {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => bindings().remove_token_wallet(
+      (port) => NekotonFlutter.bindings.remove_token_wallet(
         port,
         ptr,
         address.toNativeUtf8().cast<Int8>(),
@@ -161,7 +161,7 @@ class AccountsStorage implements Pointed {
     final ptr = await clonePtr();
 
     await executeAsync(
-      (port) => bindings().clear_accounts_storage(
+      (port) => NekotonFlutter.bindings.clear_accounts_storage(
         port,
         ptr,
       ),
@@ -172,7 +172,7 @@ class AccountsStorage implements Pointed {
   Future<Pointer<Void>> clonePtr() => _lock.synchronized(() {
         if (_ptr == null) throw Exception('Accounts storage use after free');
 
-        final ptr = bindings().clone_accounts_storage_ptr(
+        final ptr = NekotonFlutter.bindings.clone_accounts_storage_ptr(
           _ptr!,
         );
 
@@ -183,7 +183,7 @@ class AccountsStorage implements Pointed {
   Future<void> freePtr() => _lock.synchronized(() {
         if (_ptr == null) return;
 
-        bindings().free_accounts_storage_ptr(
+        NekotonFlutter.bindings.free_accounts_storage_ptr(
           _ptr!,
         );
 
@@ -194,7 +194,7 @@ class AccountsStorage implements Pointed {
         final storagePtr = await storage.clonePtr();
 
         final result = await executeAsync(
-          (port) => bindings().create_accounts_storage(
+          (port) => NekotonFlutter.bindings.create_accounts_storage(
             port,
             storagePtr,
           ),

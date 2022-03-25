@@ -16,7 +16,7 @@ Future<RootTokenContractDetails> getTokenRootDetails({
   final transportType = transport.connectionData.type;
 
   final result = await executeAsync(
-    (port) => bindings().get_token_root_details(
+    (port) => NekotonFlutter.bindings.get_token_root_details(
       port,
       ptr,
       transportType.index,

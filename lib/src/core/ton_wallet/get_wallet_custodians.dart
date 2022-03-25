@@ -3,9 +3,9 @@ import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
 
-import '../../../nekoton_flutter.dart';
 import '../../bindings.dart';
 import '../../ffi_utils.dart';
+import '../../transport/transport.dart';
 
 Future<List<String>> getWalletCustodians({
   required Transport transport,
@@ -15,7 +15,7 @@ Future<List<String>> getWalletCustodians({
   final transportType = transport.connectionData.type;
 
   final result = await executeAsync(
-    (port) => bindings().get_wallet_custodians(
+    (port) => NekotonFlutter.bindings.get_wallet_custodians(
       port,
       ptr,
       transportType.index,

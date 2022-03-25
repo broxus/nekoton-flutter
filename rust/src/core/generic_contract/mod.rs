@@ -7,7 +7,7 @@ use crate::{
     models::{HandleError, MatchResult},
     parse_address, runtime, send_to_result_port,
     transport::{match_transport, models::TransportType},
-    FromPtr, ToPtr, RUNTIME,
+    ToPtr, ToStringFromPtr, RUNTIME,
 };
 use nekoton::{
     core::{generic_contract::GenericContract, keystore::KeyStore, TransactionExecutionOptions},
@@ -19,7 +19,7 @@ use nekoton_utils::SimpleClock;
 use num_traits::FromPrimitive;
 use std::{
     ffi::c_void,
-    os::raw::{c_char, c_int, c_longlong, c_ulonglong},
+    os::raw::{c_char, c_int, c_longlong},
     sync::Arc,
 };
 use tokio::sync::Mutex;
@@ -37,14 +37,14 @@ pub unsafe extern "C" fn generic_contract_subscribe(
 ) {
     let transport = match_transport(transport, transport_type);
 
-    let address = address.from_ptr();
+    let address = address.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
-            on_message_sent_port: c_longlong,
-            on_message_expired_port: c_longlong,
-            on_state_changed_port: c_longlong,
-            on_transactions_found_port: c_longlong,
+            on_message_sent_port: i64,
+            on_message_expired_port: i64,
+            on_state_changed_port: i64,
+            on_transactions_found_port: i64,
             transport: Arc<dyn Transport>,
             address: String,
         ) -> Result<u64, String> {
@@ -64,9 +64,7 @@ pub unsafe extern "C" fn generic_contract_subscribe(
                 .await
                 .handle_error()?;
 
-            let generic_contract = Box::new(Arc::new(Mutex::new(generic_contract)));
-
-            let ptr = Box::into_raw(generic_contract) as c_ulonglong;
+            let ptr = Box::into_raw(Box::new(Arc::new(Mutex::new(generic_contract)))) as u64;
 
             Ok(ptr)
         }
@@ -111,7 +109,7 @@ pub unsafe extern "C" fn get_generic_contract_address(
 
     runtime!().spawn(async move {
         async fn internal_fn(generic_contract: &mut GenericContract) -> Result<u64, String> {
-            let address = generic_contract.address().to_string().to_ptr() as c_ulonglong;
+            let address = generic_contract.address().to_string().to_ptr() as u64;
 
             Ok(address)
         }
@@ -137,7 +135,7 @@ pub unsafe extern "C" fn get_generic_contract_contract_state(
             let contract_state = generic_contract.contract_state();
             let contract_state = serde_json::to_string(&contract_state)
                 .handle_error()?
-                .to_ptr() as c_ulonglong;
+                .to_ptr() as u64;
 
             Ok(contract_state)
         }
@@ -163,7 +161,7 @@ pub unsafe extern "C" fn get_generic_contract_pending_transactions(
             let pending_transactions = generic_contract.pending_transactions();
             let pending_transactions = serde_json::to_string(pending_transactions)
                 .handle_error()?
-                .to_ptr() as c_ulonglong;
+                .to_ptr() as u64;
 
             Ok(pending_transactions)
         }
@@ -189,7 +187,7 @@ pub unsafe extern "C" fn get_generic_contract_polling_method(
             let polling_method = generic_contract.polling_method();
             let polling_method = serde_json::to_string(&polling_method)
                 .handle_error()?
-                .to_ptr() as c_ulonglong;
+                .to_ptr() as u64;
 
             Ok(polling_method)
         }
@@ -262,7 +260,7 @@ pub unsafe extern "C" fn generic_contract_send(
     let message = Arc::from_raw(message) as Arc<Box<dyn UnsignedMessage>>;
     let message = (*message).clone();
 
-    let sign_input = sign_input.from_ptr();
+    let sign_input = sign_input.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -303,7 +301,7 @@ pub unsafe extern "C" fn generic_contract_send(
 
             let pending_transaction = serde_json::to_string(&pending_transaction)
                 .handle_error()?
-                .to_ptr() as c_ulonglong;
+                .to_ptr() as u64;
 
             Ok(pending_transaction)
         }
@@ -337,8 +335,8 @@ pub unsafe extern "C" fn generic_contract_execute_transaction_locally(
     let message = Arc::from_raw(message) as Arc<Box<dyn UnsignedMessage>>;
     let message = (*message).clone();
 
-    let sign_input = sign_input.from_ptr();
-    let options = options.from_ptr();
+    let sign_input = sign_input.to_string_from_ptr();
+    let options = options.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -381,8 +379,7 @@ pub unsafe extern "C" fn generic_contract_execute_transaction_locally(
                 .await
                 .handle_error()?;
 
-            let transaction =
-                serde_json::to_string(&transaction).handle_error()?.to_ptr() as c_ulonglong;
+            let transaction = serde_json::to_string(&transaction).handle_error()?.to_ptr() as u64;
 
             Ok(transaction)
         }
@@ -435,7 +432,7 @@ pub unsafe extern "C" fn generic_contract_preload_transactions(
     let generic_contract = generic_contract as *mut Mutex<GenericContract>;
     let generic_contract = Arc::from_raw(generic_contract) as Arc<Mutex<GenericContract>>;
 
-    let from = from.from_ptr();
+    let from = from.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -488,7 +485,7 @@ pub unsafe extern "C" fn generic_contract_handle_block(
         None => panic!(),
     };
 
-    let id = id.from_ptr();
+    let id = id.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(

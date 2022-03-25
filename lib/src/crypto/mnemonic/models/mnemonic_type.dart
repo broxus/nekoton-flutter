@@ -5,11 +5,11 @@ part 'mnemonic_type.g.dart';
 
 @Freezed(unionValueCase: FreezedUnionCase.pascal)
 class MnemonicType with _$MnemonicType {
-  const factory MnemonicType.legacy() = _Legacy;
+  const factory MnemonicType.legacy() = _MnemonicTypeLegacy;
 
   const factory MnemonicType.labs({
     required int id,
-  }) = _Labs;
+  }) = _MnemonicTypeLabs;
 
   factory MnemonicType.fromJson(Map<String, dynamic> json) => _$MnemonicTypeFromJson(json);
 }

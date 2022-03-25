@@ -61,10 +61,7 @@ impl TonWalletSubscriptionHandler for TonWalletSubscriptionHandlerImpl {
             .map(|e| -> TransactionWithData<TransactionAdditionalInfo> {
                 TransactionWithData::<TransactionAdditionalInfo> {
                     transaction: e.transaction.clone(),
-                    data: e
-                        .data
-                        .clone()
-                        .map(|e| TransactionAdditionalInfo::from_core(e)),
+                    data: e.data.clone().map(TransactionAdditionalInfo::from_core),
                 }
             })
             .collect::<Vec<_>>();

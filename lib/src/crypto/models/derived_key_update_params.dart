@@ -13,7 +13,7 @@ class DerivedKeyUpdateParams with _$DerivedKeyUpdateParams implements UpdateKeyI
     required String masterKey,
     required String publicKey,
     required String name,
-  }) = _RenameKey;
+  }) = _DerivedKeyUpdateParamsRenameKey;
 
   @JsonSerializable(
     fieldRename: FieldRename.snake,
@@ -23,7 +23,7 @@ class DerivedKeyUpdateParams with _$DerivedKeyUpdateParams implements UpdateKeyI
     required String masterKey,
     required Password oldPassword,
     required Password newPassword,
-  }) = _ChangePassword;
+  }) = _DerivedKeyUpdateParamsChangePassword;
 
   factory DerivedKeyUpdateParams.fromJson(Map<String, dynamic> json) => _$DerivedKeyUpdateParamsFromJson(json);
 }

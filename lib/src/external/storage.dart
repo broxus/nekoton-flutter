@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:ffi';
+import 'dart:io';
 
 import 'package:ffi/ffi.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:synchronized/synchronized.dart';
 
 import '../bindings.dart';
@@ -15,17 +15,17 @@ class Storage implements Pointed {
 
   Storage._();
 
-  static Future<Storage> create() async {
-    final storage = Storage._();
-    await storage._initialize();
-    return storage;
+  static Future<Storage> create(Directory dir) async {
+    final instance = Storage._();
+    await instance._initialize(dir);
+    return instance;
   }
 
   @override
   Future<Pointer<Void>> clonePtr() => _lock.synchronized(() {
         if (_ptr == null) throw Exception('Storage use after free');
 
-        final ptr = bindings().clone_storage_ptr(
+        final ptr = NekotonFlutter.bindings.clone_storage_ptr(
           _ptr!,
         );
 
@@ -36,18 +36,16 @@ class Storage implements Pointed {
   Future<void> freePtr() => _lock.synchronized(() {
         if (_ptr == null) return;
 
-        bindings().free_storage_ptr(
+        NekotonFlutter.bindings.free_storage_ptr(
           _ptr!,
         );
 
         _ptr = null;
       });
 
-  Future<void> _initialize() async {
-    final dir = await getApplicationDocumentsDirectory();
-
+  Future<void> _initialize(Directory dir) async {
     final result = executeSync(
-      () => bindings().create_storage(
+      () => NekotonFlutter.bindings.create_storage(
         dir.path.toNativeUtf8().cast<Int8>(),
       ),
     );

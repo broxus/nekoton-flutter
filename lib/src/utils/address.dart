@@ -11,7 +11,7 @@ String packStdSmcAddr({
   required bool bounceable,
 }) {
   final result = executeSync(
-    () => bindings().pack_std_smc_addr(
+    () => NekotonFlutter.bindings.pack_std_smc_addr(
       base64Url ? 1 : 0,
       addr.toNativeUtf8().cast<Int8>(),
       bounceable ? 1 : 0,
@@ -28,7 +28,7 @@ String unpackStdSmcAddr({
   required bool base64Url,
 }) {
   final result = executeSync(
-    () => bindings().unpack_std_smc_addr(
+    () => NekotonFlutter.bindings.unpack_std_smc_addr(
       packed.toNativeUtf8().cast<Int8>(),
       base64Url ? 1 : 0,
     ),
@@ -41,7 +41,7 @@ String unpackStdSmcAddr({
 
 bool validateAddress(String address) {
   final result = executeSync(
-    () => bindings().validate_address(
+    () => NekotonFlutter.bindings.validate_address(
       address.toNativeUtf8().cast<Int8>(),
     ),
   );
@@ -53,7 +53,7 @@ bool validateAddress(String address) {
 
 String repackAddress(String address) {
   final result = executeSync(
-    () => bindings().repack_address(
+    () => NekotonFlutter.bindings.repack_address(
       address.toNativeUtf8().cast<Int8>(),
     ),
   );

@@ -8,6 +8,8 @@ environment:
   flutter: '>=2.10.1'
 
 dependencies:
+  async: ^2.8.2
+  collection: ^1.15.0
   ffi: ^1.1.2
   flutter:
     sdk: flutter
@@ -16,7 +18,6 @@ dependencies:
   hive_flutter: ^1.1.0
   json_annotation: ^4.4.0
   logger: ^1.1.0
-  path_provider: ^2.0.9
   recase: ^4.0.0
   rxdart: ^0.27.3
   synchronized: ^3.0.0

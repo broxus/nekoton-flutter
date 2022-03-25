@@ -3,9 +3,10 @@ import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
 
-import '../../../nekoton_flutter.dart';
 import '../../bindings.dart';
 import '../../ffi_utils.dart';
+import '../../transport/transport.dart';
+import 'models/existing_wallet_info.dart';
 
 Future<ExistingWalletInfo> getExistingWalletInfo({
   required Transport transport,
@@ -15,7 +16,7 @@ Future<ExistingWalletInfo> getExistingWalletInfo({
   final transportType = transport.connectionData.type;
 
   final result = await executeAsync(
-    (port) => bindings().get_existing_wallet_info(
+    (port) => NekotonFlutter.bindings.get_existing_wallet_info(
       port,
       ptr,
       transportType.index,

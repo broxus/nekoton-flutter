@@ -1,3 +1,9 @@
+#![allow(
+    clippy::missing_safety_doc,
+    clippy::too_many_arguments,
+    clippy::large_enum_variant
+)]
+
 pub mod core;
 pub mod crypto;
 pub mod external;
@@ -11,7 +17,7 @@ use allo_isolate::{
 };
 use anyhow::Result;
 use lazy_static::lazy_static;
-use models::{ExecutionResult, FromPtr, HandleError, ToPtr};
+use models::{ExecutionResult, HandleError, ToPtr, ToStringFromPtr};
 use std::{
     ffi::c_void,
     intrinsics::transmute,
@@ -45,6 +51,7 @@ pub unsafe extern "C" fn store_post_cobject(ptr: *mut c_void) {
         *mut c_void,
         unsafe extern "C" fn(port_id: DartPort, message: *mut DartCObject) -> bool,
     >(ptr);
+
     allo_isolate::store_dart_post_cobject(ptr);
 }
 
@@ -54,14 +61,12 @@ pub fn send_to_result_port(port: c_longlong, result: *mut c_void) {
 
 #[no_mangle]
 pub unsafe extern "C" fn free_cstring(str: *mut c_char) {
-    str.from_ptr();
+    str.to_string_from_ptr();
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn free_execution_result(ptr: *mut c_void) {
-    let result = ptr as *mut ExecutionResult;
-
-    Box::from_raw(result);
+    Box::from_raw(ptr as *mut ExecutionResult);
 }
 
 pub fn parse_public_key(public_key: &str) -> Result<ed25519_dalek::PublicKey, String> {

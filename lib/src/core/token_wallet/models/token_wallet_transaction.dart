@@ -14,34 +14,34 @@ class TokenWalletTransaction with _$TokenWalletTransaction {
   @HiveType(typeId: 15)
   const factory TokenWalletTransaction.incomingTransfer({
     @HiveField(0) required TokenIncomingTransfer tokenIncomingTransfer,
-  }) = _IncomingTransfer;
+  }) = _TokenWalletTransactionIncomingTransfer;
 
   @JsonSerializable(fieldRename: FieldRename.snake)
   @HiveType(typeId: 16)
   const factory TokenWalletTransaction.outgoingTransfer({
     @HiveField(0) required TokenOutgoingTransfer tokenOutgoingTransfer,
-  }) = _OutgoingTransfer;
+  }) = _TokenWalletTransactionOutgoingTransfer;
 
   @JsonSerializable(fieldRename: FieldRename.snake)
   @HiveType(typeId: 17)
   const factory TokenWalletTransaction.swapBack({
     @HiveField(0) required TokenSwapBack tokenSwapBack,
-  }) = _SwapBack;
+  }) = _TokenWalletTransactionSwapBack;
 
   @HiveType(typeId: 18)
   const factory TokenWalletTransaction.accept({
     @HiveField(0) required String value,
-  }) = _Accept;
+  }) = _TokenWalletTransactionAccept;
 
   @HiveType(typeId: 19)
   const factory TokenWalletTransaction.transferBounced({
     @HiveField(0) required String value,
-  }) = _TransferBounced;
+  }) = _TokenWalletTransactionTransferBounced;
 
   @HiveType(typeId: 20)
   const factory TokenWalletTransaction.swapBackBounced({
     @HiveField(0) required String value,
-  }) = _SwapBackBounced;
+  }) = _TokenWalletTransactionSwapBackBounced;
 
   factory TokenWalletTransaction.fromJson(Map<String, dynamic> json) => _$TokenWalletTransactionFromJson(json);
 }

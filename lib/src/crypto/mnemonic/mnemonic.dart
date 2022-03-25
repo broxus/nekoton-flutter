@@ -12,7 +12,7 @@ import 'models/mnemonic_type.dart';
 GeneratedKey generateKey(MnemonicType mnemonicType) {
   final mnemonicTypeStr = jsonEncode(mnemonicType);
 
-  final result = executeSync(() => bindings().generate_key(mnemonicTypeStr.toNativeUtf8().cast<Int8>()));
+  final result = executeSync(() => NekotonFlutter.bindings.generate_key(mnemonicTypeStr.toNativeUtf8().cast<Int8>()));
 
   final string = cStringToDart(result);
   final json = jsonDecode(string) as Map<String, dynamic>;
@@ -22,7 +22,7 @@ GeneratedKey generateKey(MnemonicType mnemonicType) {
 }
 
 List<String> getHints(String input) {
-  final result = executeSync(() => bindings().get_hints(input.toNativeUtf8().cast<Int8>()));
+  final result = executeSync(() => NekotonFlutter.bindings.get_hints(input.toNativeUtf8().cast<Int8>()));
 
   final string = cStringToDart(result);
   final list = jsonDecode(string) as List;
@@ -38,7 +38,7 @@ Keypair deriveFromPhrase({
   final mnemonicTypeStr = jsonEncode(mnemonicType);
 
   final result = executeSync(
-    () => bindings().derive_from_phrase(
+    () => NekotonFlutter.bindings.derive_from_phrase(
       phraseStr.toNativeUtf8().cast<Int8>(),
       mnemonicTypeStr.toNativeUtf8().cast<Int8>(),
     ),

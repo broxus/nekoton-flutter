@@ -17,7 +17,7 @@ class MultisigTransaction with _$MultisigTransaction {
   @HiveType(typeId: 35)
   const factory MultisigTransaction.send({
     @HiveField(0) required MultisigSendTransaction multisigSendTransaction,
-  }) = _Send;
+  }) = _MultisigTransactionSend;
 
   @JsonSerializable(
     fieldRename: FieldRename.snake,
@@ -26,7 +26,7 @@ class MultisigTransaction with _$MultisigTransaction {
   @HiveType(typeId: 36)
   const factory MultisigTransaction.submit({
     @HiveField(0) required MultisigSubmitTransaction multisigSubmitTransaction,
-  }) = _Submit;
+  }) = _MultisigTransactionSubmit;
 
   @JsonSerializable(
     fieldRename: FieldRename.snake,
@@ -35,7 +35,7 @@ class MultisigTransaction with _$MultisigTransaction {
   @HiveType(typeId: 37)
   const factory MultisigTransaction.confirm({
     @HiveField(0) required MultisigConfirmTransaction multisigConfirmTransaction,
-  }) = _Confirm;
+  }) = _MultisigTransactionConfirm;
 
   factory MultisigTransaction.fromJson(Map<String, dynamic> json) => _$MultisigTransactionFromJson(json);
 }

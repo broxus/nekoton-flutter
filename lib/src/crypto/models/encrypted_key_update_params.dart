@@ -12,7 +12,7 @@ class EncryptedKeyUpdateParams with _$EncryptedKeyUpdateParams implements Update
   const factory EncryptedKeyUpdateParams.rename({
     required String publicKey,
     required String name,
-  }) = _Rename;
+  }) = _EncryptedKeyUpdateParamsRename;
 
   @JsonSerializable(
     fieldRename: FieldRename.snake,
@@ -22,7 +22,7 @@ class EncryptedKeyUpdateParams with _$EncryptedKeyUpdateParams implements Update
     required String publicKey,
     required Password oldPassword,
     required Password newPassword,
-  }) = _ChangePassword;
+  }) = _EncryptedKeyUpdateParamsChangePassword;
 
   factory EncryptedKeyUpdateParams.fromJson(Map<String, dynamic> json) => _$EncryptedKeyUpdateParamsFromJson(json);
 }

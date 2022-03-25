@@ -19,22 +19,22 @@ class TransactionAdditionalInfo with _$TransactionAdditionalInfo {
   @HiveType(typeId: 42)
   const factory TransactionAdditionalInfo.dePoolOnRoundComplete({
     @HiveField(0) required DePoolOnRoundCompleteNotification notification,
-  }) = _DePoolOnRoundComplete;
+  }) = _TransactionAdditionalInfoDePoolOnRoundComplete;
 
   @HiveType(typeId: 43)
   const factory TransactionAdditionalInfo.dePoolReceiveAnswer({
     @HiveField(0) required DePoolReceiveAnswerNotification notification,
-  }) = _DePoolReceiveAnswer;
+  }) = _TransactionAdditionalInfoDePoolReceiveAnswer;
 
   @HiveType(typeId: 44)
   const factory TransactionAdditionalInfo.tokenWalletDeployed({
     @HiveField(0) required TokenWalletDeployedNotification notification,
-  }) = _TokenWalletDeployed;
+  }) = _TransactionAdditionalInfoTokenWalletDeployed;
 
   @HiveType(typeId: 47)
   const factory TransactionAdditionalInfo.walletInteraction({
     @HiveField(0) required WalletInteractionInfo info,
-  }) = _WalletInteraction;
+  }) = _TransactionAdditionalInfoWalletInteraction;
 
   factory TransactionAdditionalInfo.fromJson(Map<String, dynamic> json) => _$TransactionAdditionalInfoFromJson(json);
 }

@@ -4,7 +4,7 @@ pub mod models;
 
 use self::models::TransportType;
 use crate::{
-    models::{FromPtr, HandleError, MatchResult, ToPtr},
+    models::{HandleError, MatchResult, ToPtr, ToStringFromPtr},
     parse_address, runtime, send_to_result_port,
     transport::models::{FullContractState, TransactionsList},
     RUNTIME,
@@ -18,7 +18,7 @@ use num_traits::FromPrimitive;
 use std::{
     convert::TryFrom,
     ffi::c_void,
-    os::raw::{c_char, c_int, c_longlong, c_uchar, c_ulonglong},
+    os::raw::{c_char, c_int, c_longlong, c_uchar},
     sync::Arc,
 };
 
@@ -45,7 +45,7 @@ pub unsafe extern "C" fn get_full_account_state(
 ) {
     let transport = match_transport(transport, transport_type);
 
-    let address = address.from_ptr();
+    let address = address.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -89,7 +89,7 @@ pub unsafe extern "C" fn get_full_account_state(
 
             let full_contract_state = serde_json::to_string(&full_contract_state)
                 .handle_error()?
-                .to_ptr() as c_ulonglong;
+                .to_ptr() as u64;
 
             Ok(full_contract_state)
         }
@@ -111,9 +111,9 @@ pub unsafe extern "C" fn get_transactions(
 ) {
     let transport = match_transport(transport, transport_type);
 
-    let address = address.from_ptr();
+    let address = address.to_string_from_ptr();
     let continuation = match !continuation.is_null() {
-        true => Some(continuation.from_ptr()),
+        true => Some(continuation.to_string_from_ptr()),
         false => None,
     };
 
@@ -174,7 +174,7 @@ pub unsafe extern "C" fn get_transactions(
             };
             let transactions_list = serde_json::to_string(&transactions_list)
                 .handle_error()?
-                .to_ptr() as c_ulonglong;
+                .to_ptr() as u64;
 
             Ok(transactions_list)
         }

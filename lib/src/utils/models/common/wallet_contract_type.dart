@@ -26,4 +26,7 @@ enum WalletContractType {
   @HiveField(6)
   @JsonValue('WalletV3')
   walletV3,
+  @HiveField(7)
+  @JsonValue('HighloadWalletV2')
+  highloadWalletV2,
 }

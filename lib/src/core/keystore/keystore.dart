@@ -36,7 +36,7 @@ class Keystore implements Pointed {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => bindings().get_entries(
+      (port) => NekotonFlutter.bindings.get_entries(
         port,
         ptr,
       ),
@@ -55,7 +55,7 @@ class Keystore implements Pointed {
     final createKeyInputStr = jsonEncode(createKeyInput);
 
     final result = await executeAsync(
-      (port) => bindings().add_key(
+      (port) => NekotonFlutter.bindings.add_key(
         port,
         ptr,
         createKeyInputStr.toNativeUtf8().cast<Int8>(),
@@ -74,7 +74,7 @@ class Keystore implements Pointed {
     final updateKeyInputStr = jsonEncode(updateKeyInput);
 
     final result = await executeAsync(
-      (port) => bindings().update_key(
+      (port) => NekotonFlutter.bindings.update_key(
         port,
         ptr,
         updateKeyInputStr.toNativeUtf8().cast<Int8>(),
@@ -93,7 +93,7 @@ class Keystore implements Pointed {
     final exportKeyInputStr = jsonEncode(exportKeyInput);
 
     final result = await executeAsync(
-      (port) => bindings().export_key(
+      (port) => NekotonFlutter.bindings.export_key(
         port,
         ptr,
         exportKeyInputStr.toNativeUtf8().cast<Int8>(),
@@ -121,7 +121,7 @@ class Keystore implements Pointed {
     final signInputStr = jsonEncode(signInput);
 
     final result = await executeAsync(
-      (port) => bindings().check_key_password(
+      (port) => NekotonFlutter.bindings.check_key_password(
         port,
         ptr,
         signInputStr.toNativeUtf8().cast<Int8>(),
@@ -137,7 +137,7 @@ class Keystore implements Pointed {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => bindings().remove_key(
+      (port) => NekotonFlutter.bindings.remove_key(
         port,
         ptr,
         publicKey.toNativeUtf8().cast<Int8>(),
@@ -155,7 +155,7 @@ class Keystore implements Pointed {
     final ptr = await clonePtr();
 
     await executeAsync(
-      (port) => bindings().clear_keystore(
+      (port) => NekotonFlutter.bindings.clear_keystore(
         port,
         ptr,
       ),
@@ -166,7 +166,7 @@ class Keystore implements Pointed {
   Future<Pointer<Void>> clonePtr() => _lock.synchronized(() {
         if (_ptr == null) throw Exception('Keystore use after free');
 
-        final ptr = bindings().clone_keystore_ptr(
+        final ptr = NekotonFlutter.bindings.clone_keystore_ptr(
           _ptr!,
         );
 
@@ -177,7 +177,7 @@ class Keystore implements Pointed {
   Future<void> freePtr() => _lock.synchronized(() {
         if (_ptr == null) return;
 
-        bindings().free_keystore_ptr(
+        NekotonFlutter.bindings.free_keystore_ptr(
           _ptr!,
         );
 
@@ -188,7 +188,7 @@ class Keystore implements Pointed {
         final storagePtr = await storage.clonePtr();
 
         final result = await executeAsync(
-          (port) => bindings().create_keystore(
+          (port) => NekotonFlutter.bindings.create_keystore(
             port,
             storagePtr,
           ),

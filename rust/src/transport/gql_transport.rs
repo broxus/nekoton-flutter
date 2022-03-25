@@ -1,7 +1,7 @@
 use crate::{
     external::gql_connection::GqlConnectionImpl,
     models::{HandleError, MatchResult},
-    parse_address, runtime, send_to_result_port, FromPtr, ToPtr, RUNTIME,
+    parse_address, runtime, send_to_result_port, ToPtr, ToStringFromPtr, RUNTIME,
 };
 use nekoton::transport::gql::GqlTransport;
 use nekoton_transport::gql::{GqlClient, GqlNetworkSettings};
@@ -15,8 +15,9 @@ use std::{
 
 #[no_mangle]
 pub unsafe extern "C" fn create_gql_transport(settings: *mut c_char) -> *mut c_void {
-    fn internal_fn(settings: *mut c_char) -> Result<u64, String> {
-        let settings = settings.from_ptr();
+    let settings = settings.to_string_from_ptr();
+
+    fn internal_fn(settings: String) -> Result<u64, String> {
         let settings = serde_json::from_str::<GqlNetworkSettings>(&settings).handle_error()?;
 
         let client = GqlClient::new(settings).handle_error()?;
@@ -25,9 +26,8 @@ pub unsafe extern "C" fn create_gql_transport(settings: *mut c_char) -> *mut c_v
         let gql_connection = Arc::new(gql_connection);
 
         let gql_transport = GqlTransport::new(gql_connection);
-        let gql_transport = Box::new(Arc::new(gql_transport));
 
-        let ptr = Box::into_raw(gql_transport) as *mut c_void as c_ulonglong;
+        let ptr = Box::into_raw(Box::new(Arc::new(gql_transport))) as *mut c_void as u64;
 
         Ok(ptr)
     }
@@ -59,7 +59,7 @@ pub unsafe extern "C" fn get_latest_block_id(
     let gql_transport = gql_transport as *mut GqlTransport;
     let gql_transport = Arc::from_raw(gql_transport);
 
-    let address = address.from_ptr();
+    let address = address.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -73,7 +73,7 @@ pub unsafe extern "C" fn get_latest_block_id(
                 .await
                 .handle_error()?
                 .id
-                .to_ptr() as c_ulonglong;
+                .to_ptr() as u64;
 
             Ok(latest_block_id)
         }
@@ -95,8 +95,8 @@ pub unsafe extern "C" fn wait_for_next_block_id(
     let gql_transport = gql_transport as *mut GqlTransport;
     let gql_transport = Arc::from_raw(gql_transport);
 
-    let current_block_id = current_block_id.from_ptr();
-    let address = address.from_ptr();
+    let current_block_id = current_block_id.to_string_from_ptr();
+    let address = address.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -113,7 +113,7 @@ pub unsafe extern "C" fn wait_for_next_block_id(
                 .wait_for_next_block(&current_block_id, &address, timeout)
                 .await
                 .handle_error()?
-                .to_ptr() as c_ulonglong;
+                .to_ptr() as u64;
 
             Ok(next_block_id)
         }

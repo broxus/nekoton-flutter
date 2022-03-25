@@ -6,7 +6,7 @@ use crate::{
         DecodedEvent, DecodedInput, DecodedOutput, DecodedTransaction, DecodedTransactionEvent,
         ExecutionOutput, SplittedTvc,
     },
-    FromPtr, ToPtr,
+    ToPtr, ToStringFromPtr,
 };
 use nekoton::core::{
     models::{Expiration, Transaction},
@@ -18,7 +18,7 @@ use nekoton_utils::SimpleClock;
 use std::{
     borrow::Cow,
     ffi::c_void,
-    os::raw::{c_char, c_schar, c_uint, c_ulonglong},
+    os::raw::{c_char, c_schar, c_uint},
     sync::Arc,
     u64,
 };
@@ -31,10 +31,10 @@ pub unsafe extern "C" fn run_local(
     method: *mut c_char,
     input: *mut c_char,
 ) -> *mut c_void {
-    let account_stuff_boc = account_stuff_boc.from_ptr();
-    let contract_abi = contract_abi.from_ptr();
-    let method = method.from_ptr();
-    let input = input.from_ptr();
+    let account_stuff_boc = account_stuff_boc.to_string_from_ptr();
+    let contract_abi = contract_abi.to_string_from_ptr();
+    let method = method.to_string_from_ptr();
+    let input = input.to_string_from_ptr();
 
     fn internal_fn(
         account_stuff_boc: String,
@@ -65,7 +65,7 @@ pub unsafe extern "C" fn run_local(
         };
         let execution_output = serde_json::to_string(&execution_output)
             .handle_error()?
-            .to_ptr() as c_ulonglong;
+            .to_ptr() as u64;
 
         Ok(execution_output)
     }
@@ -81,13 +81,13 @@ pub unsafe extern "C" fn get_expected_address(
     public_key: *mut c_char,
     init_data: *mut c_char,
 ) -> *mut c_void {
-    let tvc = tvc.from_ptr();
-    let contract_abi = contract_abi.from_ptr();
+    let tvc = tvc.to_string_from_ptr();
+    let contract_abi = contract_abi.to_string_from_ptr();
     let public_key = match !public_key.is_null() {
-        true => Some(public_key.from_ptr()),
+        true => Some(public_key.to_string_from_ptr()),
         false => None,
     };
-    let init_data = init_data.from_ptr();
+    let init_data = init_data.to_string_from_ptr();
 
     fn internal_fn(
         tvc: String,
@@ -118,7 +118,7 @@ pub unsafe extern "C" fn get_expected_address(
             address: hash.into(),
         })
         .to_string()
-        .to_ptr() as c_ulonglong;
+        .to_ptr() as u64;
 
         Ok(result)
     }
@@ -128,8 +128,8 @@ pub unsafe extern "C" fn get_expected_address(
 
 #[no_mangle]
 pub unsafe extern "C" fn pack_into_cell(params: *mut c_char, tokens: *mut c_char) -> *mut c_void {
-    let params = params.from_ptr();
-    let tokens = tokens.from_ptr();
+    let params = params.to_string_from_ptr();
+    let tokens = tokens.to_string_from_ptr();
 
     fn internal_fn(params: String, tokens: String) -> Result<u64, String> {
         let params = parse_params_list(&params)?;
@@ -139,7 +139,7 @@ pub unsafe extern "C" fn pack_into_cell(params: *mut c_char, tokens: *mut c_char
         let cell = nekoton_abi::pack_into_cell(&tokens).handle_error()?;
         let bytes = ton_types::serialize_toc(&cell).handle_error()?;
 
-        let result = base64::encode(&bytes).to_ptr() as c_ulonglong;
+        let result = base64::encode(&bytes).to_ptr() as u64;
 
         Ok(result)
     }
@@ -153,20 +153,19 @@ pub unsafe extern "C" fn unpack_from_cell(
     boc: *mut c_char,
     allow_partial: c_uint,
 ) -> *mut c_void {
-    let params = params.from_ptr();
-    let boc = boc.from_ptr();
+    let params = params.to_string_from_ptr();
+    let boc = boc.to_string_from_ptr();
     let allow_partial = allow_partial != 0;
 
     fn internal_fn(params: String, boc: String, allow_partial: bool) -> Result<u64, String> {
         let params = parse_params_list(&params)?;
         let body = base64::decode(boc).handle_error()?;
-        let cell = ton_types::deserialize_tree_of_cells(&mut std::io::Cursor::new(&body))
-            .handle_error()?;
+        let cell = ton_types::deserialize_tree_of_cells(&mut body.as_slice()).handle_error()?;
         let result = nekoton_abi::unpack_from_cell(&params, cell.into(), allow_partial)
             .handle_error()
             .and_then(|tokens| nekoton_abi::make_abi_tokens(&tokens).handle_error())?;
 
-        let result = serde_json::to_string(&result).handle_error()?.to_ptr() as c_ulonglong;
+        let result = serde_json::to_string(&result).handle_error()?.to_ptr() as u64;
 
         Ok(result)
     }
@@ -176,13 +175,13 @@ pub unsafe extern "C" fn unpack_from_cell(
 
 #[no_mangle]
 pub unsafe extern "C" fn extract_public_key(boc: *mut c_char) -> *mut c_void {
-    let boc = boc.from_ptr();
+    let boc = boc.to_string_from_ptr();
 
     fn internal_fn(boc: String) -> Result<u64, String> {
         let public_key = parse_account_stuff(&boc)
             .and_then(|x| nekoton_abi::extract_public_key(&x).handle_error())
             .map(hex::encode)?
-            .to_ptr() as c_ulonglong;
+            .to_ptr() as u64;
 
         Ok(public_key)
     }
@@ -192,17 +191,17 @@ pub unsafe extern "C" fn extract_public_key(boc: *mut c_char) -> *mut c_void {
 
 #[no_mangle]
 pub unsafe extern "C" fn code_to_tvc(code: *mut c_char) -> *mut c_void {
-    let code = code.from_ptr();
+    let code = code.to_string_from_ptr();
 
     fn internal_fn(code: String) -> Result<u64, String> {
         let cell = base64::decode(code).handle_error()?;
-        let result = ton_types::deserialize_tree_of_cells(&mut std::io::Cursor::new(cell))
+        let result = ton_types::deserialize_tree_of_cells(&mut cell.as_slice())
             .handle_error()
             .and_then(|x| nekoton_abi::code_to_tvc(x).handle_error())
             .and_then(|x| x.serialize().handle_error())
             .and_then(|x| ton_types::serialize_toc(&x).handle_error())
             .map(base64::encode)?
-            .to_ptr() as c_ulonglong;
+            .to_ptr() as u64;
 
         Ok(result)
     }
@@ -212,7 +211,7 @@ pub unsafe extern "C" fn code_to_tvc(code: *mut c_char) -> *mut c_void {
 
 #[no_mangle]
 pub unsafe extern "C" fn split_tvc(tvc: *mut c_char) -> *mut c_void {
-    let tvc = tvc.from_ptr();
+    let tvc = tvc.to_string_from_ptr();
 
     fn internal_fn(tvc: String) -> Result<u64, String> {
         let state_init = ton_block::StateInit::construct_from_base64(&tvc).handle_error()?;
@@ -234,7 +233,7 @@ pub unsafe extern "C" fn split_tvc(tvc: *mut c_char) -> *mut c_void {
         };
 
         let result = SplittedTvc { data, code };
-        let result = serde_json::to_string(&result).handle_error()?.to_ptr() as c_ulonglong;
+        let result = serde_json::to_string(&result).handle_error()?.to_ptr() as u64;
 
         Ok(result)
     }
@@ -248,9 +247,9 @@ pub unsafe extern "C" fn encode_internal_input(
     method: *mut c_char,
     input: *mut c_char,
 ) -> *mut c_void {
-    let contract_abi = contract_abi.from_ptr();
-    let method = method.from_ptr();
-    let input = input.from_ptr();
+    let contract_abi = contract_abi.to_string_from_ptr();
+    let method = method.to_string_from_ptr();
+    let input = input.to_string_from_ptr();
 
     fn internal_fn(contract_abi: String, method: String, input: String) -> Result<u64, String> {
         let contract_abi = parse_contract_abi(&contract_abi)?;
@@ -263,7 +262,7 @@ pub unsafe extern "C" fn encode_internal_input(
             .and_then(|value| value.into_cell())
             .handle_error()?;
         let body = ton_types::serialize_toc(&body).handle_error()?;
-        let result = base64::encode(&body).to_ptr() as c_ulonglong;
+        let result = base64::encode(&body).to_ptr() as u64;
 
         Ok(result)
     }
@@ -278,9 +277,9 @@ pub unsafe extern "C" fn decode_input(
     method: *mut c_char,
     internal: c_uint,
 ) -> *mut c_void {
-    let message_body = message_body.from_ptr();
-    let contract_abi = contract_abi.from_ptr();
-    let method = method.from_ptr();
+    let message_body = message_body.to_string_from_ptr();
+    let contract_abi = contract_abi.to_string_from_ptr();
+    let method = method.to_string_from_ptr();
     let internal = internal != 0;
 
     fn internal_fn(
@@ -304,9 +303,9 @@ pub unsafe extern "C" fn decode_input(
                 };
                 serde_json::to_string(&result).handle_error()?
             }
-            None => get_null_string()?,
+            None => null_string()?,
         }
-        .to_ptr() as c_ulonglong;
+        .to_ptr() as u64;
 
         Ok(result)
     }
@@ -320,9 +319,9 @@ pub unsafe extern "C" fn decode_output(
     contract_abi: *mut c_char,
     method: *mut c_char,
 ) -> *mut c_void {
-    let message_body = message_body.from_ptr();
-    let contract_abi = contract_abi.from_ptr();
-    let method = method.from_ptr();
+    let message_body = message_body.to_string_from_ptr();
+    let contract_abi = contract_abi.to_string_from_ptr();
+    let method = method.to_string_from_ptr();
 
     fn internal_fn(
         message_body: String,
@@ -344,9 +343,9 @@ pub unsafe extern "C" fn decode_output(
                 };
                 serde_json::to_string(&result).handle_error()?
             }
-            None => get_null_string()?,
+            None => null_string()?,
         }
-        .to_ptr() as c_ulonglong;
+        .to_ptr() as u64;
 
         Ok(result)
     }
@@ -360,9 +359,9 @@ pub unsafe extern "C" fn decode_event(
     contract_abi: *mut c_char,
     event: *mut c_char,
 ) -> *mut c_void {
-    let message_body = message_body.from_ptr();
-    let contract_abi = contract_abi.from_ptr();
-    let event = event.from_ptr();
+    let message_body = message_body.to_string_from_ptr();
+    let contract_abi = contract_abi.to_string_from_ptr();
+    let event = event.to_string_from_ptr();
 
     fn internal_fn(
         message_body: String,
@@ -384,9 +383,9 @@ pub unsafe extern "C" fn decode_event(
                 };
                 serde_json::to_string(&result).handle_error()?
             }
-            None => get_null_string()?,
+            None => null_string()?,
         }
-        .to_ptr() as c_ulonglong;
+        .to_ptr() as u64;
 
         Ok(result)
     }
@@ -400,9 +399,9 @@ pub unsafe extern "C" fn decode_transaction(
     contract_abi: *mut c_char,
     method: *mut c_char,
 ) -> *mut c_void {
-    let transaction = transaction.from_ptr();
-    let contract_abi = contract_abi.from_ptr();
-    let method = method.from_ptr();
+    let transaction = transaction.to_string_from_ptr();
+    let contract_abi = contract_abi.to_string_from_ptr();
+    let method = method.to_string_from_ptr();
 
     fn internal_fn(
         transaction: String,
@@ -417,14 +416,14 @@ pub unsafe extern "C" fn decode_transaction(
 
         let in_msg_body = match transaction.in_msg.body {
             Some(body) => body.data.into(),
-            None => return Ok(get_null_string()?.to_ptr() as c_ulonglong),
+            None => return Ok(null_string()?.to_ptr() as u64),
         };
 
         let method = match guess_method_by_input(&contract_abi, &in_msg_body, &method, internal)
             .handle_error()?
         {
             Some(method) => method,
-            None => return Ok(get_null_string()?.to_ptr() as c_ulonglong),
+            None => return Ok(null_string()?.to_ptr() as u64),
         };
 
         let input = method.decode_input(in_msg_body, internal).handle_error()?;
@@ -433,9 +432,8 @@ pub unsafe extern "C" fn decode_transaction(
             .out_msgs
             .iter()
             .filter_map(|message| {
-                match message.dst.clone() {
-                    Some(_) => return None,
-                    _ => {}
+                if message.dst.clone().is_some() {
+                    return None;
                 };
 
                 Some(match message.body.clone() {
@@ -455,7 +453,7 @@ pub unsafe extern "C" fn decode_transaction(
             input,
             output,
         };
-        let result = serde_json::to_string(&result).handle_error()?.to_ptr() as c_ulonglong;
+        let result = serde_json::to_string(&result).handle_error()?.to_ptr() as u64;
 
         Ok(result)
     }
@@ -468,8 +466,8 @@ pub unsafe extern "C" fn decode_transaction_events(
     transaction: *mut c_char,
     contract_abi: *mut c_char,
 ) -> *mut c_void {
-    let transaction = transaction.from_ptr();
-    let contract_abi = contract_abi.from_ptr();
+    let transaction = transaction.to_string_from_ptr();
+    let contract_abi = contract_abi.to_string_from_ptr();
 
     fn internal_fn(transaction: String, contract_abi: String) -> Result<u64, String> {
         let transaction = parse_transaction(&transaction)?;
@@ -479,9 +477,8 @@ pub unsafe extern "C" fn decode_transaction_events(
             .out_msgs
             .iter()
             .filter_map(|message| {
-                match message.dst.clone() {
-                    Some(_) => return None,
-                    _ => {}
+                if message.dst.clone().is_some() {
+                    return None;
                 };
 
                 Some(match message.body.clone() {
@@ -508,7 +505,7 @@ pub unsafe extern "C" fn decode_transaction_events(
             })
             .collect::<Result<Vec<_>, String>>()?;
 
-        let result = serde_json::to_string(&events).handle_error()?.to_ptr() as c_ulonglong;
+        let result = serde_json::to_string(&events).handle_error()?.to_ptr() as u64;
 
         Ok(result)
     }
@@ -518,13 +515,13 @@ pub unsafe extern "C" fn decode_transaction_events(
 
 #[no_mangle]
 pub unsafe extern "C" fn parse_known_payload(payload: *mut c_char) -> *mut c_void {
-    let payload = payload.from_ptr();
+    let payload = payload.to_string_from_ptr();
 
     fn internal_fn(payload: String) -> Result<u64, String> {
         let payload = parse_slice(&payload)?;
         let known_payload = parse_payload(payload);
-        let result = known_payload.map(|e| KnownPayload::from_core(e));
-        let result = serde_json::to_string(&result).handle_error()?.to_ptr() as c_ulonglong;
+        let result = known_payload.map(KnownPayload::from_core);
+        let result = serde_json::to_string(&result).handle_error()?.to_ptr() as u64;
 
         Ok(result)
     }
@@ -542,15 +539,15 @@ pub unsafe extern "C" fn create_external_message(
     public_key: *mut c_char,
     timeout: c_uint,
 ) -> *mut c_void {
-    let dst = dst.from_ptr();
-    let contract_abi = contract_abi.from_ptr();
-    let method = method.from_ptr();
+    let dst = dst.to_string_from_ptr();
+    let contract_abi = contract_abi.to_string_from_ptr();
+    let method = method.to_string_from_ptr();
     let state_init = match !state_init.is_null() {
-        true => Some(state_init.from_ptr()),
+        true => Some(state_init.to_string_from_ptr()),
         false => None,
     };
-    let input = input.from_ptr();
-    let public_key = public_key.from_ptr();
+    let input = input.to_string_from_ptr();
+    let public_key = public_key.to_string_from_ptr();
 
     fn internal_fn(
         dst: String,
@@ -594,8 +591,7 @@ pub unsafe extern "C" fn create_external_message(
         )
         .handle_error()?;
 
-        let message = Box::new(Arc::new(message));
-        let ptr = Box::into_raw(message) as c_ulonglong;
+        let ptr = Box::into_raw(Box::new(Arc::new(message))) as u64;
 
         Ok(ptr)
     }
@@ -625,20 +621,19 @@ fn parse_params_list(data: &str) -> Result<Vec<ton_abi::Param>, String> {
 }
 
 fn parse_abi_tokens_value(data: &str) -> Result<serde_json::Value, String> {
-    serde_json::from_str::<serde_json::Value>(&data).handle_error()
+    serde_json::from_str::<serde_json::Value>(data).handle_error()
 }
 
 fn parse_slice(boc: &str) -> Result<ton_types::SliceData, String> {
     let body = base64::decode(boc).handle_error()?;
-    let cell =
-        ton_types::deserialize_tree_of_cells(&mut std::io::Cursor::new(&body)).handle_error()?;
+    let cell = ton_types::deserialize_tree_of_cells(&mut body.as_slice()).handle_error()?;
     Ok(cell.into())
 }
 
 fn parse_method_name(value: &str) -> Result<MethodName, String> {
-    if let Ok(value) = serde_json::from_str::<String>(&value) {
+    if let Ok(value) = serde_json::from_str::<String>(value) {
         Ok(MethodName::Known(value))
-    } else if let Ok(value) = serde_json::from_str::<Vec<String>>(&value) {
+    } else if let Ok(value) = serde_json::from_str::<Vec<String>>(value) {
         Ok(MethodName::GuessInRange(value))
     } else {
         Err(value).handle_error()
@@ -646,9 +641,9 @@ fn parse_method_name(value: &str) -> Result<MethodName, String> {
 }
 
 fn parse_transaction(data: &str) -> Result<Transaction, String> {
-    serde_json::from_str::<Transaction>(&data).handle_error()
+    serde_json::from_str::<Transaction>(data).handle_error()
 }
 
-fn get_null_string() -> Result<String, String> {
+fn null_string() -> Result<String, String> {
     serde_json::to_string(&serde_json::Value::Null).handle_error()
 }

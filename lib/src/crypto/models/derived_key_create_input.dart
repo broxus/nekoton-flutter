@@ -16,7 +16,7 @@ class DerivedKeyCreateInput with _$DerivedKeyCreateInput implements CreateKeyInp
     String? keyName,
     required String phrase,
     required Password password,
-  }) = _Import;
+  }) = _DerivedKeyCreateInputImport;
 
   @JsonSerializable(
     fieldRename: FieldRename.snake,
@@ -27,7 +27,7 @@ class DerivedKeyCreateInput with _$DerivedKeyCreateInput implements CreateKeyInp
     required String masterKey,
     required int accountId,
     required Password password,
-  }) = _Derive;
+  }) = _DerivedKeyCreateInputDerive;
 
   factory DerivedKeyCreateInput.fromJson(Map<String, dynamic> json) => _$DerivedKeyCreateInputFromJson(json);
 }
