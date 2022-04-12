@@ -4,12 +4,6 @@ export class NotificationEmitter {
     emitter?: EventEmitter
 
     emit(method: string, params: unknown) {
-        try {
-            console.log(`EVENT PARAMS ${method}: ${typeof params === 'string' ? JSON.parse(params) : undefined}`)
-        } catch(e: any) {
-            console.log(`EVENT PARAMS ${method}: ${e.toString()}`)
-        }
-
         this.emitter?.emit(method, typeof params === 'string' ? JSON.parse(params) : undefined)
     }
 }

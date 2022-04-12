@@ -50,6 +50,8 @@ ffigen:
   name: 'Bindings'
   description: 'Generated bindings'
   output: 'lib/src/bindings.g.dart'
+  llvm-path:
+    - '/usr/local/homebrew/opt/llvm'
   headers:
     entry-points:
       - 'rust/target/bindings.h'
