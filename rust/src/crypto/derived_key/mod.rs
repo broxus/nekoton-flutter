@@ -1,8 +1,9 @@
-use crate::crypto::password_cache::Password;
 use nekoton::crypto;
 use nekoton_utils::serde_public_key;
 use secstr::SecUtf8;
 use serde::Deserialize;
+
+use crate::{crypto::password_cache::Password, models::ToNekoton};
 
 #[derive(Deserialize)]
 #[serde(tag = "runtimeType")]
@@ -21,8 +22,8 @@ pub enum DerivedKeyCreateInput {
     },
 }
 
-impl DerivedKeyCreateInput {
-    pub fn to_core(self) -> crypto::DerivedKeyCreateInput {
+impl ToNekoton<crypto::DerivedKeyCreateInput> for DerivedKeyCreateInput {
+    fn to_nekoton(self) -> crypto::DerivedKeyCreateInput {
         match self {
             DerivedKeyCreateInput::Import {
                 key_name,
@@ -31,7 +32,7 @@ impl DerivedKeyCreateInput {
             } => crypto::DerivedKeyCreateInput::Import {
                 key_name,
                 phrase,
-                password: password.to_core(),
+                password: password.to_nekoton(),
             },
             DerivedKeyCreateInput::Derive {
                 key_name,
@@ -42,7 +43,7 @@ impl DerivedKeyCreateInput {
                 key_name,
                 master_key,
                 account_id,
-                password: password.to_core(),
+                password: password.to_nekoton(),
             },
         }
     }
@@ -55,11 +56,11 @@ pub struct DerivedKeyExportParams {
     pub password: Password,
 }
 
-impl DerivedKeyExportParams {
-    pub fn to_core(self) -> crypto::DerivedKeyExportParams {
+impl ToNekoton<crypto::DerivedKeyExportParams> for DerivedKeyExportParams {
+    fn to_nekoton(self) -> crypto::DerivedKeyExportParams {
         crypto::DerivedKeyExportParams {
             master_key: self.master_key,
-            password: self.password.to_core(),
+            password: self.password.to_nekoton(),
         }
     }
 }
@@ -82,8 +83,8 @@ pub enum DerivedKeyUpdateParams {
     },
 }
 
-impl DerivedKeyUpdateParams {
-    pub fn to_core(self) -> crypto::DerivedKeyUpdateParams {
+impl ToNekoton<crypto::DerivedKeyUpdateParams> for DerivedKeyUpdateParams {
+    fn to_nekoton(self) -> crypto::DerivedKeyUpdateParams {
         match self {
             DerivedKeyUpdateParams::RenameKey {
                 master_key,
@@ -100,8 +101,8 @@ impl DerivedKeyUpdateParams {
                 new_password,
             } => crypto::DerivedKeyUpdateParams::ChangePassword {
                 master_key,
-                old_password: old_password.to_core(),
-                new_password: new_password.to_core(),
+                old_password: old_password.to_nekoton(),
+                new_password: new_password.to_nekoton(),
             },
         }
     }
@@ -125,8 +126,8 @@ pub enum DerivedKeySignParams {
     },
 }
 
-impl DerivedKeySignParams {
-    pub fn to_core(self) -> crypto::DerivedKeySignParams {
+impl ToNekoton<crypto::DerivedKeySignParams> for DerivedKeySignParams {
+    fn to_nekoton(self) -> crypto::DerivedKeySignParams {
         match self {
             DerivedKeySignParams::ByAccountId {
                 master_key,
@@ -135,7 +136,7 @@ impl DerivedKeySignParams {
             } => crypto::DerivedKeySignParams::ByAccountId {
                 master_key,
                 account_id,
-                password: password.to_core(),
+                password: password.to_nekoton(),
             },
             DerivedKeySignParams::ByPublicKey {
                 master_key,
@@ -144,7 +145,7 @@ impl DerivedKeySignParams {
             } => crypto::DerivedKeySignParams::ByPublicKey {
                 master_key,
                 public_key,
-                password: password.to_core(),
+                password: password.to_nekoton(),
             },
         }
     }

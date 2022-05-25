@@ -1,31 +1,30 @@
-pub mod handler;
-pub mod models;
+mod handler;
+mod models;
 
-use self::handler::GenericContractSubscriptionHandlerImpl;
-use crate::{
-    crypto::{derived_key::DerivedKeySignParams, encrypted_key::EncryptedKeyPassword},
-    models::{HandleError, MatchResult},
-    parse_address, runtime, send_to_result_port,
-    transport::{match_transport, models::TransportType},
-    ToPtr, ToStringFromPtr, RUNTIME,
-};
-use nekoton::{
-    core::{generic_contract::GenericContract, keystore::KeyStore, TransactionExecutionOptions},
-    crypto::{DerivedKeySigner, EncryptedKeySigner, UnsignedMessage},
-    transport::{gql::GqlTransport, Transport},
-};
-use nekoton_abi::TransactionId;
-use nekoton_utils::SimpleClock;
-use num_traits::FromPrimitive;
 use std::{
-    ffi::c_void,
-    os::raw::{c_char, c_int, c_longlong},
+    ffi::{c_char, c_int, c_longlong, c_void},
     sync::Arc,
 };
-use tokio::sync::Mutex;
+
+use nekoton::{
+    core::{generic_contract::GenericContract, TransactionExecutionOptions},
+    transport::Transport,
+};
+use nekoton_abi::TransactionId;
+use tokio::sync::RwLock;
+use ton_block::{Block, Deserializable};
+
+use crate::{
+    core::generic_contract::handler::GenericContractSubscriptionHandlerImpl,
+    crypto::models::SignedMessage,
+    models::{HandleError, MatchResult, ToNekoton},
+    parse_address, runtime, send_to_result_port,
+    transport::match_transport,
+    ToCStringPtr, ToStringFromPtr, CLOCK, RUNTIME,
+};
 
 #[no_mangle]
-pub unsafe extern "C" fn generic_contract_subscribe(
+pub unsafe extern "C" fn nt_generic_contract_subscribe(
     result_port: c_longlong,
     on_message_sent_port: c_longlong,
     on_message_expired_port: c_longlong,
@@ -50,21 +49,19 @@ pub unsafe extern "C" fn generic_contract_subscribe(
         ) -> Result<u64, String> {
             let address = parse_address(&address)?;
 
-            let handler = GenericContractSubscriptionHandlerImpl {
+            let handler = Arc::new(GenericContractSubscriptionHandlerImpl::new(
                 on_message_sent_port,
                 on_message_expired_port,
                 on_state_changed_port,
                 on_transactions_found_port,
-            };
-            let handler = Arc::new(handler);
+            ));
 
-            let clock = Arc::new(SimpleClock {});
+            let generic_contract =
+                GenericContract::subscribe(CLOCK.clone(), transport, address, handler)
+                    .await
+                    .handle_error()?;
 
-            let generic_contract = GenericContract::subscribe(clock, transport, address, handler)
-                .await
-                .handle_error()?;
-
-            let ptr = Box::into_raw(Box::new(Arc::new(Mutex::new(generic_contract)))) as u64;
+            let ptr = Box::into_raw(Box::new(Arc::new(RwLock::new(generic_contract)))) as u64;
 
             Ok(ptr)
         }
@@ -85,156 +82,138 @@ pub unsafe extern "C" fn generic_contract_subscribe(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn clone_generic_contract_ptr(generic_contract: *mut c_void) -> *mut c_void {
-    let generic_contract = generic_contract as *mut Arc<Mutex<GenericContract>>;
-    let cloned = Arc::clone(&*generic_contract);
-
-    Arc::into_raw(cloned) as *mut c_void
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn free_generic_contract_ptr(generic_contract: *mut c_void) {
-    let generic_contract = generic_contract as *mut Arc<Mutex<GenericContract>>;
-
-    let _ = Box::from_raw(generic_contract);
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn get_generic_contract_address(
+pub unsafe extern "C" fn nt_generic_contract_address(
     result_port: c_longlong,
     generic_contract: *mut c_void,
 ) {
-    let generic_contract = generic_contract as *mut Mutex<GenericContract>;
-    let generic_contract = Arc::from_raw(generic_contract) as Arc<Mutex<GenericContract>>;
+    let generic_contract = generic_contract_from_ptr(generic_contract);
 
     runtime!().spawn(async move {
-        async fn internal_fn(generic_contract: &mut GenericContract) -> Result<u64, String> {
-            let address = generic_contract.address().to_string().to_ptr() as u64;
+        fn internal_fn(generic_contract: &GenericContract) -> Result<u64, String> {
+            let address = generic_contract.address().to_string().to_cstring_ptr() as u64;
 
             Ok(address)
         }
 
-        let mut generic_contract = generic_contract.lock().await;
+        let generic_contract = generic_contract.read().await;
 
-        let result = internal_fn(&mut generic_contract).await.match_result();
+        let result = internal_fn(&generic_contract).match_result();
 
         send_to_result_port(result_port, result);
     });
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn get_generic_contract_contract_state(
+pub unsafe extern "C" fn nt_generic_contract_contract_state(
     result_port: c_longlong,
     generic_contract: *mut c_void,
 ) {
-    let generic_contract = generic_contract as *mut Mutex<GenericContract>;
-    let generic_contract = Arc::from_raw(generic_contract) as Arc<Mutex<GenericContract>>;
+    let generic_contract = generic_contract_from_ptr(generic_contract);
 
     runtime!().spawn(async move {
-        async fn internal_fn(generic_contract: &mut GenericContract) -> Result<u64, String> {
+        fn internal_fn(generic_contract: &GenericContract) -> Result<u64, String> {
             let contract_state = generic_contract.contract_state();
+
             let contract_state = serde_json::to_string(&contract_state)
                 .handle_error()?
-                .to_ptr() as u64;
+                .to_cstring_ptr() as u64;
 
             Ok(contract_state)
         }
 
-        let mut generic_contract = generic_contract.lock().await;
+        let generic_contract = generic_contract.read().await;
 
-        let result = internal_fn(&mut generic_contract).await.match_result();
+        let result = internal_fn(&generic_contract).match_result();
 
         send_to_result_port(result_port, result);
     });
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn get_generic_contract_pending_transactions(
+pub unsafe extern "C" fn nt_generic_contract_pending_transactions(
     result_port: c_longlong,
     generic_contract: *mut c_void,
 ) {
-    let generic_contract = generic_contract as *mut Mutex<GenericContract>;
-    let generic_contract = Arc::from_raw(generic_contract) as Arc<Mutex<GenericContract>>;
+    let generic_contract = generic_contract_from_ptr(generic_contract);
 
     runtime!().spawn(async move {
-        async fn internal_fn(generic_contract: &mut GenericContract) -> Result<u64, String> {
+        fn internal_fn(generic_contract: &GenericContract) -> Result<u64, String> {
             let pending_transactions = generic_contract.pending_transactions();
+
             let pending_transactions = serde_json::to_string(pending_transactions)
                 .handle_error()?
-                .to_ptr() as u64;
+                .to_cstring_ptr() as u64;
 
             Ok(pending_transactions)
         }
 
-        let mut generic_contract = generic_contract.lock().await;
+        let generic_contract = generic_contract.read().await;
 
-        let result = internal_fn(&mut generic_contract).await.match_result();
+        let result = internal_fn(&generic_contract).match_result();
 
         send_to_result_port(result_port, result);
     });
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn get_generic_contract_polling_method(
+pub unsafe extern "C" fn nt_generic_contract_polling_method(
     result_port: c_longlong,
     generic_contract: *mut c_void,
 ) {
-    let generic_contract = generic_contract as *mut Mutex<GenericContract>;
-    let generic_contract = Arc::from_raw(generic_contract) as Arc<Mutex<GenericContract>>;
+    let generic_contract = generic_contract_from_ptr(generic_contract);
 
     runtime!().spawn(async move {
-        async fn internal_fn(generic_contract: &mut GenericContract) -> Result<u64, String> {
+        fn internal_fn(generic_contract: &GenericContract) -> Result<u64, String> {
             let polling_method = generic_contract.polling_method();
+
             let polling_method = serde_json::to_string(&polling_method)
                 .handle_error()?
-                .to_ptr() as u64;
+                .to_cstring_ptr() as u64;
 
             Ok(polling_method)
         }
 
-        let mut generic_contract = generic_contract.lock().await;
+        let generic_contract = generic_contract.read().await;
 
-        let result = internal_fn(&mut generic_contract).await.match_result();
+        let result = internal_fn(&generic_contract).match_result();
 
         send_to_result_port(result_port, result);
     });
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn generic_contract_estimate_fees(
+pub unsafe extern "C" fn nt_generic_contract_estimate_fees(
     result_port: c_longlong,
     generic_contract: *mut c_void,
-    message: *mut c_void,
+    signed_message: *mut c_char,
 ) {
-    let generic_contract = generic_contract as *mut Mutex<GenericContract>;
-    let generic_contract = Arc::from_raw(generic_contract) as Arc<Mutex<GenericContract>>;
+    let generic_contract = generic_contract_from_ptr(generic_contract);
 
-    let message = message as *mut Box<dyn UnsignedMessage>;
-    let message = Arc::from_raw(message) as Arc<Box<dyn UnsignedMessage>>;
-    let message = (*message).clone();
+    let signed_message = signed_message.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
             generic_contract: &mut GenericContract,
-            message: Box<dyn UnsignedMessage>,
+            signed_message: String,
         ) -> Result<u64, String> {
-            let signature = [u8::default(); ed25519_dalek::SIGNATURE_LENGTH];
-
-            let message = message.sign(&signature).handle_error()?.message;
+            let message = serde_json::from_str::<SignedMessage>(&signed_message)
+                .handle_error()?
+                .to_nekoton()
+                .message;
 
             let fees = generic_contract
                 .estimate_fees(&message)
                 .await
-                .handle_error()?;
-
-            let fees = fees.to_string().to_ptr() as u64;
+                .handle_error()?
+                .to_string()
+                .to_cstring_ptr() as u64;
 
             Ok(fees)
         }
 
-        let mut generic_contract = generic_contract.lock().await;
+        let mut generic_contract = generic_contract.write().await;
 
-        let result = internal_fn(&mut generic_contract, message)
+        let result = internal_fn(&mut generic_contract, signed_message)
             .await
             .match_result();
 
@@ -243,72 +222,39 @@ pub unsafe extern "C" fn generic_contract_estimate_fees(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn generic_contract_send(
+pub unsafe extern "C" fn nt_generic_contract_send(
     result_port: c_longlong,
     generic_contract: *mut c_void,
-    keystore: *mut c_void,
-    message: *mut c_void,
-    sign_input: *mut c_char,
+    signed_message: *mut c_char,
 ) {
-    let generic_contract = generic_contract as *mut Mutex<GenericContract>;
-    let generic_contract = Arc::from_raw(generic_contract) as Arc<Mutex<GenericContract>>;
+    let generic_contract = generic_contract_from_ptr(generic_contract);
 
-    let keystore = keystore as *mut KeyStore;
-    let keystore = Arc::from_raw(keystore) as Arc<KeyStore>;
-
-    let message = message as *mut Box<dyn UnsignedMessage>;
-    let message = Arc::from_raw(message) as Arc<Box<dyn UnsignedMessage>>;
-    let message = (*message).clone();
-
-    let sign_input = sign_input.to_string_from_ptr();
+    let signed_message = signed_message.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
             generic_contract: &mut GenericContract,
-            keystore: Arc<KeyStore>,
-            mut message: Box<dyn UnsignedMessage>,
-            sign_input: String,
+            signed_message: String,
         ) -> Result<u64, String> {
-            let clock = SimpleClock {};
-
-            message.refresh_timeout(&clock);
-
-            let hash = message.hash();
-
-            let signature = if let Ok(sign_input) =
-                serde_json::from_str::<EncryptedKeyPassword>(&sign_input)
-            {
-                keystore
-                    .sign::<EncryptedKeySigner>(hash, sign_input.to_core())
-                    .await
-                    .handle_error()?
-            } else if let Ok(sign_input) = serde_json::from_str::<DerivedKeySignParams>(&sign_input)
-            {
-                keystore
-                    .sign::<DerivedKeySigner>(hash, sign_input.to_core())
-                    .await
-                    .handle_error()?
-            } else {
-                panic!()
-            };
-
-            let message = message.sign(&signature).handle_error()?;
+            let signed_message = serde_json::from_str::<SignedMessage>(&signed_message)
+                .handle_error()?
+                .to_nekoton();
 
             let pending_transaction = generic_contract
-                .send(&message.message, message.expire_at)
+                .send(&signed_message.message, signed_message.expire_at)
                 .await
                 .handle_error()?;
 
             let pending_transaction = serde_json::to_string(&pending_transaction)
                 .handle_error()?
-                .to_ptr() as u64;
+                .to_cstring_ptr() as u64;
 
             Ok(pending_transaction)
         }
 
-        let mut generic_contract = generic_contract.lock().await;
+        let mut generic_contract = generic_contract.write().await;
 
-        let result = internal_fn(&mut generic_contract, keystore, message, sign_input)
+        let result = internal_fn(&mut generic_contract, signed_message)
             .await
             .match_result();
 
@@ -317,105 +263,68 @@ pub unsafe extern "C" fn generic_contract_send(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn generic_contract_execute_transaction_locally(
+pub unsafe extern "C" fn nt_generic_contract_execute_transaction_locally(
     result_port: c_longlong,
     generic_contract: *mut c_void,
-    keystore: *mut c_void,
-    message: *mut c_void,
-    sign_input: *mut c_char,
+    signed_message: *mut c_char,
     options: *mut c_char,
 ) {
-    let generic_contract = generic_contract as *mut Mutex<GenericContract>;
-    let generic_contract = Arc::from_raw(generic_contract) as Arc<Mutex<GenericContract>>;
+    let generic_contract = generic_contract_from_ptr(generic_contract);
 
-    let keystore = keystore as *mut KeyStore;
-    let keystore = Arc::from_raw(keystore) as Arc<KeyStore>;
-
-    let message = message as *mut Box<dyn UnsignedMessage>;
-    let message = Arc::from_raw(message) as Arc<Box<dyn UnsignedMessage>>;
-    let message = (*message).clone();
-
-    let sign_input = sign_input.to_string_from_ptr();
+    let signed_message = signed_message.to_string_from_ptr();
     let options = options.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
             generic_contract: &mut GenericContract,
-            keystore: Arc<KeyStore>,
-            mut message: Box<dyn UnsignedMessage>,
-            sign_input: String,
+            signed_message: String,
             options: String,
         ) -> Result<u64, String> {
+            let message = serde_json::from_str::<SignedMessage>(&signed_message)
+                .handle_error()?
+                .to_nekoton()
+                .message;
+
             let options =
                 serde_json::from_str::<TransactionExecutionOptions>(&options).handle_error()?;
 
-            let clock = SimpleClock {};
-
-            message.refresh_timeout(&clock);
-
-            let hash = message.hash();
-
-            let signature = if let Ok(sign_input) =
-                serde_json::from_str::<EncryptedKeyPassword>(&sign_input)
-            {
-                keystore
-                    .sign::<EncryptedKeySigner>(hash, sign_input.to_core())
-                    .await
-                    .handle_error()?
-            } else if let Ok(sign_input) = serde_json::from_str::<DerivedKeySignParams>(&sign_input)
-            {
-                keystore
-                    .sign::<DerivedKeySigner>(hash, sign_input.to_core())
-                    .await
-                    .handle_error()?
-            } else {
-                panic!()
-            };
-
-            let message = message.sign(&signature).handle_error()?;
-
             let transaction = generic_contract
-                .execute_transaction_locally(&message.message, options)
+                .execute_transaction_locally(&message, options)
                 .await
                 .handle_error()?;
 
-            let transaction = serde_json::to_string(&transaction).handle_error()?.to_ptr() as u64;
+            let transaction = serde_json::to_string(&transaction)
+                .handle_error()?
+                .to_cstring_ptr() as u64;
 
             Ok(transaction)
         }
 
-        let mut generic_contract = generic_contract.lock().await;
+        let mut generic_contract = generic_contract.write().await;
 
-        let result = internal_fn(
-            &mut generic_contract,
-            keystore,
-            message,
-            sign_input,
-            options,
-        )
-        .await
-        .match_result();
+        let result = internal_fn(&mut generic_contract, signed_message, options)
+            .await
+            .match_result();
 
         send_to_result_port(result_port, result);
     });
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn generic_contract_refresh(
+pub unsafe extern "C" fn nt_generic_contract_refresh(
     result_port: c_longlong,
     generic_contract: *mut c_void,
 ) {
-    let generic_contract = generic_contract as *mut Mutex<GenericContract>;
-    let generic_contract = Arc::from_raw(generic_contract) as Arc<Mutex<GenericContract>>;
+    let generic_contract = generic_contract_from_ptr(generic_contract);
 
     runtime!().spawn(async move {
         async fn internal_fn(generic_contract: &mut GenericContract) -> Result<u64, String> {
-            let _ = generic_contract.refresh().await.handle_error()?;
+            generic_contract.refresh().await.handle_error()?;
 
-            Ok(0)
+            Ok(u64::default())
         }
 
-        let mut generic_contract = generic_contract.lock().await;
+        let mut generic_contract = generic_contract.write().await;
 
         let result = internal_fn(&mut generic_contract).await.match_result();
 
@@ -424,13 +333,12 @@ pub unsafe extern "C" fn generic_contract_refresh(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn generic_contract_preload_transactions(
+pub unsafe extern "C" fn nt_generic_contract_preload_transactions(
     result_port: c_longlong,
     generic_contract: *mut c_void,
     from: *mut c_char,
 ) {
-    let generic_contract = generic_contract as *mut Mutex<GenericContract>;
-    let generic_contract = Arc::from_raw(generic_contract) as Arc<Mutex<GenericContract>>;
+    let generic_contract = generic_contract_from_ptr(generic_contract);
 
     let from = from.to_string_from_ptr();
 
@@ -441,15 +349,15 @@ pub unsafe extern "C" fn generic_contract_preload_transactions(
         ) -> Result<u64, String> {
             let from = serde_json::from_str::<TransactionId>(&from).handle_error()?;
 
-            let _ = generic_contract
+            generic_contract
                 .preload_transactions(from)
                 .await
                 .handle_error()?;
 
-            Ok(0)
+            Ok(u64::default())
         }
 
-        let mut generic_contract = generic_contract.lock().await;
+        let mut generic_contract = generic_contract.write().await;
 
         let result = internal_fn(&mut generic_contract, from)
             .await
@@ -460,52 +368,47 @@ pub unsafe extern "C" fn generic_contract_preload_transactions(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn generic_contract_handle_block(
+pub unsafe extern "C" fn nt_generic_contract_handle_block(
     result_port: c_longlong,
     generic_contract: *mut c_void,
-    transport: *mut c_void,
-    transport_type: c_int,
-    id: *mut c_char,
+    block: *mut c_char,
 ) {
-    let generic_contract = generic_contract as *mut Mutex<GenericContract>;
-    let generic_contract = Arc::from_raw(generic_contract) as Arc<Mutex<GenericContract>>;
+    let generic_contract = generic_contract_from_ptr(generic_contract);
 
-    let transport = match FromPrimitive::from_i32(transport_type) {
-        Some(TransportType::Gql) => {
-            let gql_transport = transport as *mut GqlTransport;
-            Arc::from_raw(gql_transport) as Arc<GqlTransport>
-        }
-        Some(TransportType::Jrpc) => {
-            let result = Err(String::from("Not a GQL transport")).match_result();
-
-            send_to_result_port(result_port, result);
-
-            return;
-        }
-        None => panic!(),
-    };
-
-    let id = id.to_string_from_ptr();
+    let block = block.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
             generic_contract: &mut GenericContract,
-            transport: Arc<GqlTransport>,
-            id: String,
+            block: String,
         ) -> Result<u64, String> {
-            let block = transport.get_block(&id).await.handle_error()?;
+            let block = Block::construct_from_base64(&block).handle_error()?;
 
-            let _ = generic_contract.handle_block(&block).await.handle_error()?;
+            generic_contract.handle_block(&block).await.handle_error()?;
 
-            Ok(0)
+            Ok(u64::default())
         }
 
-        let mut generic_contract = generic_contract.lock().await;
+        let mut generic_contract = generic_contract.write().await;
 
-        let result = internal_fn(&mut generic_contract, transport, id)
+        let result = internal_fn(&mut generic_contract, block)
             .await
             .match_result();
 
         send_to_result_port(result_port, result);
     });
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nt_generic_contract_clone_ptr(ptr: *mut c_void) -> *mut c_void {
+    Arc::into_raw(Arc::clone(&*(ptr as *mut Arc<RwLock<GenericContract>>))) as *mut c_void
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nt_generic_contract_free_ptr(ptr: *mut c_void) {
+    Box::from_raw(ptr as *mut Arc<RwLock<GenericContract>>);
+}
+
+unsafe fn generic_contract_from_ptr(ptr: *mut c_void) -> Arc<RwLock<GenericContract>> {
+    Arc::from_raw(ptr as *mut RwLock<GenericContract>)
 }

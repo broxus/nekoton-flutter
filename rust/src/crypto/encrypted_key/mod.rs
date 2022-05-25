@@ -1,9 +1,12 @@
-use super::mnemonic::models::MnemonicType;
-use crate::crypto::password_cache::Password;
 use nekoton::crypto;
 use nekoton_utils::serde_public_key;
 use secstr::SecUtf8;
 use serde::{Deserialize, Serialize};
+
+use crate::{
+    crypto::{mnemonic::models::MnemonicType, password_cache::Password},
+    models::{ToNekoton, ToSerializable},
+};
 
 #[derive(Deserialize)]
 pub struct EncryptedKeyCreateInput {
@@ -13,13 +16,13 @@ pub struct EncryptedKeyCreateInput {
     pub password: Password,
 }
 
-impl EncryptedKeyCreateInput {
-    pub fn to_core(self) -> crypto::EncryptedKeyCreateInput {
+impl ToNekoton<crypto::EncryptedKeyCreateInput> for EncryptedKeyCreateInput {
+    fn to_nekoton(self) -> crypto::EncryptedKeyCreateInput {
         crypto::EncryptedKeyCreateInput {
             name: self.name,
             phrase: self.phrase,
-            mnemonic_type: self.mnemonic_type.to_core(),
-            password: self.password.to_core(),
+            mnemonic_type: self.mnemonic_type.to_nekoton(),
+            password: self.password.to_nekoton(),
         }
     }
 }
@@ -30,11 +33,11 @@ pub struct EncryptedKeyExportOutput {
     pub mnemonic_type: MnemonicType,
 }
 
-impl EncryptedKeyExportOutput {
-    pub fn from_core(encrypted_key_export_output: crypto::EncryptedKeyExportOutput) -> Self {
-        Self {
-            phrase: encrypted_key_export_output.phrase,
-            mnemonic_type: MnemonicType::from_core(encrypted_key_export_output.mnemonic_type),
+impl ToSerializable<EncryptedKeyExportOutput> for crypto::EncryptedKeyExportOutput {
+    fn to_serializable(self) -> EncryptedKeyExportOutput {
+        EncryptedKeyExportOutput {
+            phrase: self.phrase,
+            mnemonic_type: self.mnemonic_type.to_serializable(),
         }
     }
 }
@@ -46,11 +49,11 @@ pub struct EncryptedKeyPassword {
     pub password: Password,
 }
 
-impl EncryptedKeyPassword {
-    pub fn to_core(self) -> crypto::EncryptedKeyPassword {
+impl ToNekoton<crypto::EncryptedKeyPassword> for EncryptedKeyPassword {
+    fn to_nekoton(self) -> crypto::EncryptedKeyPassword {
         crypto::EncryptedKeyPassword {
             public_key: self.public_key,
-            password: self.password.to_core(),
+            password: self.password.to_nekoton(),
         }
     }
 }
@@ -71,8 +74,8 @@ pub enum EncryptedKeyUpdateParams {
     },
 }
 
-impl EncryptedKeyUpdateParams {
-    pub fn to_core(self) -> crypto::EncryptedKeyUpdateParams {
+impl ToNekoton<crypto::EncryptedKeyUpdateParams> for EncryptedKeyUpdateParams {
+    fn to_nekoton(self) -> crypto::EncryptedKeyUpdateParams {
         match self {
             EncryptedKeyUpdateParams::Rename { public_key, name } => {
                 crypto::EncryptedKeyUpdateParams::Rename { public_key, name }
@@ -83,8 +86,8 @@ impl EncryptedKeyUpdateParams {
                 new_password,
             } => crypto::EncryptedKeyUpdateParams::ChangePassword {
                 public_key,
-                old_password: old_password.to_core(),
-                new_password: new_password.to_core(),
+                old_password: old_password.to_nekoton(),
+                new_password: new_password.to_nekoton(),
             },
         }
     }

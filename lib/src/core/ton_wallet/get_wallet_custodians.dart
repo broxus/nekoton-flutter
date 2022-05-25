@@ -15,11 +15,11 @@ Future<List<String>> getWalletCustodians({
   final transportType = transport.connectionData.type;
 
   final result = await executeAsync(
-    (port) => NekotonFlutter.bindings.get_wallet_custodians(
+    (port) => NekotonFlutter.bindings.nt_get_wallet_custodians(
       port,
       ptr,
       transportType.index,
-      address.toNativeUtf8().cast<Int8>(),
+      address.toNativeUtf8().cast<Char>(),
     ),
   );
 

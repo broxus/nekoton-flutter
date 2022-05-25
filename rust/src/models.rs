@@ -1,6 +1,6 @@
 use std::{
-    ffi::{c_void, CStr, CString},
-    os::raw::{c_char, c_uint, c_ulonglong},
+    ffi::{c_char, c_uint, c_ulonglong, c_void, CStr, CString},
+    ptr::null,
 };
 
 #[repr(C)]
@@ -9,18 +9,31 @@ pub struct ExecutionResult {
     pub payload: c_ulonglong,
 }
 
-pub enum ExecutionStatus {
+enum ExecutionStatus {
     Ok,
     Err,
 }
 
-pub trait ToPtr {
-    fn to_ptr(self) -> *mut c_char;
+pub trait ToCStringPtr {
+    fn to_cstring_ptr(self) -> *mut c_char;
 }
 
-impl ToPtr for String {
-    fn to_ptr(self) -> *mut c_char {
+impl ToCStringPtr for String {
+    fn to_cstring_ptr(self) -> *mut c_char {
         CString::new(self).unwrap().into_raw()
+    }
+}
+
+pub trait ToOptionalCStringPtr {
+    fn to_optional_cstring_ptr(self) -> *mut c_char;
+}
+
+impl ToOptionalCStringPtr for Option<String> {
+    fn to_optional_cstring_ptr(self) -> *mut c_char {
+        match self {
+            Some(string) => string.to_cstring_ptr(),
+            None => null::<c_char>() as *mut c_char,
+        }
     }
 }
 
@@ -31,6 +44,19 @@ pub trait ToStringFromPtr {
 impl ToStringFromPtr for *mut c_char {
     unsafe fn to_string_from_ptr(self) -> String {
         CStr::from_ptr(self).to_str().unwrap().to_owned()
+    }
+}
+
+pub trait ToOptionalStringFromPtr {
+    unsafe fn to_optional_string_from_ptr(self) -> Option<String>;
+}
+
+impl ToOptionalStringFromPtr for *mut c_char {
+    unsafe fn to_optional_string_from_ptr(self) -> Option<String> {
+        match !self.is_null() {
+            true => Some(self.to_string_from_ptr()),
+            false => None,
+        }
     }
 }
 
@@ -58,16 +84,24 @@ pub trait MatchResult {
 impl MatchResult for Result<u64, String> {
     fn match_result(self) -> *mut c_void {
         let result = match self {
-            Ok(success) => ExecutionResult {
+            Ok(data) => ExecutionResult {
                 status_code: ExecutionStatus::Ok as c_uint,
-                payload: success as c_ulonglong,
+                payload: data as c_ulonglong,
             },
-            Err(error) => ExecutionResult {
+            Err(err) => ExecutionResult {
                 status_code: ExecutionStatus::Err as c_uint,
-                payload: error.to_ptr() as c_ulonglong,
+                payload: err.to_cstring_ptr() as c_ulonglong,
             },
         };
 
         Box::into_raw(Box::new(result)) as *mut c_void
     }
+}
+
+pub trait ToNekoton<T> {
+    fn to_nekoton(self) -> T;
+}
+
+pub trait ToSerializable<T> {
+    fn to_serializable(self) -> T;
 }

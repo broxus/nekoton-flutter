@@ -14,7 +14,7 @@ int executeSync(Pointer<Void> Function() function) {
   try {
     return executionResult.handle();
   } finally {
-    NekotonFlutter.bindings.free_execution_result(ptr);
+    NekotonFlutter.bindings.nt_free_execution_result(ptr);
   }
 }
 
@@ -33,7 +33,7 @@ Future<int> executeAsync(void Function(int port) function) async {
     } catch (err) {
       completer.completeError(err, st);
     } finally {
-      NekotonFlutter.bindings.free_execution_result(ptr);
+      NekotonFlutter.bindings.nt_free_execution_result(ptr);
       receivePort.close();
     }
   });
@@ -44,11 +44,19 @@ Future<int> executeAsync(void Function(int port) function) async {
 }
 
 String cStringToDart(int address) {
-  final ptr = Pointer.fromAddress(address).cast<Int8>();
+  final ptr = Pointer.fromAddress(address).cast<Char>();
 
   final string = ptr.cast<Utf8>().toDartString();
 
-  NekotonFlutter.bindings.free_cstring(ptr);
+  NekotonFlutter.bindings.nt_free_cstring(ptr);
 
   return string;
+}
+
+String? optionalCStringToDart(int address) {
+  if (Pointer.fromAddress(address) == nullptr) {
+    return null;
+  } else {
+    return cStringToDart(address);
+  }
 }

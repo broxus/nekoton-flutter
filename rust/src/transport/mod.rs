@@ -1,43 +1,70 @@
-pub mod gql_transport;
-pub mod jrpc_transport;
-pub mod models;
+mod gql_transport;
+mod jrpc_transport;
+pub(crate) mod models;
 
-use self::models::TransportType;
-use crate::{
-    models::{HandleError, MatchResult, ToPtr, ToStringFromPtr},
-    parse_address, runtime, send_to_result_port,
-    transport::models::{FullContractState, TransactionsList},
-    RUNTIME,
+use std::{
+    convert::TryFrom,
+    ffi::{c_char, c_int, c_longlong, c_uchar, c_void},
+    sync::Arc,
 };
+
 use nekoton::{
     core::models::{Transaction, TransactionsBatchInfo, TransactionsBatchType},
     transport::{gql::GqlTransport, jrpc::JrpcTransport, models::RawContractState, Transport},
 };
 use nekoton_abi::TransactionId;
 use num_traits::FromPrimitive;
-use std::{
-    convert::TryFrom,
-    ffi::c_void,
-    os::raw::{c_char, c_int, c_longlong, c_uchar},
-    sync::Arc,
+use ton_block::Serializable;
+
+use crate::{
+    models::{
+        HandleError, MatchResult, ToCStringPtr, ToOptionalCStringPtr, ToOptionalStringFromPtr,
+        ToSerializable, ToStringFromPtr,
+    },
+    parse_address, parse_hash, runtime, send_to_result_port,
+    transport::models::{AccountsList, FullContractState, TransactionsList, TransportType},
+    RUNTIME,
 };
 
-pub unsafe fn match_transport(transport: *mut c_void, transport_type: i32) -> Arc<dyn Transport> {
-    match FromPrimitive::from_i32(transport_type) {
-        Some(TransportType::Jrpc) => {
-            let jrpc_transport = transport as *mut JrpcTransport;
-            Arc::from_raw(jrpc_transport) as Arc<dyn Transport>
+#[no_mangle]
+pub unsafe extern "C" fn nt_transport_get_contract_state(
+    result_port: c_longlong,
+    transport: *mut c_void,
+    transport_type: c_int,
+    address: *mut c_char,
+) {
+    let transport = match_transport(transport, transport_type);
+
+    let address = address.to_string_from_ptr();
+
+    runtime!().spawn(async move {
+        async fn internal_fn(
+            transport: Arc<dyn Transport>,
+            address: String,
+        ) -> Result<u64, String> {
+            let address = parse_address(&address)?;
+
+            let contract_state = transport
+                .get_contract_state(&address)
+                .await
+                .handle_error()?
+                .to_serializable();
+
+            let contract_state = serde_json::to_string(&contract_state)
+                .handle_error()?
+                .to_cstring_ptr() as u64;
+
+            Ok(contract_state)
         }
-        Some(TransportType::Gql) => {
-            let gql_transport = transport as *mut GqlTransport;
-            Arc::from_raw(gql_transport) as Arc<dyn Transport>
-        }
-        None => panic!(),
-    }
+
+        let result = internal_fn(transport, address).await.match_result();
+
+        send_to_result_port(result_port, result);
+    });
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn get_full_account_state(
+pub unsafe extern "C" fn nt_transport_get_full_contract_state(
     result_port: c_longlong,
     transport: *mut c_void,
     transport_type: c_int,
@@ -61,35 +88,38 @@ pub unsafe extern "C" fn get_full_account_state(
 
             let full_contract_state = match raw_contract_state {
                 RawContractState::Exists(state) => {
-                    let account_cell =
-                        ton_block::Serializable::serialize(&state.account).handle_error()?;
-                    let boc = ton_types::serialize_toc(&account_cell)
+                    let boc = state
+                        .account
+                        .serialize()
+                        .as_ref()
+                        .map(ton_types::serialize_toc)
+                        .handle_error()?
                         .map(base64::encode)
                         .handle_error()?;
 
-                    let full_contract_state = FullContractState {
+                    let is_deployed = matches!(
+                        &state.account.storage.state,
+                        ton_block::AccountState::AccountActive { state_init: _ }
+                    );
+
+                    Some(FullContractState {
                         balance: state.account.storage.balance.grams.0.to_string(),
                         gen_timings: state.timings,
                         last_transaction_id: Some(state.last_transaction_id),
-                        is_deployed: matches!(
-                            &state.account.storage.state,
-                            ton_block::AccountState::AccountActive {
-                                init_code_hash: _,
-                                state_init: _,
-                            }
-                        ),
+                        is_deployed,
                         code_hash: None,
                         boc,
-                    };
-
-                    Some(full_contract_state)
+                    })
                 }
                 RawContractState::NotExists => None,
             };
 
-            let full_contract_state = serde_json::to_string(&full_contract_state)
+            let full_contract_state = full_contract_state
+                .as_ref()
+                .map(serde_json::to_string)
+                .transpose()
                 .handle_error()?
-                .to_ptr() as u64;
+                .to_optional_cstring_ptr() as u64;
 
             Ok(full_contract_state)
         }
@@ -101,7 +131,56 @@ pub unsafe extern "C" fn get_full_account_state(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn get_transactions(
+pub unsafe extern "C" fn nt_transport_get_accounts_by_code_hash(
+    result_port: c_longlong,
+    transport: *mut c_void,
+    transport_type: c_int,
+    code_hash: *mut c_char,
+    limit: c_uchar,
+    continuation: *mut c_char,
+) {
+    let transport = match_transport(transport, transport_type);
+
+    let code_hash = code_hash.to_string_from_ptr();
+    let continuation = continuation.to_optional_string_from_ptr();
+
+    runtime!().spawn(async move {
+        async fn internal_fn(
+            transport: Arc<dyn Transport>,
+            code_hash: String,
+            limit: u8,
+            continuation: Option<String>,
+        ) -> Result<u64, String> {
+            let code_hash = parse_hash(&code_hash)?;
+            let continuation = continuation.map(|addr| parse_address(&addr)).transpose()?;
+
+            let accounts = transport
+                .get_accounts_by_code_hash(&code_hash, limit, &continuation)
+                .await
+                .handle_error()?;
+
+            let accounts_list = AccountsList {
+                accounts: accounts.clone(),
+                continuation: accounts.last().cloned(),
+            };
+
+            let accounts_list = serde_json::to_string(&accounts_list)
+                .handle_error()?
+                .to_cstring_ptr() as u64;
+
+            Ok(accounts_list)
+        }
+
+        let result = internal_fn(transport, code_hash, limit, continuation)
+            .await
+            .match_result();
+
+        send_to_result_port(result_port, result);
+    });
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nt_transport_get_transactions(
     result_port: c_longlong,
     transport: *mut c_void,
     transport_type: c_int,
@@ -112,10 +191,7 @@ pub unsafe extern "C" fn get_transactions(
     let transport = match_transport(transport, transport_type);
 
     let address = address.to_string_from_ptr();
-    let continuation = match !continuation.is_null() {
-        true => Some(continuation.to_string_from_ptr()),
-        false => None,
-    };
+    let continuation = continuation.to_optional_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -125,36 +201,34 @@ pub unsafe extern "C" fn get_transactions(
             limit: u8,
         ) -> Result<u64, String> {
             let address = parse_address(&address)?;
+
             let continuation = continuation
                 .map(|e| serde_json::from_str::<TransactionId>(&e))
                 .transpose()
                 .handle_error()?;
-            let before_lt = continuation.map(|id| id.lt);
+
+            let before_lt = continuation.map(|e| e.lt);
+
+            let from = TransactionId {
+                lt: before_lt.unwrap_or(u64::MAX),
+                hash: Default::default(),
+            };
 
             let raw_transactions = transport
-                .get_transactions(
-                    address,
-                    TransactionId {
-                        lt: before_lt.unwrap_or(u64::MAX),
-                        hash: Default::default(),
-                    },
-                    limit,
-                )
+                .get_transactions(address, from, limit)
                 .await
                 .handle_error()?;
 
             let transactions = raw_transactions
                 .clone()
                 .into_iter()
-                .filter_map(|transaction| {
-                    Transaction::try_from((transaction.hash, transaction.data)).ok()
-                })
+                .filter_map(|e| Transaction::try_from((e.hash, e.data)).ok())
                 .collect::<Vec<_>>();
 
-            let continuation = raw_transactions.last().and_then(|transaction| {
-                (transaction.data.prev_trans_lt != 0).then(|| TransactionId {
-                    lt: transaction.data.prev_trans_lt,
-                    hash: transaction.data.prev_trans_hash,
+            let continuation = raw_transactions.last().and_then(|e| {
+                (e.data.prev_trans_lt != 0).then(|| TransactionId {
+                    lt: e.data.prev_trans_lt,
+                    hash: e.data.prev_trans_hash,
                 })
             });
 
@@ -172,9 +246,10 @@ pub unsafe extern "C" fn get_transactions(
                 continuation,
                 info: batch_info,
             };
+
             let transactions_list = serde_json::to_string(&transactions_list)
                 .handle_error()?
-                .to_ptr() as u64;
+                .to_cstring_ptr() as u64;
 
             Ok(transactions_list)
         }
@@ -185,4 +260,55 @@ pub unsafe extern "C" fn get_transactions(
 
         send_to_result_port(result_port, result);
     });
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nt_transport_get_transaction(
+    result_port: c_longlong,
+    transport: *mut c_void,
+    transport_type: c_int,
+    hash: *mut c_char,
+) {
+    let transport = match_transport(transport, transport_type);
+
+    let hash = hash.to_string_from_ptr();
+
+    runtime!().spawn(async move {
+        async fn internal_fn(transport: Arc<dyn Transport>, hash: String) -> Result<u64, String> {
+            let hash = parse_hash(&hash)?;
+
+            let transaction = transport
+                .get_transaction(&hash)
+                .await
+                .handle_error()?
+                .map(|e| Transaction::try_from((e.hash, e.data)))
+                .transpose()
+                .handle_error()?;
+
+            let transaction = transaction
+                .as_ref()
+                .map(serde_json::to_string)
+                .transpose()
+                .handle_error()?
+                .to_optional_cstring_ptr() as u64;
+
+            Ok(transaction)
+        }
+
+        let result = internal_fn(transport, hash).await.match_result();
+
+        send_to_result_port(result_port, result);
+    });
+}
+
+pub unsafe fn match_transport(transport: *mut c_void, transport_type: i32) -> Arc<dyn Transport> {
+    match FromPrimitive::from_i32(transport_type) {
+        Some(TransportType::Jrpc) => {
+            Arc::from_raw(transport as *mut JrpcTransport) as Arc<dyn Transport>
+        }
+        Some(TransportType::Gql) => {
+            Arc::from_raw(transport as *mut GqlTransport) as Arc<dyn Transport>
+        }
+        None => panic!(),
+    }
 }

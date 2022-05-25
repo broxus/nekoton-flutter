@@ -6,17 +6,19 @@ import 'package:logger/logger.dart';
 import 'bindings.g.dart';
 
 abstract class NekotonFlutter {
-  static Logger? logger;
+  static Logger? _logger;
   static Bindings? _bindings;
 
   static void initialize([Logger? logger]) {
-    NekotonFlutter.logger = logger;
+    _logger = logger;
 
     final dylib = _dlOpenPlatformSpecific();
-    final ptr = NativeApi.postCObject.cast<Void>();
+    final postCObject = NativeApi.postCObject.cast<Void>();
 
-    _bindings = Bindings(dylib)..store_post_cobject(ptr);
+    _bindings = Bindings(dylib)..nt_store_dart_post_cobject(postCObject);
   }
+
+  static Logger? get logger => _logger;
 
   static Bindings get bindings {
     if (_bindings != null) {

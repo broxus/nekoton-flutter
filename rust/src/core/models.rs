@@ -1,11 +1,14 @@
 use nekoton::core::{
     self,
     models::{
-        ContractState, PendingTransaction, Transaction, TransactionWithData, TransactionsBatchInfo,
+        self, ContractState, PendingTransaction, Transaction, TransactionWithData,
+        TransactionsBatchInfo,
     },
 };
 use nekoton_utils::{serde_address, serde_boc, serde_optional_address};
 use serde::{Deserialize, Serialize};
+
+use crate::models::{ToNekoton, ToSerializable};
 
 #[derive(Serialize)]
 pub struct OnMessageSentPayload {
@@ -37,12 +40,12 @@ pub enum Expiration {
     Timestamp { value: u32 },
 }
 
-impl Expiration {
-    pub fn to_core(self) -> core::models::Expiration {
+impl ToNekoton<models::Expiration> for Expiration {
+    fn to_nekoton(self) -> models::Expiration {
         match self {
-            Expiration::Never => core::models::Expiration::Never,
-            Expiration::Timeout { value } => core::models::Expiration::Timeout(value),
-            Expiration::Timestamp { value } => core::models::Expiration::Timestamp(value),
+            Expiration::Never => models::Expiration::Never,
+            Expiration::Timeout { value } => models::Expiration::Timeout(value),
+            Expiration::Timestamp { value } => models::Expiration::Timestamp(value),
         }
     }
 }
@@ -59,14 +62,14 @@ pub struct InternalMessage {
     pub body: ton_types::SliceData,
 }
 
-impl InternalMessage {
-    pub fn from_core(internal_message: nekoton::core::InternalMessage) -> Self {
-        Self {
-            source: internal_message.source,
-            destination: internal_message.destination,
-            amount: internal_message.amount.to_string(),
-            bounce: internal_message.bounce,
-            body: internal_message.body,
+impl ToSerializable<InternalMessage> for core::InternalMessage {
+    fn to_serializable(self) -> InternalMessage {
+        InternalMessage {
+            source: self.source,
+            destination: self.destination,
+            amount: self.amount.to_string(),
+            bounce: self.bounce,
+            body: self.body,
         }
     }
 }

@@ -6,30 +6,34 @@ import 'package:ffi/ffi.dart';
 import '../../bindings.dart';
 import '../../ffi_utils.dart';
 import '../../transport/transport.dart';
+import '../accounts_storage/models/wallet_type.dart';
 import 'models/existing_wallet_info.dart';
 
 Future<List<ExistingWalletInfo>> findExistingWallets({
   required Transport transport,
   required String publicKey,
   required int workchainId,
+  required List<WalletType> walletTypes,
 }) async {
   final ptr = await transport.clonePtr();
   final transportType = transport.connectionData.type;
+  final walletTypesStr = jsonEncode(walletTypes);
 
   final result = await executeAsync(
-    (port) => NekotonFlutter.bindings.find_existing_wallets(
+    (port) => NekotonFlutter.bindings.nt_find_existing_wallets(
       port,
       ptr,
       transportType.index,
-      publicKey.toNativeUtf8().cast<Int8>(),
+      publicKey.toNativeUtf8().cast<Char>(),
       workchainId,
+      walletTypesStr.toNativeUtf8().cast<Char>(),
     ),
   );
 
   final string = cStringToDart(result);
   final json = jsonDecode(string) as List<dynamic>;
-  final jsonList = json.cast<Map<String, dynamic>>();
-  final existingWallets = jsonList.map((e) => ExistingWalletInfo.fromJson(e)).toList();
+  final list = json.cast<Map<String, dynamic>>();
+  final existingWallets = list.map((e) => ExistingWalletInfo.fromJson(e)).toList();
 
   return existingWallets;
 }

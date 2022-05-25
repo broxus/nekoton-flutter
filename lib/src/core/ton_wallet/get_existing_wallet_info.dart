@@ -16,11 +16,11 @@ Future<ExistingWalletInfo> getExistingWalletInfo({
   final transportType = transport.connectionData.type;
 
   final result = await executeAsync(
-    (port) => NekotonFlutter.bindings.get_existing_wallet_info(
+    (port) => NekotonFlutter.bindings.nt_get_existing_wallet_info(
       port,
       ptr,
       transportType.index,
-      address.toNativeUtf8().cast<Int8>(),
+      address.toNativeUtf8().cast<Char>(),
     ),
   );
 

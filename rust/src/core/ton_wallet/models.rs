@@ -1,4 +1,3 @@
-use crate::core::token_wallet::models::TokenOutgoingTransfer;
 use nekoton::core::{
     models::{
         self, ContractState, DePoolOnRoundCompleteNotification, DePoolReceiveAnswerNotification,
@@ -9,6 +8,11 @@ use nekoton::core::{
 use nekoton_utils::{serde_address, serde_optional_address, serde_public_key};
 use serde::{Deserialize, Serialize};
 use ton_block::MsgAddressInt;
+
+use crate::{
+    core::token_wallet::models::TokenOutgoingTransfer,
+    models::{ToNekoton, ToSerializable},
+};
 
 #[derive(Serialize)]
 #[serde(tag = "runtimeType")]
@@ -30,23 +34,27 @@ pub enum TransactionAdditionalInfo {
     },
 }
 
-impl TransactionAdditionalInfo {
-    pub fn from_core(transaction_additional_info: models::TransactionAdditionalInfo) -> Self {
-        match transaction_additional_info {
-            models::TransactionAdditionalInfo::Comment(value) => Self::Comment { value },
+impl ToSerializable<TransactionAdditionalInfo> for models::TransactionAdditionalInfo {
+    fn to_serializable(self) -> TransactionAdditionalInfo {
+        match self {
+            models::TransactionAdditionalInfo::Comment(value) => {
+                TransactionAdditionalInfo::Comment { value }
+            }
             models::TransactionAdditionalInfo::DePoolOnRoundComplete(notification) => {
-                Self::DePoolOnRoundComplete { notification }
+                TransactionAdditionalInfo::DePoolOnRoundComplete { notification }
             }
             models::TransactionAdditionalInfo::DePoolReceiveAnswer(notification) => {
-                Self::DePoolReceiveAnswer { notification }
+                TransactionAdditionalInfo::DePoolReceiveAnswer { notification }
             }
             models::TransactionAdditionalInfo::TokenWalletDeployed(notification) => {
-                Self::TokenWalletDeployed { notification }
+                TransactionAdditionalInfo::TokenWalletDeployed { notification }
             }
-            models::TransactionAdditionalInfo::WalletInteraction(info) => Self::WalletInteraction {
-                info: WalletInteractionInfo::from_core(info),
-            },
-            _ => Self::Comment {
+            models::TransactionAdditionalInfo::WalletInteraction(info) => {
+                TransactionAdditionalInfo::WalletInteraction {
+                    info: info.to_serializable(),
+                }
+            }
+            _ => TransactionAdditionalInfo::Comment {
                 value: String::new(),
             },
         }
@@ -61,14 +69,12 @@ pub struct WalletInteractionInfo {
     pub method: WalletInteractionMethod,
 }
 
-impl WalletInteractionInfo {
-    pub fn from_core(wallet_interaction_info: models::WalletInteractionInfo) -> Self {
-        Self {
-            recipient: wallet_interaction_info.recipient,
-            known_payload: wallet_interaction_info
-                .known_payload
-                .map(KnownPayload::from_core),
-            method: WalletInteractionMethod::from_core(wallet_interaction_info.method),
+impl ToSerializable<WalletInteractionInfo> for models::WalletInteractionInfo {
+    fn to_serializable(self) -> WalletInteractionInfo {
+        WalletInteractionInfo {
+            recipient: self.recipient,
+            known_payload: self.known_payload.map(|e| e.to_serializable()),
+            method: self.method.to_serializable(),
         }
     }
 }
@@ -87,21 +93,19 @@ pub enum KnownPayload {
     },
 }
 
-impl KnownPayload {
-    pub fn from_core(known_payload: models::KnownPayload) -> Self {
-        match known_payload {
-            models::KnownPayload::Comment(value) => Self::Comment { value },
+impl ToSerializable<KnownPayload> for models::KnownPayload {
+    fn to_serializable(self) -> KnownPayload {
+        match self {
+            models::KnownPayload::Comment(value) => KnownPayload::Comment { value },
             models::KnownPayload::TokenOutgoingTransfer(token_outgoing_transfer) => {
-                Self::TokenOutgoingTransfer {
-                    token_outgoing_transfer: TokenOutgoingTransfer::from_core(
-                        token_outgoing_transfer,
-                    ),
+                KnownPayload::TokenOutgoingTransfer {
+                    token_outgoing_transfer: token_outgoing_transfer.to_serializable(),
                 }
             }
             models::KnownPayload::TokenSwapBack(token_swap_back) => {
-                Self::TokenSwapBack { token_swap_back }
+                KnownPayload::TokenSwapBack { token_swap_back }
             }
-            _ => Self::Comment {
+            _ => KnownPayload::Comment {
                 value: String::new(),
             },
         }
@@ -117,13 +121,17 @@ pub enum WalletInteractionMethod {
     },
 }
 
-impl WalletInteractionMethod {
-    pub fn from_core(wallet_interaction_method: models::WalletInteractionMethod) -> Self {
-        match wallet_interaction_method {
-            models::WalletInteractionMethod::WalletV3Transfer => Self::WalletV3Transfer,
-            models::WalletInteractionMethod::Multisig(multisig_transaction) => Self::Multisig {
-                multisig_transaction: MultisigTransaction::from_core(*multisig_transaction),
-            },
+impl ToSerializable<WalletInteractionMethod> for models::WalletInteractionMethod {
+    fn to_serializable(self) -> WalletInteractionMethod {
+        match self {
+            models::WalletInteractionMethod::WalletV3Transfer => {
+                WalletInteractionMethod::WalletV3Transfer
+            }
+            models::WalletInteractionMethod::Multisig(multisig_transaction) => {
+                WalletInteractionMethod::Multisig {
+                    multisig_transaction: multisig_transaction.to_serializable(),
+                }
+            }
         }
     }
 }
@@ -142,18 +150,24 @@ pub enum MultisigTransaction {
     },
 }
 
-impl MultisigTransaction {
-    pub fn from_core(multisig_transaction: models::MultisigTransaction) -> Self {
-        match multisig_transaction {
-            models::MultisigTransaction::Send(multisig_send_transaction) => Self::Send {
-                multisig_send_transaction,
-            },
-            models::MultisigTransaction::Submit(multisig_submit_transaction) => Self::Submit {
-                multisig_submit_transaction,
-            },
-            models::MultisigTransaction::Confirm(multisig_confirm_transaction) => Self::Confirm {
-                multisig_confirm_transaction,
-            },
+impl ToSerializable<MultisigTransaction> for models::MultisigTransaction {
+    fn to_serializable(self) -> MultisigTransaction {
+        match self {
+            models::MultisigTransaction::Send(multisig_send_transaction) => {
+                MultisigTransaction::Send {
+                    multisig_send_transaction,
+                }
+            }
+            models::MultisigTransaction::Submit(multisig_submit_transaction) => {
+                MultisigTransaction::Submit {
+                    multisig_submit_transaction,
+                }
+            }
+            models::MultisigTransaction::Confirm(multisig_confirm_transaction) => {
+                MultisigTransaction::Confirm {
+                    multisig_confirm_transaction,
+                }
+            }
         }
     }
 }
@@ -166,16 +180,20 @@ pub enum WalletType {
     HighloadWalletV2,
 }
 
-impl WalletType {
-    pub fn from_core(contract: ton_wallet::WalletType) -> Self {
-        match contract {
-            ton_wallet::WalletType::Multisig(multisig_type) => Self::Multisig { multisig_type },
-            ton_wallet::WalletType::WalletV3 => Self::WalletV3,
-            ton_wallet::WalletType::HighloadWalletV2 => Self::HighloadWalletV2,
+impl ToSerializable<WalletType> for ton_wallet::WalletType {
+    fn to_serializable(self) -> WalletType {
+        match self {
+            ton_wallet::WalletType::Multisig(multisig_type) => {
+                WalletType::Multisig { multisig_type }
+            }
+            ton_wallet::WalletType::WalletV3 => WalletType::WalletV3,
+            ton_wallet::WalletType::HighloadWalletV2 => WalletType::HighloadWalletV2,
         }
     }
+}
 
-    pub fn to_core(self) -> ton_wallet::WalletType {
+impl ToNekoton<ton_wallet::WalletType> for WalletType {
+    fn to_nekoton(self) -> ton_wallet::WalletType {
         match self {
             WalletType::Multisig { multisig_type } => {
                 ton_wallet::WalletType::Multisig(multisig_type)
@@ -196,21 +214,23 @@ pub struct ExistingWalletInfo {
     pub contract_state: ContractState,
 }
 
-impl ExistingWalletInfo {
-    pub fn from_core(existing_wallet_info: ton_wallet::ExistingWalletInfo) -> Self {
-        Self {
-            address: existing_wallet_info.address,
-            public_key: existing_wallet_info.public_key,
-            wallet_type: WalletType::from_core(existing_wallet_info.wallet_type),
-            contract_state: existing_wallet_info.contract_state,
+impl ToSerializable<ExistingWalletInfo> for ton_wallet::ExistingWalletInfo {
+    fn to_serializable(self) -> ExistingWalletInfo {
+        ExistingWalletInfo {
+            address: self.address,
+            public_key: self.public_key,
+            wallet_type: self.wallet_type.to_serializable(),
+            contract_state: self.contract_state,
         }
     }
+}
 
-    pub fn to_core(self) -> ton_wallet::ExistingWalletInfo {
+impl ToNekoton<ton_wallet::ExistingWalletInfo> for ExistingWalletInfo {
+    fn to_nekoton(self) -> ton_wallet::ExistingWalletInfo {
         ton_wallet::ExistingWalletInfo {
             address: self.address,
             public_key: self.public_key,
-            wallet_type: self.wallet_type.to_core(),
+            wallet_type: self.wallet_type.to_nekoton(),
             contract_state: self.contract_state,
         }
     }

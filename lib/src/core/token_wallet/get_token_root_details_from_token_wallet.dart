@@ -17,18 +17,18 @@ Future<Tuple2<String, RootTokenContractDetails>> getTokenRootDetailsFromTokenWal
   final transportType = transport.connectionData.type;
 
   final result = await executeAsync(
-    (port) => NekotonFlutter.bindings.get_token_wallet_details(
+    (port) => NekotonFlutter.bindings.nt_get_token_wallet_details(
       port,
       ptr,
       transportType.index,
-      tokenWalletAddress.toNativeUtf8().cast<Int8>(),
+      tokenWalletAddress.toNativeUtf8().cast<Char>(),
     ),
   );
 
   final string = cStringToDart(result);
-  final jsonList = jsonDecode(string) as List<dynamic>;
-  final rootTokenContract = jsonList.first as String;
-  final rootContractDetails = RootTokenContractDetails.fromJson(jsonList.last as Map<String, dynamic>);
+  final list = jsonDecode(string) as List<dynamic>;
+  final rootTokenContract = list.first as String;
+  final rootContractDetails = RootTokenContractDetails.fromJson(list.last as Map<String, dynamic>);
 
   return Tuple2(rootTokenContract, rootContractDetails);
 }

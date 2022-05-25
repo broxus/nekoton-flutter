@@ -16,11 +16,11 @@ Future<RootTokenContractDetails> getTokenRootDetails({
   final transportType = transport.connectionData.type;
 
   final result = await executeAsync(
-    (port) => NekotonFlutter.bindings.get_token_root_details(
+    (port) => NekotonFlutter.bindings.nt_get_token_root_details(
       port,
       ptr,
       transportType.index,
-      rootTokenContract.toNativeUtf8().cast<Int8>(),
+      rootTokenContract.toNativeUtf8().cast<Char>(),
     ),
   );
 

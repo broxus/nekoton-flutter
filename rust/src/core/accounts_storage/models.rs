@@ -1,9 +1,49 @@
-use crate::core::ton_wallet::models::WalletType;
-use nekoton::core::accounts_storage::{self, AdditionalAssets};
-use nekoton_utils::{serde_address, serde_public_key};
-use serde::Serialize;
 use std::collections::HashMap;
+
+use nekoton::core::accounts_storage::{self, AdditionalAssets};
+use nekoton_utils::{serde_address, serde_optional_address, serde_public_key};
+use serde::{Deserialize, Serialize};
 use ton_block::MsgAddressInt;
+
+use crate::{
+    core::ton_wallet::models::WalletType,
+    models::{ToNekoton, ToSerializable},
+};
+
+#[derive(Serialize, Deserialize)]
+pub struct AccountToAdd {
+    pub name: String,
+    #[serde(with = "serde_public_key")]
+    pub public_key: ed25519_dalek::PublicKey,
+    pub contract: WalletType,
+    pub workchain: i8,
+    #[serde(with = "serde_optional_address")]
+    pub explicit_address: Option<MsgAddressInt>,
+}
+
+impl ToNekoton<accounts_storage::AccountToAdd> for AccountToAdd {
+    fn to_nekoton(self) -> accounts_storage::AccountToAdd {
+        accounts_storage::AccountToAdd {
+            name: self.name,
+            public_key: self.public_key,
+            contract: self.contract.to_nekoton(),
+            workchain: self.workchain,
+            explicit_address: self.explicit_address,
+        }
+    }
+}
+
+impl ToSerializable<AccountToAdd> for accounts_storage::AccountToAdd {
+    fn to_serializable(self) -> AccountToAdd {
+        AccountToAdd {
+            name: self.name,
+            public_key: self.public_key,
+            contract: self.contract.to_serializable(),
+            workchain: self.workchain,
+            explicit_address: self.explicit_address,
+        }
+    }
+}
 
 #[derive(Serialize)]
 pub struct AssetsList {
@@ -12,12 +52,12 @@ pub struct AssetsList {
     pub additional_assets: HashMap<String, AdditionalAssets>,
 }
 
-impl AssetsList {
-    pub fn from_core(assets_list: accounts_storage::AssetsList) -> Self {
-        Self {
-            name: assets_list.name,
-            ton_wallet: TonWalletAsset::from_core(assets_list.ton_wallet),
-            additional_assets: assets_list.additional_assets,
+impl ToSerializable<AssetsList> for accounts_storage::AssetsList {
+    fn to_serializable(self) -> AssetsList {
+        AssetsList {
+            name: self.name,
+            ton_wallet: self.ton_wallet.to_serializable(),
+            additional_assets: self.additional_assets,
         }
     }
 }
@@ -31,12 +71,12 @@ pub struct TonWalletAsset {
     pub contract: WalletType,
 }
 
-impl TonWalletAsset {
-    pub fn from_core(ton_wallet_asset: accounts_storage::TonWalletAsset) -> Self {
-        Self {
-            address: ton_wallet_asset.address,
-            public_key: ton_wallet_asset.public_key,
-            contract: WalletType::from_core(ton_wallet_asset.contract),
+impl ToSerializable<TonWalletAsset> for accounts_storage::TonWalletAsset {
+    fn to_serializable(self) -> TonWalletAsset {
+        TonWalletAsset {
+            address: self.address,
+            public_key: self.public_key,
+            contract: self.contract.to_serializable(),
         }
     }
 }

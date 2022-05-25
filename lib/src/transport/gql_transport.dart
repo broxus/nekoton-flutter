@@ -6,11 +6,8 @@ import 'package:ffi/ffi.dart';
 import 'package:synchronized/synchronized.dart';
 
 import '../bindings.dart';
-import '../constants.dart';
-import '../core/models/transaction_id.dart';
 import '../ffi_utils.dart';
-import '../utils/models/common/full_contract_state.dart';
-import '../utils/models/common/transactions_list.dart';
+import 'constants.dart';
 import 'models/connection_data.dart';
 import 'models/gql_network_settings.dart';
 import 'transport.dart';
@@ -18,6 +15,8 @@ import 'transport.dart';
 class GqlTransport extends Transport {
   final _lock = Lock();
   Pointer<Void>? _ptr;
+  @override
+  late final ConnectionData connectionData;
 
   GqlTransport._();
 
@@ -27,70 +26,36 @@ class GqlTransport extends Transport {
     return instance;
   }
 
-  @override
-  Future<FullContractState?> getFullAccountState({
-    required String address,
-  }) async {
-    final ptr = await clonePtr();
-
-    final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.get_full_account_state(
-        port,
-        ptr,
-        connectionData.type.index,
-        address.toNativeUtf8().cast<Int8>(),
-      ),
-    );
-
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>?;
-    final fullContractState = json != null ? FullContractState.fromJson(json) : null;
-
-    return fullContractState;
-  }
-
-  @override
-  Future<TransactionsList> getTransactions({
-    required String address,
-    TransactionId? continuation,
-    int? limit,
-  }) async {
-    final ptr = await clonePtr();
-
-    final fromStr = continuation != null ? jsonEncode(continuation) : null;
-
-    final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.get_transactions(
-        port,
-        ptr,
-        connectionData.type.index,
-        address.toNativeUtf8().cast<Int8>(),
-        fromStr?.toNativeUtf8().cast<Int8>() ?? nullptr,
-        limit ?? 50,
-      ),
-    );
-
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>;
-    final transactionsList = TransactionsList.fromJson(json);
-
-    return transactionsList;
-  }
-
   Future<String> getLatestBlockId(String address) async {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.get_latest_block_id(
+      (port) => NekotonFlutter.bindings.nt_gql_transport_get_latest_block_id(
         port,
         ptr,
-        address.toNativeUtf8().cast<Int8>(),
+        address.toNativeUtf8().cast<Char>(),
       ),
     );
 
     final id = cStringToDart(result);
 
     return id;
+  }
+
+  Future<String> getBlock(String id) async {
+    final ptr = await clonePtr();
+
+    final result = await executeAsync(
+      (port) => NekotonFlutter.bindings.nt_gql_transport_get_block(
+        port,
+        ptr,
+        id.toNativeUtf8().cast<Char>(),
+      ),
+    );
+
+    final block = cStringToDart(result);
+
+    return block;
   }
 
   Future<String> waitForNextBlockId({
@@ -101,11 +66,11 @@ class GqlTransport extends Transport {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.wait_for_next_block_id(
+      (port) => NekotonFlutter.bindings.nt_gql_transport_wait_for_next_block_id(
         port,
         ptr,
-        currentBlockId.toNativeUtf8().cast<Int8>(),
-        address.toNativeUtf8().cast<Int8>(),
+        currentBlockId.toNativeUtf8().cast<Char>(),
+        address.toNativeUtf8().cast<Char>(),
         timeout,
       ),
     );
@@ -119,7 +84,7 @@ class GqlTransport extends Transport {
   Future<Pointer<Void>> clonePtr() => _lock.synchronized(() {
         if (_ptr == null) throw Exception('Gql transport use after free');
 
-        final ptr = NekotonFlutter.bindings.clone_gql_transport_ptr(
+        final ptr = NekotonFlutter.bindings.nt_gql_transport_clone_ptr(
           _ptr!,
         );
 
@@ -130,32 +95,32 @@ class GqlTransport extends Transport {
   Future<void> freePtr() => _lock.synchronized(() {
         if (_ptr == null) return;
 
-        NekotonFlutter.bindings.free_gql_transport_ptr(
+        NekotonFlutter.bindings.nt_gql_transport_free_ptr(
           _ptr!,
         );
 
         _ptr = null;
       });
 
-  Future<void> _initialize(ConnectionData connectionData) async {
-    this.connectionData = connectionData;
+  Future<void> _initialize(ConnectionData connectionData) => _lock.synchronized(() async {
+        this.connectionData = connectionData;
 
-    final settings = GqlNetworkSettings(
-      endpoints: connectionData.endpoints,
-      latencyDetectionInterval: kGqlTimeout.inMilliseconds,
-      maxLatency: kGqlTimeout.inMilliseconds,
-      endpointSelectionRetryCount: 5,
-      local: connectionData.local,
-    );
+        final settings = GqlNetworkSettings(
+          endpoints: connectionData.endpoints,
+          latencyDetectionInterval: kGqlTimeout.inMilliseconds,
+          maxLatency: kGqlTimeout.inMilliseconds,
+          endpointSelectionRetryCount: 5,
+          local: connectionData.local,
+        );
 
-    final settingsStr = jsonEncode(settings);
+        final settingsStr = jsonEncode(settings);
 
-    final result = executeSync(
-      () => NekotonFlutter.bindings.create_gql_transport(
-        settingsStr.toNativeUtf8().cast<Int8>(),
-      ),
-    );
+        final result = executeSync(
+          () => NekotonFlutter.bindings.nt_gql_transport_create(
+            settingsStr.toNativeUtf8().cast<Char>(),
+          ),
+        );
 
-    _ptr = Pointer.fromAddress(result).cast<Void>();
-  }
+        _ptr = Pointer.fromAddress(result).cast<Void>();
+      });
 }

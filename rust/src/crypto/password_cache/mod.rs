@@ -1,7 +1,10 @@
+use std::time::Duration;
+
 use nekoton::crypto;
 use secstr::SecUtf8;
 use serde::Deserialize;
-use std::time::Duration;
+
+use crate::models::ToNekoton;
 
 #[derive(Deserialize)]
 #[serde(tag = "runtimeType")]
@@ -13,15 +16,15 @@ pub enum Password {
     FromCache,
 }
 
-impl Password {
-    pub fn to_core(self) -> crypto::Password {
+impl ToNekoton<crypto::Password> for Password {
+    fn to_nekoton(self) -> crypto::Password {
         match self {
             Password::Explicit {
                 password,
                 cache_behavior,
             } => crypto::Password::Explicit {
                 password,
-                cache_behavior: cache_behavior.to_core(),
+                cache_behavior: cache_behavior.to_nekoton(),
             },
             Password::FromCache => crypto::Password::FromCache,
         }
@@ -35,8 +38,8 @@ pub enum PasswordCacheBehavior {
     Remove,
 }
 
-impl PasswordCacheBehavior {
-    pub fn to_core(self) -> crypto::PasswordCacheBehavior {
+impl ToNekoton<crypto::PasswordCacheBehavior> for PasswordCacheBehavior {
+    fn to_nekoton(self) -> crypto::PasswordCacheBehavior {
         match self {
             PasswordCacheBehavior::Store { duration } => {
                 crypto::PasswordCacheBehavior::Store(Duration::from_millis(duration))

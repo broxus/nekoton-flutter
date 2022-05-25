@@ -3,6 +3,8 @@ use nekoton_utils::serde_address;
 use serde::Serialize;
 use ton_block::MsgAddressInt;
 
+use crate::models::ToSerializable;
+
 #[derive(Serialize)]
 pub struct OnBalanceChangedPayload {
     pub balance: String,
@@ -31,33 +33,35 @@ pub enum TokenWalletTransaction {
     },
 }
 
-impl TokenWalletTransaction {
-    pub fn from_core(token_wallet_transaction: models::TokenWalletTransaction) -> Self {
-        match token_wallet_transaction {
+impl ToSerializable<TokenWalletTransaction> for models::TokenWalletTransaction {
+    fn to_serializable(self) -> TokenWalletTransaction {
+        match self {
             models::TokenWalletTransaction::IncomingTransfer(token_incoming_transfer) => {
-                Self::IncomingTransfer {
+                TokenWalletTransaction::IncomingTransfer {
                     token_incoming_transfer,
                 }
             }
             models::TokenWalletTransaction::OutgoingTransfer(token_outgoing_transfer) => {
-                Self::OutgoingTransfer {
-                    token_outgoing_transfer: TokenOutgoingTransfer::from_core(
-                        token_outgoing_transfer,
-                    ),
+                TokenWalletTransaction::OutgoingTransfer {
+                    token_outgoing_transfer: token_outgoing_transfer.to_serializable(),
                 }
             }
             models::TokenWalletTransaction::SwapBack(token_swap_back) => {
-                Self::SwapBack { token_swap_back }
+                TokenWalletTransaction::SwapBack { token_swap_back }
             }
-            models::TokenWalletTransaction::Accept(value) => Self::Accept {
+            models::TokenWalletTransaction::Accept(value) => TokenWalletTransaction::Accept {
                 value: value.to_string(),
             },
-            models::TokenWalletTransaction::TransferBounced(value) => Self::TransferBounced {
-                value: value.to_string(),
-            },
-            models::TokenWalletTransaction::SwapBackBounced(value) => Self::SwapBackBounced {
-                value: value.to_string(),
-            },
+            models::TokenWalletTransaction::TransferBounced(value) => {
+                TokenWalletTransaction::TransferBounced {
+                    value: value.to_string(),
+                }
+            }
+            models::TokenWalletTransaction::SwapBackBounced(value) => {
+                TokenWalletTransaction::SwapBackBounced {
+                    value: value.to_string(),
+                }
+            }
         }
     }
 }
@@ -68,11 +72,11 @@ pub struct TokenOutgoingTransfer {
     pub tokens: String,
 }
 
-impl TokenOutgoingTransfer {
-    pub fn from_core(token_outgoing_transfer: models::TokenOutgoingTransfer) -> Self {
-        Self {
-            to: TransferRecipient::from_core(token_outgoing_transfer.to),
-            tokens: token_outgoing_transfer.tokens.to_string(),
+impl ToSerializable<TokenOutgoingTransfer> for models::TokenOutgoingTransfer {
+    fn to_serializable(self) -> TokenOutgoingTransfer {
+        TokenOutgoingTransfer {
+            to: self.to.to_serializable(),
+            tokens: self.tokens.to_string(),
         }
     }
 }
@@ -90,11 +94,15 @@ pub enum TransferRecipient {
     },
 }
 
-impl TransferRecipient {
-    pub fn from_core(transfer_recipient: models::TransferRecipient) -> Self {
-        match transfer_recipient {
-            models::TransferRecipient::OwnerWallet(address) => Self::OwnerWallet { address },
-            models::TransferRecipient::TokenWallet(address) => Self::TokenWallet { address },
+impl ToSerializable<TransferRecipient> for models::TransferRecipient {
+    fn to_serializable(self) -> TransferRecipient {
+        match self {
+            models::TransferRecipient::OwnerWallet(address) => {
+                TransferRecipient::OwnerWallet { address }
+            }
+            models::TransferRecipient::TokenWallet(address) => {
+                TransferRecipient::TokenWallet { address }
+            }
         }
     }
 }
