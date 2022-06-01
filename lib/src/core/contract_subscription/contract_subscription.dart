@@ -45,6 +45,18 @@ abstract class ContractSubscription {
       var previousPollingMethod = _currentPollingMethod;
 
       while (_isRunning) {
+        // TODO: Replace with proper polling task and remove this ugly crutch
+        // possibly when Finalizable will be working as intended there will be no need for that at all
+        bool transportAvailable;
+        try {
+          await transport.clonePtr();
+          transportAvailable = true;
+        } catch (_) {
+          transportAvailable = false;
+        }
+
+        if (!transportAvailable) break;
+
         final pollingMethodChanged = previousPollingMethod != _currentPollingMethod;
         previousPollingMethod = _currentPollingMethod;
 
