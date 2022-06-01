@@ -4,7 +4,7 @@ pub(crate) mod models;
 
 use std::{
     convert::TryFrom,
-    ffi::{c_char, c_int, c_longlong, c_uchar, c_void},
+    os::raw::{c_char, c_int, c_longlong, c_uchar, c_void},
     sync::Arc,
 };
 

@@ -3,7 +3,7 @@ mod models;
 use std::{
     borrow::Cow,
     collections::HashMap,
-    ffi::{c_char, c_schar, c_uint, c_void},
+    os::raw::{c_char, c_schar, c_uint, c_void},
     str::FromStr,
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},

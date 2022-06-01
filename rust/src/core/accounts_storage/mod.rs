@@ -1,7 +1,7 @@
 mod models;
 
 use std::{
-    ffi::{c_char, c_longlong, c_void},
+    os::raw::{c_char, c_longlong, c_void},
     sync::Arc,
 };
 

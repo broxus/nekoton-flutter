@@ -1,5 +1,6 @@
 use std::{
-    ffi::{c_char, c_uint, c_ulonglong, c_void, CStr, CString},
+    ffi::{CStr, CString},
+    os::raw::{c_char, c_uint, c_ulonglong, c_void},
     ptr::null,
 };
 

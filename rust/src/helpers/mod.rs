@@ -2,7 +2,7 @@ mod abi;
 mod models;
 
 use std::{
-    ffi::{c_char, c_uint, c_void},
+    os::raw::{c_char, c_uint, c_void},
     u64,
 };
 

@@ -2,7 +2,7 @@ mod handler;
 pub(crate) mod models;
 
 use std::{
-    ffi::{c_char, c_int, c_longlong, c_uint, c_void},
+    os::raw::{c_char, c_int, c_longlong, c_uint, c_void},
     str::FromStr,
     sync::Arc,
 };

@@ -5,7 +5,7 @@ pub(crate) mod models;
 mod password_cache;
 
 use std::{
-    ffi::{c_char, c_longlong, c_void},
+    os::raw::{c_char, c_longlong, c_void},
     sync::Arc,
 };
 

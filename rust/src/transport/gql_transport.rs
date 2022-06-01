@@ -1,5 +1,5 @@
 use std::{
-    ffi::{c_char, c_longlong, c_ulonglong, c_void},
+    os::raw::{c_char, c_longlong, c_ulonglong, c_void},
     sync::Arc,
     time::Duration,
     u64,

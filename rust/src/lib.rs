@@ -14,9 +14,9 @@ mod models;
 mod transport;
 
 use std::{
-    ffi::{c_char, c_longlong, c_ulonglong, c_void},
     intrinsics::transmute,
     io,
+    os::raw::{c_char, c_longlong, c_ulonglong, c_void},
     str::FromStr,
     sync::Arc,
 };

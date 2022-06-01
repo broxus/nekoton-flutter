@@ -1,6 +1,6 @@
 pub(crate) mod models;
 
-use std::ffi::{c_char, c_void};
+use std::os::raw::{c_char, c_void};
 
 use anyhow::Result;
 use nekoton::crypto::{self, dict};
