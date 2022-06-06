@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:logger/logger.dart';
 
-import 'bindings.g.dart';
+import 'bindings.ffigen.dart';
 
 abstract class NekotonFlutter {
   static Logger? _logger;

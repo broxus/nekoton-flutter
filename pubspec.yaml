@@ -48,7 +48,7 @@ flutter:
 ffigen:
   name: "Bindings"
   description: "Generated bindings"
-  output: "lib/src/bindings.g.dart"
+  output: "lib/src/bindings.ffigen.dart"
   llvm-path:
     - "/opt/homebrew/opt/llvm"
   headers:

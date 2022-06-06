@@ -13,3 +13,4 @@ build/
 *.gr.dart
 *.config.dart
 *.freezed.dart
+*.ffigen.dart
