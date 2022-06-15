@@ -1,22 +1,13 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
 part 'transfer_recipient.freezed.dart';
 part 'transfer_recipient.g.dart';
 
-@Freezed(unionValueCase: FreezedUnionCase.pascal)
+@Freezed(unionKey: 'type')
 class TransferRecipient with _$TransferRecipient {
-  @JsonSerializable(fieldRename: FieldRename.snake)
-  @HiveType(typeId: 24)
-  const factory TransferRecipient.ownerWallet({
-    @HiveField(0) required String address,
-  }) = _TransferRecipientOwnerWallet;
+  const factory TransferRecipient.ownerWallet(String data) = _TransferRecipientOwnerWallet;
 
-  @JsonSerializable(fieldRename: FieldRename.snake)
-  @HiveType(typeId: 25)
-  const factory TransferRecipient.tokenWallet({
-    @HiveField(0) required String address,
-  }) = _TransferRecipientTokenWallet;
+  const factory TransferRecipient.tokenWallet(String data) = _TransferRecipientTokenWallet;
 
   factory TransferRecipient.fromJson(Map<String, dynamic> json) => _$TransferRecipientFromJson(json);
 }

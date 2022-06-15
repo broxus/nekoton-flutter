@@ -1,50 +1,32 @@
 use nekoton::{
     core::models::{Transaction, TransactionsBatchInfo},
-    transport::models,
+    transport::models::{ExistingContract, RawContractState},
 };
 use nekoton_abi::{GenTimings, LastTransactionId, TransactionId};
 use nekoton_utils::{serde_optional_address, serde_vec_address};
-use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use ton_block::MsgAddressInt;
 
-use crate::models::{ToNekoton, ToSerializable};
-
-#[derive(FromPrimitive)]
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum TransportType {
     Jrpc,
     Gql,
 }
 
 #[derive(Serialize, Deserialize)]
-#[serde(tag = "runtimeType")]
-pub enum RawContractState {
+pub struct RawContractStateHelper(#[serde(with = "RawContractStateDef")] pub RawContractState);
+
+#[derive(Serialize, Deserialize)]
+#[serde(
+    remote = "RawContractState",
+    rename_all = "camelCase",
+    tag = "type",
+    content = "data"
+)]
+pub enum RawContractStateDef {
     NotExists,
-    Exists {
-        existing_contract: models::ExistingContract,
-    },
-}
-
-impl ToSerializable<RawContractState> for models::RawContractState {
-    fn to_serializable(self) -> RawContractState {
-        match self {
-            models::RawContractState::NotExists => RawContractState::NotExists,
-            models::RawContractState::Exists(existing_contract) => {
-                RawContractState::Exists { existing_contract }
-            }
-        }
-    }
-}
-
-impl ToNekoton<models::RawContractState> for RawContractState {
-    fn to_nekoton(self) -> models::RawContractState {
-        match self {
-            RawContractState::NotExists => models::RawContractState::NotExists,
-            RawContractState::Exists { existing_contract } => {
-                models::RawContractState::Exists(existing_contract)
-            }
-        }
-    }
+    Exists(ExistingContract),
 }
 
 #[derive(Serialize)]

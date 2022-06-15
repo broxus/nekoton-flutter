@@ -8,10 +8,7 @@ part 'derived_key_export_params.g.dart';
 
 @freezed
 class DerivedKeyExportParams with _$DerivedKeyExportParams implements ExportKeyInput {
-  @JsonSerializable(
-    fieldRename: FieldRename.snake,
-    explicitToJson: true,
-  )
+  @JsonSerializable(fieldRename: FieldRename.snake)
   const factory DerivedKeyExportParams({
     required String masterKey,
     required Password password,

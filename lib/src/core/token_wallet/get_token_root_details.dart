@@ -13,19 +13,18 @@ Future<RootTokenContractDetails> getTokenRootDetails({
   required String rootTokenContract,
 }) async {
   final ptr = await transport.clonePtr();
-  final transportType = transport.connectionData.type;
+  final transportTypeStr = jsonEncode(transport.type.toString());
 
   final result = await executeAsync(
-    (port) => NekotonFlutter.bindings.nt_get_token_root_details(
-      port,
-      ptr,
-      transportType.index,
-      rootTokenContract.toNativeUtf8().cast<Char>(),
-    ),
+    (port) => NekotonFlutter.instance().bindings.nt_get_token_root_details(
+          port,
+          ptr,
+          transportTypeStr.toNativeUtf8().cast<Char>(),
+          rootTokenContract.toNativeUtf8().cast<Char>(),
+        ),
   );
 
-  final string = cStringToDart(result);
-  final json = jsonDecode(string) as Map<String, dynamic>;
+  final json = result as Map<String, dynamic>;
   final tokenRootDetails = RootTokenContractDetails.fromJson(json);
 
   return tokenRootDetails;

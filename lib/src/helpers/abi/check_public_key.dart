@@ -6,7 +6,7 @@ import '../../bindings.dart';
 import '../../ffi_utils.dart';
 
 void checkPublicKey(String publicKey) => executeSync(
-      () => NekotonFlutter.bindings.nt_check_public_key(
-        publicKey.toNativeUtf8().cast<Char>(),
-      ),
+      () => NekotonFlutter.instance().bindings.nt_check_public_key(
+            publicKey.toNativeUtf8().cast<Char>(),
+          ),
     );

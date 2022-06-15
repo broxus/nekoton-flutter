@@ -1,25 +1,20 @@
-import 'dart:ffi';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-import '../ffi_utils.dart';
-import 'execution_status.dart';
+part 'execution_result.freezed.dart';
+part 'execution_result.g.dart';
 
-class ExecutionResult extends Struct {
-  @Uint32()
-  external int statusCode;
+@Freezed(unionKey: 'type', unionValueCase: FreezedUnionCase.snake)
+class ExecutionResult with _$ExecutionResult {
+  const factory ExecutionResult.ok(dynamic data) = _ExecutionResultOk;
 
-  @Uint64()
-  external int payload;
-}
+  const factory ExecutionResult.err(String data) = _ExecutionResultErr;
 
-extension Handle on ExecutionResult {
-  int handle() {
-    final status = ExecutionStatus.values[statusCode];
+  const ExecutionResult._();
 
-    switch (status) {
-      case ExecutionStatus.ok:
-        return payload;
-      case ExecutionStatus.err:
-        throw Exception(cStringToDart(payload));
-    }
-  }
+  dynamic handle() => when(
+        ok: (data) => data,
+        err: (data) => throw Exception(data),
+      );
+
+  factory ExecutionResult.fromJson(Map<String, dynamic> json) => _$ExecutionResultFromJson(json);
 }

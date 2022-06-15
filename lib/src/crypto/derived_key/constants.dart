@@ -1,0 +1,1 @@
+const kDerivedKeySignerName = 'DerivedKeySigner';

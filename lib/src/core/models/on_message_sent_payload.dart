@@ -8,10 +8,6 @@ part 'on_message_sent_payload.g.dart';
 
 @freezed
 class OnMessageSentPayload with _$OnMessageSentPayload {
-  @JsonSerializable(
-    fieldRename: FieldRename.snake,
-    explicitToJson: true,
-  )
   const factory OnMessageSentPayload({
     required PendingTransaction pendingTransaction,
     Transaction? transaction,

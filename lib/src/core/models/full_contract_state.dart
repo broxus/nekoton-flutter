@@ -8,7 +8,6 @@ part 'full_contract_state.g.dart';
 
 @freezed
 class FullContractState with _$FullContractState {
-  @JsonSerializable(explicitToJson: true)
   const factory FullContractState({
     required String balance,
     required GenTimings genTimings,

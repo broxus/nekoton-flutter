@@ -1,10 +1,8 @@
 import 'dart:io';
 
-import 'package:collection/collection.dart';
+import 'package:args/args.dart';
 
 Future<void> main(List<String> args) async {
-  final androidNdkHome = args.firstOrNull;
-
   final flutterProjectDirectory = Directory.current.absolute.path;
   final rustProjectDirectory = '$flutterProjectDirectory/rust';
   final jsProjectDirectory = '$flutterProjectDirectory/js';
@@ -29,6 +27,23 @@ Future<void> main(List<String> args) async {
     if (exitCode != 0) exit(exitCode);
   }
 
+  final parser = ArgParser()
+    ..addOption('action', defaultsTo: 'all')
+    ..addFlag('help');
+
+  final argResults = parser.parse(args);
+
+  if (argResults['help'] as bool) {
+    await execute(
+      executable: 'make',
+      arguments: ['help'],
+      workingDirectory: rustProjectDirectory,
+    );
+    return;
+  }
+
+  final action = argResults['action'] as String;
+
   await execute(
     executable: 'make',
     arguments: ['init'],
@@ -37,10 +52,7 @@ Future<void> main(List<String> args) async {
 
   await execute(
     executable: 'make',
-    arguments: ['all'],
-    environment: {
-      'ANDROID_NDK_HOME': androidNdkHome ?? '',
-    },
+    arguments: [action],
     workingDirectory: rustProjectDirectory,
   );
 
@@ -54,6 +66,18 @@ Future<void> main(List<String> args) async {
     executable: 'npm',
     arguments: ['run', 'build'],
     workingDirectory: jsProjectDirectory,
+  );
+
+  await execute(
+    executable: 'flutter',
+    arguments: ['clean'],
+    workingDirectory: flutterProjectDirectory,
+  );
+
+  await execute(
+    executable: 'flutter',
+    arguments: ['pub', 'get'],
+    workingDirectory: flutterProjectDirectory,
   );
 
   await execute(

@@ -4,15 +4,21 @@ description: Demonstrates how to use the nekoton_flutter plugin.
 publish_to: "none"
 
 environment:
-  sdk: ">=2.17.0 <3.0.0"
-  flutter: ">=3.0.0"
+  sdk: ">=2.17.3 <3.0.0"
+  flutter: ">=3.0.2"
 
 dependencies:
-  cupertino_icons: ^1.0.4
+  async: ^2.8.2
+  bloc: ^8.0.3
+  cupertino_icons: ^1.0.5
   flutter:
     sdk: flutter
+  flutter_bloc: ^8.0.1
+  hex: ^0.2.0
+  http: ^0.13.4
   nekoton_flutter:
     path: ../
+  shared_preferences: ^2.0.15
 
 dev_dependencies:
   flutter_test:

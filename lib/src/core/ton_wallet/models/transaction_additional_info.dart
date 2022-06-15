@@ -1,5 +1,4 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
 import 'de_pool_on_round_complete_notification.dart';
 import 'de_pool_receive_answer_notification.dart';
@@ -9,32 +8,21 @@ import 'wallet_interaction_info.dart';
 part 'transaction_additional_info.freezed.dart';
 part 'transaction_additional_info.g.dart';
 
-@Freezed(unionValueCase: FreezedUnionCase.pascal)
+@Freezed(unionKey: 'type', unionValueCase: FreezedUnionCase.snake)
 class TransactionAdditionalInfo with _$TransactionAdditionalInfo {
-  @HiveType(typeId: 41)
-  const factory TransactionAdditionalInfo.comment({
-    @HiveField(0) required String value,
-  }) = _TransactionAdditionalInfoComment;
+  const factory TransactionAdditionalInfo.comment(String data) = _TransactionAdditionalInfoComment;
 
-  @HiveType(typeId: 42)
-  const factory TransactionAdditionalInfo.dePoolOnRoundComplete({
-    @HiveField(0) required DePoolOnRoundCompleteNotification notification,
-  }) = _TransactionAdditionalInfoDePoolOnRoundComplete;
+  const factory TransactionAdditionalInfo.dePoolOnRoundComplete(DePoolOnRoundCompleteNotification data) =
+      _TransactionAdditionalInfoDePoolOnRoundComplete;
 
-  @HiveType(typeId: 43)
-  const factory TransactionAdditionalInfo.dePoolReceiveAnswer({
-    @HiveField(0) required DePoolReceiveAnswerNotification notification,
-  }) = _TransactionAdditionalInfoDePoolReceiveAnswer;
+  const factory TransactionAdditionalInfo.dePoolReceiveAnswer(DePoolReceiveAnswerNotification data) =
+      _TransactionAdditionalInfoDePoolReceiveAnswer;
 
-  @HiveType(typeId: 44)
-  const factory TransactionAdditionalInfo.tokenWalletDeployed({
-    @HiveField(0) required TokenWalletDeployedNotification notification,
-  }) = _TransactionAdditionalInfoTokenWalletDeployed;
+  const factory TransactionAdditionalInfo.tokenWalletDeployed(TokenWalletDeployedNotification data) =
+      _TransactionAdditionalInfoTokenWalletDeployed;
 
-  @HiveType(typeId: 47)
-  const factory TransactionAdditionalInfo.walletInteraction({
-    @HiveField(0) required WalletInteractionInfo info,
-  }) = _TransactionAdditionalInfoWalletInteraction;
+  const factory TransactionAdditionalInfo.walletInteraction(WalletInteractionInfo data) =
+      _TransactionAdditionalInfoWalletInteraction;
 
   factory TransactionAdditionalInfo.fromJson(Map<String, dynamic> json) => _$TransactionAdditionalInfoFromJson(json);
 }

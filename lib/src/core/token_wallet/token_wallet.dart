@@ -10,7 +10,6 @@ import 'package:synchronized/synchronized.dart';
 
 import '../../bindings.dart';
 import '../../ffi_utils.dart';
-import '../../models/pointed.dart';
 import '../../transport/transport.dart';
 import '../contract_subscription/contract_subscription.dart';
 import '../models/contract_state.dart';
@@ -23,11 +22,12 @@ import 'models/symbol.dart';
 import 'models/token_wallet_transaction_with_data.dart';
 import 'models/token_wallet_version.dart';
 
-class TokenWallet extends ContractSubscription implements Pointed {
+class TokenWallet extends ContractSubscription {
   final _lock = Lock();
   Pointer<Void>? _ptr;
   final _onBalanceChangedPort = ReceivePort();
   final _onTransactionsFoundPort = ReceivePort();
+  late final StreamSubscription _onTransactionsFoundSubscription;
   final _transactionsSubject = BehaviorSubject<List<TokenWalletTransactionWithData>>.seeded([]);
   late final Stream<String> balanceChangesStream;
   late final Stream<List<TokenWalletTransactionWithData>> transactionsStream = _transactionsSubject;
@@ -58,13 +58,13 @@ class TokenWallet extends ContractSubscription implements Pointed {
         final ptr = await clonePtr();
 
         final result = await executeAsync(
-          (port) => NekotonFlutter.bindings.nt_token_wallet_owner(
-            port,
-            ptr,
-          ),
+          (port) => NekotonFlutter.instance().bindings.nt_token_wallet_owner(
+                port,
+                ptr,
+              ),
         );
 
-        final owner = cStringToDart(result);
+        final owner = result as String;
 
         return owner;
       });
@@ -74,13 +74,13 @@ class TokenWallet extends ContractSubscription implements Pointed {
         final ptr = await clonePtr();
 
         final result = await executeAsync(
-          (port) => NekotonFlutter.bindings.nt_token_wallet_address(
-            port,
-            ptr,
-          ),
+          (port) => NekotonFlutter.instance().bindings.nt_token_wallet_address(
+                port,
+                ptr,
+              ),
         );
 
-        final address = cStringToDart(result);
+        final address = result as String;
 
         return address;
       });
@@ -89,14 +89,13 @@ class TokenWallet extends ContractSubscription implements Pointed {
         final ptr = await clonePtr();
 
         final result = await executeAsync(
-          (port) => NekotonFlutter.bindings.nt_token_wallet_symbol(
-            port,
-            ptr,
-          ),
+          (port) => NekotonFlutter.instance().bindings.nt_token_wallet_symbol(
+                port,
+                ptr,
+              ),
         );
 
-        final string = cStringToDart(result);
-        final json = jsonDecode(string) as Map<String, dynamic>;
+        final json = result as Map<String, dynamic>;
         final symbol = Symbol.fromJson(json);
 
         return symbol;
@@ -106,15 +105,14 @@ class TokenWallet extends ContractSubscription implements Pointed {
         final ptr = await clonePtr();
 
         final result = await executeAsync(
-          (port) => NekotonFlutter.bindings.nt_token_wallet_version(
-            port,
-            ptr,
-          ),
+          (port) => NekotonFlutter.instance().bindings.nt_token_wallet_version(
+                port,
+                ptr,
+              ),
         );
 
-        final string = cStringToDart(result);
-        final json = jsonDecode(string) as String;
-        final version = tokenWalletVersionFromEnumString(json);
+        final json = result as String;
+        final version = TokenWalletVersion.values.firstWhere((e) => e.toString() == json);
 
         return version;
       });
@@ -123,13 +121,13 @@ class TokenWallet extends ContractSubscription implements Pointed {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_token_wallet_balance(
-        port,
-        ptr,
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_token_wallet_balance(
+            port,
+            ptr,
+          ),
     );
 
-    final balance = cStringToDart(result);
+    final balance = result as String;
 
     return balance;
   }
@@ -138,14 +136,13 @@ class TokenWallet extends ContractSubscription implements Pointed {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_token_wallet_contract_state(
-        port,
-        ptr,
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_token_wallet_contract_state(
+            port,
+            ptr,
+          ),
     );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>;
+    final json = result as Map<String, dynamic>;
     final contractState = ContractState.fromJson(json);
 
     return contractState;
@@ -163,18 +160,17 @@ class TokenWallet extends ContractSubscription implements Pointed {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_token_wallet_prepare_transfer(
-        port,
-        ptr,
-        destination.toNativeUtf8().cast<Char>(),
-        tokens.toNativeUtf8().cast<Char>(),
-        notifyReceiver ? 1 : 0,
-        payload?.toNativeUtf8().cast<Char>() ?? nullptr,
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_token_wallet_prepare_transfer(
+            port,
+            ptr,
+            destination.toNativeUtf8().cast<Char>(),
+            tokens.toNativeUtf8().cast<Char>(),
+            notifyReceiver ? 1 : 0,
+            payload?.toNativeUtf8().cast<Char>() ?? nullptr,
+          ),
     );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>;
+    final json = result as Map<String, dynamic>;
     final internalMessage = InternalMessage.fromJson(json);
 
     return internalMessage;
@@ -185,10 +181,10 @@ class TokenWallet extends ContractSubscription implements Pointed {
     final ptr = await clonePtr();
 
     await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_token_wallet_refresh(
-        port,
-        ptr,
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_token_wallet_refresh(
+            port,
+            ptr,
+          ),
     );
   }
 
@@ -197,11 +193,11 @@ class TokenWallet extends ContractSubscription implements Pointed {
     final fromStr = jsonEncode(from);
 
     await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_token_wallet_preload_transactions(
-        port,
-        ptr,
-        fromStr.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_token_wallet_preload_transactions(
+            port,
+            ptr,
+            fromStr.toNativeUtf8().cast<Char>(),
+          ),
     );
   }
 
@@ -210,39 +206,41 @@ class TokenWallet extends ContractSubscription implements Pointed {
     final ptr = await clonePtr();
 
     await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_token_wallet_handle_block(
-        port,
-        ptr,
-        block.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_token_wallet_handle_block(
+            port,
+            ptr,
+            block.toNativeUtf8().cast<Char>(),
+          ),
     );
   }
 
   @override
   Future<Pointer<Void>> clonePtr() => _lock.synchronized(() {
-        if (_ptr == null) throw Exception('Token wallet use after free');
+        if (_ptr == null) throw Exception('TokenWallet use after free');
 
-        final ptr = NekotonFlutter.bindings.nt_token_wallet_clone_ptr(
-          _ptr!,
-        );
+        final ptr = NekotonFlutter.instance().bindings.nt_token_wallet_clone_ptr(
+              _ptr!,
+            );
 
         return ptr;
       });
 
   @override
   Future<void> freePtr() => _lock.synchronized(() async {
-        if (_ptr == null) return;
+        await _onTransactionsFoundSubscription.cancel();
 
         _onBalanceChangedPort.close();
         _onTransactionsFoundPort.close();
 
-        _transactionsSubject.close();
+        await _transactionsSubject.close();
 
         await pausePolling();
 
-        NekotonFlutter.bindings.nt_token_wallet_free_ptr(
-          _ptr!,
-        );
+        if (_ptr == null) return;
+
+        NekotonFlutter.instance().bindings.nt_token_wallet_free_ptr(
+              _ptr!,
+            );
 
         _ptr = null;
       });
@@ -265,7 +263,7 @@ class TokenWallet extends ContractSubscription implements Pointed {
             .map((event) => event.balance)
             .asBroadcastStream();
 
-        _onTransactionsFoundPort.cast<String>().map((e) {
+        _onTransactionsFoundSubscription = _onTransactionsFoundPort.cast<String>().map((e) {
           final json = jsonDecode(e) as Map<String, dynamic>;
           final payload = OnTokenWalletTransactionsFoundPayload.fromJson(json);
           return payload;
@@ -279,21 +277,21 @@ class TokenWallet extends ContractSubscription implements Pointed {
         );
 
         final transportPtr = await transport.clonePtr();
-        final transportType = transport.connectionData.type;
+        final transportTypeStr = jsonEncode(transport.type.toString());
 
         final result = await executeAsync(
-          (port) => NekotonFlutter.bindings.nt_token_wallet_subscribe(
-            port,
-            _onBalanceChangedPort.sendPort.nativePort,
-            _onTransactionsFoundPort.sendPort.nativePort,
-            transportPtr,
-            transportType.index,
-            owner.toNativeUtf8().cast<Char>(),
-            rootTokenContract.toNativeUtf8().cast<Char>(),
-          ),
+          (port) => NekotonFlutter.instance().bindings.nt_token_wallet_subscribe(
+                port,
+                _onBalanceChangedPort.sendPort.nativePort,
+                _onTransactionsFoundPort.sendPort.nativePort,
+                transportPtr,
+                transportTypeStr.toNativeUtf8().cast<Char>(),
+                owner.toNativeUtf8().cast<Char>(),
+                rootTokenContract.toNativeUtf8().cast<Char>(),
+              ),
         );
 
-        _ptr = Pointer.fromAddress(result).cast<Void>();
+        _ptr = Pointer.fromAddress(result as int).cast<Void>();
 
         await startPolling();
       });

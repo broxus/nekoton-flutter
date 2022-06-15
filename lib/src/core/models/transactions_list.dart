@@ -9,7 +9,6 @@ part 'transactions_list.g.dart';
 
 @freezed
 class TransactionsList with _$TransactionsList {
-  @JsonSerializable(explicitToJson: true)
   const factory TransactionsList({
     required List<Transaction> transactions,
     @JsonKey(includeIfNull: false) TransactionId? continuation,

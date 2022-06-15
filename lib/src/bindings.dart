@@ -1,38 +1,30 @@
 import 'dart:ffi';
 import 'dart:io';
 
-import 'package:logger/logger.dart';
-
 import 'bindings.ffigen.dart';
 
-abstract class NekotonFlutter {
-  static Logger? _logger;
-  static Bindings? _bindings;
+class NekotonFlutter {
+  static NekotonFlutter? _instance;
+  final Bindings _bindings;
 
-  static void initialize([Logger? logger]) {
-    _logger = logger;
+  NekotonFlutter._()
+      : _bindings = Bindings(_dlOpenPlatformSpecific())..nt_store_dart_post_cobject(NativeApi.postCObject.cast<Void>());
 
-    final dylib = _dlOpenPlatformSpecific();
-    final postCObject = NativeApi.postCObject.cast<Void>();
+  factory NekotonFlutter.instance() => _instance ??= NekotonFlutter._();
 
-    _bindings = Bindings(dylib)..nt_store_dart_post_cobject(postCObject);
-  }
-
-  static Logger? get logger => _logger;
-
-  static Bindings get bindings {
-    if (_bindings != null) {
-      return _bindings!;
-    } else {
-      throw Exception("Library isn't loaded");
-    }
-  }
+  Bindings get bindings => _bindings;
 
   static DynamicLibrary _dlOpenPlatformSpecific() {
     if (Platform.isAndroid) {
       return DynamicLibrary.open('libnekoton_flutter.so');
     } else if (Platform.isIOS) {
       return DynamicLibrary.process();
+    } else if (Platform.isLinux) {
+      return DynamicLibrary.open('libnekoton_flutter.so');
+    } else if (Platform.isMacOS) {
+      return DynamicLibrary.process();
+    } else if (Platform.isWindows) {
+      return DynamicLibrary.open('libnekoton_flutter.dll');
     } else {
       throw Exception('Invalid platform');
     }

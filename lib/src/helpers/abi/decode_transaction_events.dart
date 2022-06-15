@@ -15,14 +15,13 @@ List<DecodedTransactionEvent> decodeTransactionEvents({
   final transactionStr = jsonEncode(transaction);
 
   final result = executeSync(
-    () => NekotonFlutter.bindings.nt_decode_transaction_events(
-      transactionStr.toNativeUtf8().cast<Char>(),
-      contractAbi.toNativeUtf8().cast<Char>(),
-    ),
+    () => NekotonFlutter.instance().bindings.nt_decode_transaction_events(
+          transactionStr.toNativeUtf8().cast<Char>(),
+          contractAbi.toNativeUtf8().cast<Char>(),
+        ),
   );
 
-  final string = cStringToDart(result);
-  final json = jsonDecode(string) as List<dynamic>;
+  final json = result as List<dynamic>;
   final list = json.cast<Map<String, dynamic>>();
   final decodedTransactionEvents = list.map((e) => DecodedTransactionEvent.fromJson(e)).toList();
 

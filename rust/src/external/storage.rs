@@ -1,161 +1,171 @@
 use std::{
     os::raw::{c_char, c_longlong, c_void},
-    path::Path,
     sync::Arc,
 };
 
-use anyhow::{anyhow, Result};
+use allo_isolate::Isolate;
+use anyhow::Result;
 use async_trait::async_trait;
 use nekoton::external::Storage;
-use pickledb::{PickleDb, PickleDbDumpPolicy, SerializationMethod};
-use tokio::sync::RwLock;
+use serde::Serialize;
+use tokio::sync::oneshot::channel;
 
-use crate::{
-    models::{HandleError, MatchResult, ToOptionalCStringPtr},
-    runtime, send_to_result_port, ToStringFromPtr, RUNTIME,
-};
-
-pub const NEKOTON_STORAGE_FILENAME: &str = "nekoton_storage.db";
+use crate::{HandleError, MatchResult, PostWithResult};
 
 pub struct StorageImpl {
-    db: Arc<RwLock<PickleDb>>,
+    get_port: Isolate,
+    set_port: Isolate,
+    set_unchecked_port: Isolate,
+    remove_port: Isolate,
+    remove_unchecked_port: Isolate,
 }
 
 impl StorageImpl {
-    pub fn new(db: Arc<RwLock<PickleDb>>) -> Self {
-        Self { db }
+    pub fn new(
+        get_port: i64,
+        set_port: i64,
+        set_unchecked_port: i64,
+        remove_port: i64,
+        remove_unchecked_port: i64,
+    ) -> Self {
+        Self {
+            get_port: Isolate::new(get_port),
+            set_port: Isolate::new(set_port),
+            set_unchecked_port: Isolate::new(set_unchecked_port),
+            remove_port: Isolate::new(remove_port),
+            remove_unchecked_port: Isolate::new(remove_unchecked_port),
+        }
     }
 }
 
 #[async_trait]
 impl Storage for StorageImpl {
     async fn get(&self, key: &str) -> Result<Option<String>> {
-        Ok(self.db.read().await.get::<String>(key))
+        let (tx, rx) = channel::<Result<Option<String>>>();
+
+        let tx = Box::into_raw(Box::new(tx)) as usize;
+        let key = key.to_owned();
+
+        let request = serde_json::to_string(&StorageGetRequest { tx, key })?;
+
+        self.get_port.post_with_result(request).unwrap();
+
+        rx.await.unwrap()
     }
 
     async fn set(&self, key: &str, value: &str) -> Result<()> {
-        self.db
-            .write()
-            .await
-            .set::<String>(key, &value.to_owned())
-            .map_err(|e| anyhow!("{}", e))
+        let (tx, rx) = channel::<Result<()>>();
+
+        let tx = Box::into_raw(Box::new(tx)) as usize;
+        let key = key.to_owned();
+        let value = value.to_owned();
+
+        let request = serde_json::to_string(&StorageSetRequest { tx, key, value })?;
+
+        self.set_port.post_with_result(request).unwrap();
+
+        rx.await.unwrap()
     }
 
     fn set_unchecked(&self, key: &str, value: &str) {
-        let db = self.db.clone();
-        let key = key.to_string();
-        let value = value.to_string();
+        let key = key.to_owned();
+        let value = value.to_owned();
 
-        runtime!().spawn(async move {
-            let _ = db.write().await.set::<String>(&key, &value.to_owned());
-        });
+        let request = serde_json::to_string(&StorageSetUncheckedRequest { key, value }).unwrap();
+
+        self.set_unchecked_port.post_with_result(request).unwrap();
     }
 
     async fn remove(&self, key: &str) -> Result<()> {
-        self.db
-            .write()
-            .await
-            .rem(key)
-            .map(|_| ())
-            .map_err(|e| anyhow!("{}", e))
+        let (tx, rx) = channel::<Result<()>>();
+
+        let tx = Box::into_raw(Box::new(tx)) as usize;
+        let key = key.to_owned();
+
+        let request = serde_json::to_string(&StorageRemoveRequest { tx, key })?;
+
+        self.remove_port.post_with_result(request).unwrap();
+
+        rx.await.unwrap()
     }
 
     fn remove_unchecked(&self, key: &str) {
-        let db = self.db.clone();
-        let key = key.to_string();
+        let key = key.to_owned();
 
-        runtime!().spawn(async move {
-            let _ = db.write().await.rem(&key);
-        });
+        let request = serde_json::to_string(&StorageRemoveUncheckedRequest { key }).unwrap();
+
+        self.remove_unchecked_port
+            .post_with_result(request)
+            .unwrap();
     }
 }
 
+#[derive(Serialize)]
+pub struct StorageGetRequest {
+    pub tx: usize,
+    pub key: String,
+}
+
+#[derive(Serialize)]
+pub struct StorageSetRequest {
+    pub tx: usize,
+    pub key: String,
+    pub value: String,
+}
+
+#[derive(Serialize)]
+pub struct StorageSetUncheckedRequest {
+    pub key: String,
+    pub value: String,
+}
+
+#[derive(Serialize)]
+pub struct StorageRemoveRequest {
+    pub tx: usize,
+    pub key: String,
+}
+
+#[derive(Serialize)]
+pub struct StorageRemoveUncheckedRequest {
+    pub key: String,
+}
+
 #[no_mangle]
-pub unsafe extern "C" fn nt_storage_create(dir: *mut c_char) -> *mut c_void {
-    let dir = dir.to_string_from_ptr();
+pub unsafe extern "C" fn nt_storage_create(
+    get_port: c_longlong,
+    set_port: c_longlong,
+    set_unchecked_port: c_longlong,
+    remove_port: c_longlong,
+    remove_unchecked_port: c_longlong,
+) -> *mut c_char {
+    fn internal_fn(
+        get_port: i64,
+        set_port: i64,
+        set_unchecked_port: i64,
+        remove_port: i64,
+        remove_unchecked_port: i64,
+    ) -> Result<serde_json::Value, String> {
+        let storage = StorageImpl::new(
+            get_port,
+            set_port,
+            set_unchecked_port,
+            remove_port,
+            remove_unchecked_port,
+        );
 
-    fn internal_fn(dir: String) -> Result<u64, String> {
-        let db_path = Path::new(&dir).join(NEKOTON_STORAGE_FILENAME);
+        let ptr = Box::into_raw(Box::new(Arc::new(storage)));
 
-        let db = match PickleDb::load(
-            &db_path,
-            PickleDbDumpPolicy::AutoDump,
-            SerializationMethod::Json,
-        ) {
-            Ok(db) => db,
-            Err(_) => PickleDb::new(
-                &db_path,
-                PickleDbDumpPolicy::AutoDump,
-                SerializationMethod::Json,
-            ),
-        };
-
-        let db = Arc::new(RwLock::new(db));
-
-        let storage = StorageImpl::new(db);
-
-        let ptr = Box::into_raw(Box::new(Arc::new(storage))) as u64;
-
-        Ok(ptr)
+        serde_json::to_value(ptr as usize).handle_error()
     }
 
-    internal_fn(dir).match_result()
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn nt_storage_get(
-    result_port: c_longlong,
-    storage: *mut c_void,
-    key: *mut c_char,
-) {
-    let storage = storage_from_ptr(storage);
-
-    let key = key.to_string_from_ptr();
-
-    runtime!().spawn(async move {
-        async fn internal_fn(storage: Arc<dyn Storage>, key: String) -> Result<u64, String> {
-            let value = storage
-                .get(&key)
-                .await
-                .handle_error()?
-                .to_optional_cstring_ptr() as u64;
-
-            Ok(value)
-        }
-
-        let result = internal_fn(storage, key).await.match_result();
-
-        send_to_result_port(result_port, result);
-    });
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn nt_storage_set(
-    result_port: c_longlong,
-    storage: *mut c_void,
-    key: *mut c_char,
-    value: *mut c_char,
-) {
-    let storage = storage_from_ptr(storage);
-
-    let key = key.to_string_from_ptr();
-    let value = value.to_string_from_ptr();
-
-    runtime!().spawn(async move {
-        async fn internal_fn(
-            storage: Arc<dyn Storage>,
-            key: String,
-            value: String,
-        ) -> Result<u64, String> {
-            storage.set(&key, &value).await.handle_error()?;
-
-            Ok(u64::default())
-        }
-
-        let result = internal_fn(storage, key, value).await.match_result();
-
-        send_to_result_port(result_port, result);
-    });
+    internal_fn(
+        get_port,
+        set_port,
+        set_unchecked_port,
+        remove_port,
+        remove_unchecked_port,
+    )
+    .match_result()
 }
 
 #[no_mangle]
@@ -168,6 +178,6 @@ pub unsafe extern "C" fn nt_storage_free_ptr(ptr: *mut c_void) {
     Box::from_raw(ptr as *mut Arc<StorageImpl>);
 }
 
-pub unsafe fn storage_from_ptr(ptr: *mut c_void) -> Arc<dyn Storage> {
+pub unsafe fn storage_from_ptr(ptr: *mut c_void) -> Arc<StorageImpl> {
     Arc::from_raw(ptr as *mut StorageImpl)
 }

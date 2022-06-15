@@ -1,24 +1,75 @@
-use std::sync::Arc;
+use std::{
+    ffi::c_void,
+    os::raw::{c_char, c_longlong},
+    sync::Arc,
+};
 
+use allo_isolate::Isolate;
 use anyhow::Result;
 use async_trait::async_trait;
 use nekoton::external::JrpcConnection;
-use nekoton_transport::jrpc::JrpcClient;
+use serde::Serialize;
+use tokio::sync::oneshot::channel;
+
+use crate::{HandleError, MatchResult, PostWithResult};
 
 pub struct JrpcConnectionImpl {
-    client: Arc<JrpcClient>,
+    port: Isolate,
 }
 
 impl JrpcConnectionImpl {
-    pub fn new(client: Arc<JrpcClient>) -> Self {
-        Self { client }
+    pub fn new(port: i64) -> Self {
+        Self {
+            port: Isolate::new(port),
+        }
     }
 }
 
 #[async_trait]
-
 impl JrpcConnection for JrpcConnectionImpl {
     async fn post(&self, data: &str) -> Result<String> {
-        self.client.post(data).await
+        let (tx, rx) = channel::<Result<String>>();
+
+        let tx = Box::into_raw(Box::new(tx)) as usize;
+        let data = data.to_owned();
+
+        let request = serde_json::to_string(&JrpcConnectionPostRequest { tx, data })?;
+
+        self.port.post_with_result(request).unwrap();
+
+        rx.await.unwrap()
     }
+}
+
+#[derive(Serialize)]
+pub struct JrpcConnectionPostRequest {
+    pub tx: usize,
+    pub data: String,
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nt_jrpc_connection_create(port: c_longlong) -> *mut c_char {
+    fn internal_fn(port: i64) -> Result<serde_json::Value, String> {
+        let jrpc_connection = JrpcConnectionImpl::new(port);
+
+        let ptr = Box::into_raw(Box::new(Arc::new(jrpc_connection)));
+
+        serde_json::to_value(ptr as usize).handle_error()
+    }
+
+    internal_fn(port).match_result()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nt_jrpc_connection_clone_ptr(ptr: *mut c_void) -> *mut c_void {
+    Arc::into_raw(Arc::clone(&*(ptr as *mut Arc<JrpcConnectionImpl>))) as *mut c_void
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nt_jrpc_connection_free_ptr(ptr: *mut c_void) {
+    Box::from_raw(ptr as *mut Arc<JrpcConnectionImpl>);
+}
+
+pub unsafe fn jrpc_connection_from_ptr(ptr: *mut c_void) -> Arc<JrpcConnectionImpl> {
+    Arc::from_raw(ptr as *mut JrpcConnectionImpl)
 }

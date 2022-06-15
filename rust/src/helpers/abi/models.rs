@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize)]
 pub struct AbiParam {
     pub name: String,
-    #[serde(alias = "type")]
+    #[serde(rename = "type")]
     pub param_type: String,
     pub components: Option<Vec<AbiParam>>,
 }

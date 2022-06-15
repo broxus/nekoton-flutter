@@ -1,18 +1,18 @@
-# nekoton-flutter
+# nekoton_flutter
 
 Flutter plugin for TON wallets core
 
-## How to build & run
+## Requirements
 
-1. Install Rust by running  
-   `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+-   Rust
+-   LLVM
+-   NodeJS
 
-2. Install LLVM by running  
-   `brew install llvm`
+## Build
 
-3. Install NodeJS from official website or by running `brew install node`
+`flutter pub run nekoton_flutter:build`
 
-4. Add package to `pubspec.yaml` and run `flutter pub get` to load dependencies
+### Options
 
-5. Run build on package with following command  
-   `flutter pub run nekoton_flutter:build /Your/Path/To/Android/NDK`
+-   `--action=your_action`
+-   `--help`

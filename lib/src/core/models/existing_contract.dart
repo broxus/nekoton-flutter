@@ -8,7 +8,6 @@ part 'existing_contract.g.dart';
 
 @freezed
 class ExistingContract with _$ExistingContract {
-  @JsonSerializable(explicitToJson: true)
   const factory ExistingContract({
     required String account,
     required GenTimings timings,

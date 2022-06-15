@@ -5,36 +5,28 @@ use std::{
     u64,
 };
 
+use allo_isolate::Isolate;
 use nekoton::transport::gql::GqlTransport;
-use nekoton_transport::gql::{GqlClient, GqlNetworkSettings};
 use ton_block::Serializable;
 
 use crate::{
-    external::gql_connection::GqlConnectionImpl,
-    models::{HandleError, MatchResult},
-    parse_address, runtime, send_to_result_port, ToCStringPtr, ToStringFromPtr, RUNTIME,
+    external::gql_connection::{gql_connection_from_ptr, GqlConnectionImpl},
+    parse_address, runtime, HandleError, MatchResult, PostWithResult, ToStringFromPtr, RUNTIME,
 };
 
 #[no_mangle]
-pub unsafe extern "C" fn nt_gql_transport_create(settings: *mut c_char) -> *mut c_void {
-    let settings = settings.to_string_from_ptr();
+pub unsafe extern "C" fn nt_gql_transport_create(gql_connection: *mut c_void) -> *mut c_char {
+    let gql_connection = gql_connection_from_ptr(gql_connection);
 
-    fn internal_fn(settings: String) -> Result<u64, String> {
-        let settings = serde_json::from_str::<GqlNetworkSettings>(&settings).handle_error()?;
-
-        let client = GqlClient::new(settings.clone()).handle_error()?;
-        let local = settings.local;
-
-        let gql_connection = Arc::new(GqlConnectionImpl::new(client, local));
-
+    fn internal_fn(gql_connection: Arc<GqlConnectionImpl>) -> Result<serde_json::Value, String> {
         let gql_transport = GqlTransport::new(gql_connection);
 
-        let ptr = Box::into_raw(Box::new(Arc::new(gql_transport))) as u64;
+        let ptr = Box::into_raw(Box::new(Arc::new(gql_transport)));
 
-        Ok(ptr)
+        serde_json::to_value(ptr as usize).handle_error()
     }
 
-    internal_fn(settings).match_result()
+    internal_fn(gql_connection).match_result()
 }
 
 #[no_mangle]
@@ -51,22 +43,21 @@ pub unsafe extern "C" fn nt_gql_transport_get_latest_block_id(
         async fn internal_fn(
             gql_transport: Arc<GqlTransport>,
             address: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let address = parse_address(&address)?;
 
             let latest_block_id = gql_transport
                 .get_latest_block(&address)
                 .await
                 .handle_error()?
-                .id
-                .to_cstring_ptr() as u64;
+                .id;
 
-            Ok(latest_block_id)
+            serde_json::to_value(latest_block_id).handle_error()
         }
 
         let result = internal_fn(gql_transport, address).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port).post_with_result(result).unwrap();
     });
 }
 
@@ -81,7 +72,10 @@ pub unsafe extern "C" fn nt_gql_transport_get_block(
     let id = id.to_string_from_ptr();
 
     runtime!().spawn(async move {
-        async fn internal_fn(gql_transport: Arc<GqlTransport>, id: String) -> Result<u64, String> {
+        async fn internal_fn(
+            gql_transport: Arc<GqlTransport>,
+            id: String,
+        ) -> Result<serde_json::Value, String> {
             let block = gql_transport.get_block(&id).await.handle_error()?;
 
             let block = block
@@ -90,15 +84,14 @@ pub unsafe extern "C" fn nt_gql_transport_get_block(
                 .map(ton_types::serialize_toc)
                 .handle_error()?
                 .map(base64::encode)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
+                .handle_error()?;
 
-            Ok(block)
+            serde_json::to_value(block).handle_error()
         }
 
         let result = internal_fn(gql_transport, id).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port).post_with_result(result).unwrap();
     });
 }
 
@@ -121,7 +114,7 @@ pub unsafe extern "C" fn nt_gql_transport_wait_for_next_block_id(
             current_block_id: String,
             address: String,
             timeout: u64,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let address = parse_address(&address)?;
 
             let timeout = Duration::from_millis(timeout);
@@ -129,17 +122,16 @@ pub unsafe extern "C" fn nt_gql_transport_wait_for_next_block_id(
             let next_block_id = gql_transport
                 .wait_for_next_block(&current_block_id, &address, timeout)
                 .await
-                .handle_error()?
-                .to_cstring_ptr() as u64;
+                .handle_error()?;
 
-            Ok(next_block_id)
+            serde_json::to_value(next_block_id).handle_error()
         }
 
         let result = internal_fn(gql_transport, current_block_id, address, timeout)
             .await
             .match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port).post_with_result(result).unwrap();
     });
 }
 

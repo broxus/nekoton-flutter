@@ -8,10 +8,6 @@ part 'on_token_wallet_transactions_found_payload.g.dart';
 
 @freezed
 class OnTokenWalletTransactionsFoundPayload with _$OnTokenWalletTransactionsFoundPayload {
-  @JsonSerializable(
-    fieldRename: FieldRename.snake,
-    explicitToJson: true,
-  )
   const factory OnTokenWalletTransactionsFoundPayload({
     required List<TokenWalletTransactionWithData> transactions,
     required TransactionsBatchInfo batchInfo,

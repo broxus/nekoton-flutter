@@ -7,9 +7,8 @@ part 'encryption_algorithm.g.dart';
   fieldRename: FieldRename.pascal,
 )
 enum EncryptionAlgorithm {
-  chaCha20Poly1305,
-}
+  chaCha20Poly1305;
 
-extension EnumString on EncryptionAlgorithm {
-  String toEnumString() => _$EncryptionAlgorithmEnumMap[this]!;
+  @override
+  String toString() => _$EncryptionAlgorithmEnumMap[this]!;
 }

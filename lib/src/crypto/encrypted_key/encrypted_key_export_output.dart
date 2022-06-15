@@ -8,10 +8,6 @@ part 'encrypted_key_export_output.g.dart';
 
 @freezed
 class EncryptedKeyExportOutput with _$EncryptedKeyExportOutput implements ExportKeyOutput {
-  @JsonSerializable(
-    fieldRename: FieldRename.snake,
-    explicitToJson: true,
-  )
   const factory EncryptedKeyExportOutput({
     required String phrase,
     required MnemonicType mnemonicType,

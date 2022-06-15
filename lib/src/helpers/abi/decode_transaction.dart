@@ -18,15 +18,14 @@ DecodedTransaction? decodeTransaction({
   final methodStr = jsonEncode(method);
 
   final result = executeSync(
-    () => NekotonFlutter.bindings.nt_decode_transaction(
-      transactionStr.toNativeUtf8().cast<Char>(),
-      contractAbi.toNativeUtf8().cast<Char>(),
-      methodStr.toNativeUtf8().cast<Char>(),
-    ),
+    () => NekotonFlutter.instance().bindings.nt_decode_transaction(
+          transactionStr.toNativeUtf8().cast<Char>(),
+          contractAbi.toNativeUtf8().cast<Char>(),
+          methodStr.toNativeUtf8().cast<Char>(),
+        ),
   );
 
-  final string = optionalCStringToDart(result);
-  final json = string != null ? jsonDecode(string) as Map<String, dynamic> : null;
+  final json = result != null ? result as Map<String, dynamic> : null;
   final decodedTransaction = json != null ? DecodedTransaction.fromJson(json) : null;
 
   return decodedTransaction;

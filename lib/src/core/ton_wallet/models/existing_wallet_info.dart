@@ -8,10 +8,6 @@ part 'existing_wallet_info.g.dart';
 
 @freezed
 class ExistingWalletInfo with _$ExistingWalletInfo {
-  @JsonSerializable(
-    fieldRename: FieldRename.snake,
-    explicitToJson: true,
-  )
   const factory ExistingWalletInfo({
     required String address,
     required String publicKey,

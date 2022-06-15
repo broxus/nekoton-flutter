@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import 'key_signer.dart';
+import '../../../crypto/derived_key/constants.dart';
+import '../../../crypto/encrypted_key/constants.dart';
+import '../../../crypto/ledger_key/constants.dart';
 
 part 'key_store_entry.freezed.dart';
 part 'key_store_entry.g.dart';
@@ -10,7 +12,7 @@ part 'key_store_entry.g.dart';
 class KeyStoreEntry with _$KeyStoreEntry implements Comparable<KeyStoreEntry> {
   @JsonSerializable(fieldRename: FieldRename.snake)
   const factory KeyStoreEntry({
-    required KeySigner signerName,
+    required String signerName,
     required String name,
     required String publicKey,
     required String masterKey,
@@ -21,9 +23,9 @@ class KeyStoreEntry with _$KeyStoreEntry implements Comparable<KeyStoreEntry> {
 
   const KeyStoreEntry._();
 
-  bool get isLegacy => signerName == KeySigner.encryptedKeySigner;
+  bool get isLegacy => signerName == kEncryptedKeySignerName;
 
-  bool get isNotLegacy => signerName == KeySigner.derivedKeySigner;
+  bool get isNotLegacy => signerName == kDerivedKeySignerName || signerName == kLedgerKeySignerName;
 
   bool get isMaster => publicKey == masterKey;
 

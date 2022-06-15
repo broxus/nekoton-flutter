@@ -1,3 +1,12 @@
 edition = "2018"
 group_imports = "StdExternalCrate"
 imports_granularity = "Crate"
+match_block_trailing_comma = true
+normalize_comments = true
+normalize_doc_attributes = true
+reorder_impl_items = true
+report_fixme = "Always"
+report_todo = "Always"
+use_field_init_shorthand = true
+use_try_shorthand = true
+wrap_comments = true

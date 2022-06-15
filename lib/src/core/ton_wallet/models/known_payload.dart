@@ -1,5 +1,4 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../token_wallet/models/token_outgoing_transfer.dart';
 import '../../token_wallet/models/token_swap_back.dart';
@@ -7,30 +6,13 @@ import '../../token_wallet/models/token_swap_back.dart';
 part 'known_payload.freezed.dart';
 part 'known_payload.g.dart';
 
-@Freezed(unionValueCase: FreezedUnionCase.pascal)
+@Freezed(unionKey: 'type', unionValueCase: FreezedUnionCase.snake)
 class KnownPayload with _$KnownPayload {
-  @HiveType(typeId: 29)
-  const factory KnownPayload.comment({
-    @HiveField(0) required String value,
-  }) = _KnownPayloadComment;
+  const factory KnownPayload.comment(String data) = _KnownPayloadComment;
 
-  @JsonSerializable(
-    fieldRename: FieldRename.snake,
-    explicitToJson: true,
-  )
-  @HiveType(typeId: 30)
-  const factory KnownPayload.tokenOutgoingTransfer({
-    @HiveField(0) required TokenOutgoingTransfer tokenOutgoingTransfer,
-  }) = _KnownPayloadTokenOutgoingTransfer;
+  const factory KnownPayload.tokenOutgoingTransfer(TokenOutgoingTransfer data) = _KnownPayloadTokenOutgoingTransfer;
 
-  @JsonSerializable(
-    fieldRename: FieldRename.snake,
-    explicitToJson: true,
-  )
-  @HiveType(typeId: 31)
-  const factory KnownPayload.tokenSwapBack({
-    @HiveField(0) required TokenSwapBack tokenSwapBack,
-  }) = _KnownPayloadTokenSwapBack;
+  const factory KnownPayload.tokenSwapBack(TokenSwapBack data) = _KnownPayloadTokenSwapBack;
 
   factory KnownPayload.fromJson(Map<String, dynamic> json) => _$KnownPayloadFromJson(json);
 }

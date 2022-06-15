@@ -5,7 +5,6 @@ part 'abi_param.g.dart';
 
 @freezed
 class AbiParam with _$AbiParam {
-  @JsonSerializable(explicitToJson: true)
   const factory AbiParam({
     required String name,
     required String type,

@@ -13,19 +13,18 @@ Future<ExistingWalletInfo> getExistingWalletInfo({
   required String address,
 }) async {
   final ptr = await transport.clonePtr();
-  final transportType = transport.connectionData.type;
+  final transportTypeStr = jsonEncode(transport.type.toString());
 
   final result = await executeAsync(
-    (port) => NekotonFlutter.bindings.nt_get_existing_wallet_info(
-      port,
-      ptr,
-      transportType.index,
-      address.toNativeUtf8().cast<Char>(),
-    ),
+    (port) => NekotonFlutter.instance().bindings.nt_get_existing_wallet_info(
+          port,
+          ptr,
+          transportTypeStr.toNativeUtf8().cast<Char>(),
+          address.toNativeUtf8().cast<Char>(),
+        ),
   );
 
-  final string = cStringToDart(result);
-  final json = jsonDecode(string) as Map<String, dynamic>;
+  final json = result as Map<String, dynamic>;
   final existingWalletInfo = ExistingWalletInfo.fromJson(json);
 
   return existingWalletInfo;

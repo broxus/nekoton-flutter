@@ -13,25 +13,27 @@ import '../core/models/transaction_id.dart';
 import '../core/models/transactions_list.dart';
 import '../ffi_utils.dart';
 import '../models/pointed.dart';
-import 'models/connection_data.dart';
+import 'models/transport_type.dart';
 
 abstract class Transport implements Pointed {
-  abstract final ConnectionData connectionData;
+  TransportType get type;
+
+  String get group;
 
   Future<RawContractState> getContractState(String address) async {
     final ptr = await clonePtr();
+    final transportTypeStr = jsonEncode(type.toString());
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_transport_get_contract_state(
-        port,
-        ptr,
-        connectionData.type.index,
-        address.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_transport_get_contract_state(
+            port,
+            ptr,
+            transportTypeStr.toNativeUtf8().cast<Char>(),
+            address.toNativeUtf8().cast<Char>(),
+          ),
     );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>;
+    final json = result as Map<String, dynamic>;
     final contractState = RawContractState.fromJson(json);
 
     return contractState;
@@ -39,18 +41,18 @@ abstract class Transport implements Pointed {
 
   Future<FullContractState?> getFullContractState(String address) async {
     final ptr = await clonePtr();
+    final transportTypeStr = jsonEncode(type.toString());
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_transport_get_full_contract_state(
-        port,
-        ptr,
-        connectionData.type.index,
-        address.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_transport_get_full_contract_state(
+            port,
+            ptr,
+            transportTypeStr.toNativeUtf8().cast<Char>(),
+            address.toNativeUtf8().cast<Char>(),
+          ),
     );
 
-    final string = optionalCStringToDart(result);
-    final json = string != null ? jsonDecode(string) as Map<String, dynamic> : null;
+    final json = result != null ? result as Map<String, dynamic> : null;
     final fullContractState = json != null ? FullContractState.fromJson(json) : null;
 
     return fullContractState;
@@ -62,20 +64,20 @@ abstract class Transport implements Pointed {
     String? continuation,
   }) async {
     final ptr = await clonePtr();
+    final transportTypeStr = jsonEncode(type.toString());
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_transport_get_accounts_by_code_hash(
-        port,
-        ptr,
-        connectionData.type.index,
-        codeHash.toNativeUtf8().cast<Char>(),
-        limit,
-        continuation?.toNativeUtf8().cast<Char>() ?? nullptr,
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_transport_get_accounts_by_code_hash(
+            port,
+            ptr,
+            transportTypeStr.toNativeUtf8().cast<Char>(),
+            codeHash.toNativeUtf8().cast<Char>(),
+            limit,
+            continuation?.toNativeUtf8().cast<Char>() ?? nullptr,
+          ),
     );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>;
+    final json = result as Map<String, dynamic>;
     final accountsList = AccountsList.fromJson(json);
 
     return accountsList;
@@ -87,21 +89,21 @@ abstract class Transport implements Pointed {
     required int limit,
   }) async {
     final ptr = await clonePtr();
+    final transportTypeStr = jsonEncode(type.toString());
     final continuationStr = continuation != null ? jsonEncode(continuation) : null;
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_transport_get_transactions(
-        port,
-        ptr,
-        connectionData.type.index,
-        address.toNativeUtf8().cast<Char>(),
-        continuationStr?.toNativeUtf8().cast<Char>() ?? nullptr,
-        limit,
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_transport_get_transactions(
+            port,
+            ptr,
+            transportTypeStr.toNativeUtf8().cast<Char>(),
+            address.toNativeUtf8().cast<Char>(),
+            continuationStr?.toNativeUtf8().cast<Char>() ?? nullptr,
+            limit,
+          ),
     );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>;
+    final json = result as Map<String, dynamic>;
     final transactionsList = TransactionsList.fromJson(json);
 
     return transactionsList;
@@ -109,18 +111,18 @@ abstract class Transport implements Pointed {
 
   Future<Transaction?> getTransaction(String hash) async {
     final ptr = await clonePtr();
+    final transportTypeStr = jsonEncode(type.toString());
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_transport_get_transaction(
-        port,
-        ptr,
-        connectionData.type.index,
-        hash.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_transport_get_transaction(
+            port,
+            ptr,
+            transportTypeStr.toNativeUtf8().cast<Char>(),
+            hash.toNativeUtf8().cast<Char>(),
+          ),
     );
 
-    final string = optionalCStringToDart(result);
-    final json = string != null ? jsonDecode(string) as Map<String, dynamic> : null;
+    final json = result != null ? result as Map<String, dynamic> : null;
     final transaction = json != null ? Transaction.fromJson(json) : null;
 
     return transaction;

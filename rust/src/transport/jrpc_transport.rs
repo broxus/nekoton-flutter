@@ -1,34 +1,28 @@
 use std::{
     os::raw::{c_char, c_void},
     sync::Arc,
-    u64,
 };
 
 use nekoton::transport::jrpc::JrpcTransport;
-use nekoton_transport::jrpc::JrpcClient;
 
 use crate::{
-    external::jrpc_connection::JrpcConnectionImpl,
-    models::{HandleError, MatchResult, ToStringFromPtr},
+    external::jrpc_connection::{jrpc_connection_from_ptr, JrpcConnectionImpl},
+    HandleError, MatchResult,
 };
 
 #[no_mangle]
-pub unsafe extern "C" fn nt_jrpc_transport_create(endpoint: *mut c_char) -> *mut c_void {
-    let endpoint = endpoint.to_string_from_ptr();
+pub unsafe extern "C" fn nt_jrpc_transport_create(jrpc_connection: *mut c_void) -> *mut c_char {
+    let jrpc_connection = jrpc_connection_from_ptr(jrpc_connection);
 
-    fn internal_fn(endpoint: String) -> Result<u64, String> {
-        let client = JrpcClient::new(endpoint).handle_error()?;
-
-        let jrpc_connection = Arc::new(JrpcConnectionImpl::new(client));
-
+    fn internal_fn(jrpc_connection: Arc<JrpcConnectionImpl>) -> Result<serde_json::Value, String> {
         let jrpc_transport = JrpcTransport::new(jrpc_connection);
 
-        let ptr = Box::into_raw(Box::new(Arc::new(jrpc_transport))) as u64;
+        let ptr = Box::into_raw(Box::new(Arc::new(jrpc_transport)));
 
-        Ok(ptr)
+        serde_json::to_value(ptr as usize).handle_error()
     }
 
-    internal_fn(endpoint).match_result()
+    internal_fn(jrpc_connection).match_result()
 }
 
 #[no_mangle]

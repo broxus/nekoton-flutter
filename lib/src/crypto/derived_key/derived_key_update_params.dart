@@ -1,29 +1,19 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 import '../models/update_key_input.dart';
-import '../password_cache/password.dart';
+import 'derived_key_update_params_change_password.dart';
+import 'derived_key_update_params_rename_key.dart';
 
 part 'derived_key_update_params.freezed.dart';
 part 'derived_key_update_params.g.dart';
 
-@Freezed(unionValueCase: FreezedUnionCase.pascal)
+@Freezed(unionKey: 'type', unionValueCase: FreezedUnionCase.snake)
 class DerivedKeyUpdateParams with _$DerivedKeyUpdateParams implements UpdateKeyInput {
-  @JsonSerializable(fieldRename: FieldRename.snake)
-  const factory DerivedKeyUpdateParams.renameKey({
-    required String masterKey,
-    required String publicKey,
-    required String name,
-  }) = _DerivedKeyUpdateParamsRenameKey;
+  const factory DerivedKeyUpdateParams.renameKey(DerivedKeyUpdateParamsRenameKey data) =
+      _DerivedKeyUpdateParamsRenameKey;
 
-  @JsonSerializable(
-    fieldRename: FieldRename.snake,
-    explicitToJson: true,
-  )
-  const factory DerivedKeyUpdateParams.changePassword({
-    required String masterKey,
-    required Password oldPassword,
-    required Password newPassword,
-  }) = _DerivedKeyUpdateParamsChangePassword;
+  const factory DerivedKeyUpdateParams.changePassword(DerivedKeyUpdateParamsChangePassword data) =
+      _DerivedKeyUpdateParamsChangePassword;
 
   factory DerivedKeyUpdateParams.fromJson(Map<String, dynamic> json) => _$DerivedKeyUpdateParamsFromJson(json);
 }

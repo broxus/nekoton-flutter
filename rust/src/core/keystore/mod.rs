@@ -1,56 +1,78 @@
-mod models;
-
 use std::{
     os::raw::{c_char, c_longlong, c_ulonglong, c_void},
     sync::Arc,
     time::Duration,
 };
 
+use allo_isolate::Isolate;
 use nekoton::{
-    core::keystore::{KeyStore, KeyStoreBuilder, KEYSTORE_STORAGE_KEY},
+    core::keystore::{KeyStore, KeyStoreBuilder},
     crypto::{
-        self, DerivedKeySigner, EncryptedData, EncryptedKeySigner, EncryptionAlgorithm, Signature,
+        DerivedKeyCreateInput, DerivedKeyExportParams, DerivedKeyGetPublicKeys,
+        DerivedKeySignParams, DerivedKeySigner, DerivedKeyUpdateParams, EncryptedData,
+        EncryptedKeyCreateInput, EncryptedKeyGetPublicKeys, EncryptedKeyPassword,
+        EncryptedKeySigner, EncryptedKeyUpdateParams, EncryptionAlgorithm, LedgerKeyCreateInput,
+        LedgerKeyGetPublicKeys, LedgerKeySigner, LedgerSignInput, LedgerUpdateKeyInput, Signature,
     },
     external::Storage,
 };
 use sha2::Digest;
 
 use crate::{
-    core::keystore::models::KeySigner,
     crypto::{
-        derived_key::{
-            DerivedKeyCreateInput, DerivedKeyExportParams, DerivedKeySignParams,
-            DerivedKeyUpdateParams,
+        derived_key::DERIVED_KEY_SIGNER_NAME,
+        encrypted_key::{
+            EncryptedKeyCreateInputHelper, EncryptedKeyExportOutputHelper,
+            ENCRYPTED_KEY_SIGNER_NAME,
         },
-        encrypted_key::{EncryptedKeyCreateInput, EncryptedKeyPassword, EncryptedKeyUpdateParams},
+        ledger_key::LEDGER_KEY_SIGNER_NAME,
         models::{SignatureParts, SignedData, SignedDataRaw},
     },
-    external::storage::storage_from_ptr,
-    models::{HandleError, MatchResult, ToNekoton, ToOptionalCStringPtr, ToSerializable},
-    parse_public_key, runtime, send_to_result_port, ToCStringPtr, ToStringFromPtr, RUNTIME,
+    external::{
+        ledger_connection::{ledger_connection_from_ptr, LedgerConnectionImpl},
+        storage::storage_from_ptr,
+    },
+    parse_public_key, runtime, HandleError, MatchResult, PostWithResult, ToStringFromPtr, RUNTIME,
 };
 
 #[no_mangle]
-pub unsafe extern "C" fn nt_keystore_storage_key() -> *mut c_char {
-    KEYSTORE_STORAGE_KEY.to_owned().to_cstring_ptr()
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn nt_keystore_create(result_port: c_longlong, storage: *mut c_void) {
+pub unsafe extern "C" fn nt_keystore_create(
+    result_port: c_longlong,
+    storage: *mut c_void,
+    connection: *mut c_void,
+    signers: *mut c_char,
+) {
     let storage = storage_from_ptr(storage);
+    let connection = if !connection.is_null() {
+        Some(ledger_connection_from_ptr(connection))
+    } else {
+        None
+    };
+
+    let signers = signers.to_string_from_ptr();
 
     runtime!().spawn(async move {
-        async fn internal_fn(storage: Arc<dyn Storage>) -> Result<u64, String> {
-            let keystore = build_keystore()?.load(storage).await.handle_error()?;
+        async fn internal_fn(
+            storage: Arc<dyn Storage>,
+            connection: Option<Arc<LedgerConnectionImpl>>,
+            signers: String,
+        ) -> Result<serde_json::Value, String> {
+            let signers = serde_json::from_str::<Vec<String>>(&signers).handle_error()?;
 
-            let ptr = Box::into_raw(Box::new(Arc::new(keystore))) as u64;
+            let keystore_builder = map_keystore_builder(signers, connection)?;
 
-            Ok(ptr)
+            let keystore = keystore_builder.load(storage).await.handle_error()?;
+
+            let ptr = Box::into_raw(Box::new(Arc::new(keystore)));
+
+            serde_json::to_value(ptr as usize).handle_error()
         }
 
-        let result = internal_fn(storage).await.match_result();
+        let result = internal_fn(storage, connection, signers)
+            .await
+            .match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port).post_with_result(result).unwrap();
     });
 }
 
@@ -59,19 +81,15 @@ pub unsafe extern "C" fn nt_keystore_entries(result_port: c_longlong, keystore: 
     let keystore = keystore_from_ptr(keystore);
 
     runtime!().spawn(async move {
-        async fn internal_fn(keystore: &KeyStore) -> Result<u64, String> {
+        async fn internal_fn(keystore: &KeyStore) -> Result<serde_json::Value, String> {
             let entries = keystore.get_entries().await;
 
-            let entries = serde_json::to_string(&entries)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(entries)
+            serde_json::to_value(&entries).handle_error()
         }
 
         let result = internal_fn(&keystore).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port).post_with_result(result).unwrap();
     });
 }
 
@@ -79,42 +97,57 @@ pub unsafe extern "C" fn nt_keystore_entries(result_port: c_longlong, keystore: 
 pub unsafe extern "C" fn nt_keystore_add_key(
     result_port: c_longlong,
     keystore: *mut c_void,
+    signer: *mut c_char,
     input: *mut c_char,
 ) {
     let keystore = keystore_from_ptr(keystore);
 
+    let signer = signer.to_string_from_ptr();
     let input = input.to_string_from_ptr();
 
     runtime!().spawn(async move {
-        async fn internal_fn(keystore: &KeyStore, input: String) -> Result<u64, String> {
-            let entry = if let Ok(input) = serde_json::from_str::<EncryptedKeyCreateInput>(&input) {
-                let input = input.to_nekoton();
+        async fn internal_fn(
+            keystore: &KeyStore,
+            signer: String,
+            input: String,
+        ) -> Result<serde_json::Value, String> {
+            let entry = if signer == ENCRYPTED_KEY_SIGNER_NAME {
+                let input = serde_json::from_str::<EncryptedKeyCreateInputHelper>(&input)
+                    .map(
+                        |EncryptedKeyCreateInputHelper(encrypted_key_create_input)| {
+                            encrypted_key_create_input
+                        },
+                    )
+                    .handle_error()?;
 
                 keystore
                     .add_key::<EncryptedKeySigner>(input)
                     .await
                     .handle_error()?
-            } else if let Ok(input) = serde_json::from_str::<DerivedKeyCreateInput>(&input) {
-                let input = input.to_nekoton();
+            } else if signer == DERIVED_KEY_SIGNER_NAME {
+                let input = serde_json::from_str::<DerivedKeyCreateInput>(&input).handle_error()?;
 
                 keystore
                     .add_key::<DerivedKeySigner>(input)
+                    .await
+                    .handle_error()?
+            } else if signer == LEDGER_KEY_SIGNER_NAME {
+                let input = serde_json::from_str::<LedgerKeyCreateInput>(&input).handle_error()?;
+
+                keystore
+                    .add_key::<LedgerKeySigner>(input)
                     .await
                     .handle_error()?
             } else {
                 panic!()
             };
 
-            let entry = serde_json::to_string(&entry)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(entry)
+            serde_json::to_value(&entry).handle_error()
         }
 
-        let result = internal_fn(&keystore, input).await.match_result();
+        let result = internal_fn(&keystore, signer, input).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port).post_with_result(result).unwrap();
     });
 }
 
@@ -122,50 +155,61 @@ pub unsafe extern "C" fn nt_keystore_add_key(
 pub unsafe extern "C" fn nt_keystore_add_keys(
     result_port: c_longlong,
     keystore: *mut c_void,
+    signer: *mut c_char,
     input: *mut c_char,
 ) {
     let keystore = keystore_from_ptr(keystore);
 
+    let signer = signer.to_string_from_ptr();
     let input = input.to_string_from_ptr();
 
     runtime!().spawn(async move {
-        async fn internal_fn(keystore: &KeyStore, input: String) -> Result<u64, String> {
-            let entries = if let Ok(input) =
-                serde_json::from_str::<Vec<EncryptedKeyCreateInput>>(&input)
-            {
-                let input = input
+        async fn internal_fn(
+            keystore: &KeyStore,
+            signer: String,
+            input: String,
+        ) -> Result<serde_json::Value, String> {
+            let entries = if signer == ENCRYPTED_KEY_SIGNER_NAME {
+                let input = serde_json::from_str::<Vec<EncryptedKeyCreateInputHelper>>(&input)
+                    .handle_error()?
                     .into_iter()
-                    .map(|e| e.to_nekoton())
+                    .map(
+                        |EncryptedKeyCreateInputHelper(encrypted_key_create_input)| {
+                            encrypted_key_create_input
+                        },
+                    )
                     .collect::<Vec<_>>();
 
                 keystore
-                    .add_keys::<EncryptedKeySigner, Vec<crypto::EncryptedKeyCreateInput>>(input)
+                    .add_keys::<EncryptedKeySigner, Vec<EncryptedKeyCreateInput>>(input)
                     .await
                     .handle_error()?
-            } else if let Ok(input) = serde_json::from_str::<Vec<DerivedKeyCreateInput>>(&input) {
-                let input = input
-                    .into_iter()
-                    .map(|e| e.to_nekoton())
-                    .collect::<Vec<_>>();
+            } else if signer == DERIVED_KEY_SIGNER_NAME {
+                let input =
+                    serde_json::from_str::<Vec<DerivedKeyCreateInput>>(&input).handle_error()?;
 
                 keystore
-                    .add_keys::<DerivedKeySigner, Vec<crypto::DerivedKeyCreateInput>>(input)
+                    .add_keys::<DerivedKeySigner, Vec<DerivedKeyCreateInput>>(input)
+                    .await
+                    .handle_error()?
+            } else if signer == LEDGER_KEY_SIGNER_NAME {
+                let input =
+                    serde_json::from_str::<Vec<LedgerKeyCreateInput>>(&input).handle_error()?;
+
+                keystore
+                    .add_keys::<LedgerKeySigner, Vec<LedgerKeyCreateInput>>(input)
                     .await
                     .handle_error()?
             } else {
                 panic!()
             };
 
-            let entries = serde_json::to_string(&entries)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(entries)
+            serde_json::to_value(&entries).handle_error()
         }
 
-        let result = internal_fn(&keystore, input).await.match_result();
+        let result = internal_fn(&keystore, signer, input).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port).post_with_result(result).unwrap();
     });
 }
 
@@ -173,43 +217,53 @@ pub unsafe extern "C" fn nt_keystore_add_keys(
 pub unsafe extern "C" fn nt_keystore_update_key(
     result_port: c_longlong,
     keystore: *mut c_void,
+    signer: *mut c_char,
     input: *mut c_char,
 ) {
     let keystore = keystore_from_ptr(keystore);
 
+    let signer = signer.to_string_from_ptr();
     let input = input.to_string_from_ptr();
 
     runtime!().spawn(async move {
-        async fn internal_fn(keystore: &KeyStore, input: String) -> Result<u64, String> {
-            let entry = if let Ok(input) = serde_json::from_str::<EncryptedKeyUpdateParams>(&input)
-            {
-                let input = input.to_nekoton();
+        async fn internal_fn(
+            keystore: &KeyStore,
+            signer: String,
+            input: String,
+        ) -> Result<serde_json::Value, String> {
+            let entry = if signer == ENCRYPTED_KEY_SIGNER_NAME {
+                let input =
+                    serde_json::from_str::<EncryptedKeyUpdateParams>(&input).handle_error()?;
 
                 keystore
                     .update_key::<EncryptedKeySigner>(input)
                     .await
                     .handle_error()?
-            } else if let Ok(input) = serde_json::from_str::<DerivedKeyUpdateParams>(&input) {
-                let input = input.to_nekoton();
+            } else if signer == DERIVED_KEY_SIGNER_NAME {
+                let input =
+                    serde_json::from_str::<DerivedKeyUpdateParams>(&input).handle_error()?;
 
                 keystore
                     .update_key::<DerivedKeySigner>(input)
+                    .await
+                    .handle_error()?
+            } else if signer == LEDGER_KEY_SIGNER_NAME {
+                let input = serde_json::from_str::<LedgerUpdateKeyInput>(&input).handle_error()?;
+
+                keystore
+                    .update_key::<LedgerKeySigner>(input)
                     .await
                     .handle_error()?
             } else {
                 panic!()
             };
 
-            let entry = serde_json::to_string(&entry)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(entry)
+            serde_json::to_value(&entry).handle_error()
         }
 
-        let result = internal_fn(&keystore, input).await.match_result();
+        let result = internal_fn(&keystore, signer, input).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port).post_with_result(result).unwrap();
     });
 }
 
@@ -217,44 +271,115 @@ pub unsafe extern "C" fn nt_keystore_update_key(
 pub unsafe extern "C" fn nt_keystore_export_key(
     result_port: c_longlong,
     keystore: *mut c_void,
+    signer: *mut c_char,
     input: *mut c_char,
 ) {
     let keystore = keystore_from_ptr(keystore);
 
+    let signer = signer.to_string_from_ptr();
     let input = input.to_string_from_ptr();
 
     runtime!().spawn(async move {
-        async fn internal_fn(keystore: &KeyStore, input: String) -> Result<u64, String> {
-            let output = if let Ok(input) = serde_json::from_str::<EncryptedKeyPassword>(&input) {
-                let input = input.to_nekoton();
+        async fn internal_fn(
+            keystore: &KeyStore,
+            signer: String,
+            input: String,
+        ) -> Result<serde_json::Value, String> {
+            if signer == ENCRYPTED_KEY_SIGNER_NAME {
+                let input = serde_json::from_str::<EncryptedKeyPassword>(&input).handle_error()?;
 
                 let output = keystore
                     .export_key::<EncryptedKeySigner>(input)
                     .await
-                    .handle_error()?
-                    .to_serializable();
+                    .handle_error()?;
 
-                serde_json::to_string(&output).handle_error()?
-            } else if let Ok(input) = serde_json::from_str::<DerivedKeyExportParams>(&input) {
-                let input = input.to_nekoton();
+                serde_json::to_value(&EncryptedKeyExportOutputHelper(output)).handle_error()
+            } else if signer == DERIVED_KEY_SIGNER_NAME {
+                let input =
+                    serde_json::from_str::<DerivedKeyExportParams>(&input).handle_error()?;
 
                 let output = keystore
                     .export_key::<DerivedKeySigner>(input)
                     .await
                     .handle_error()?;
 
-                serde_json::to_string(&output).handle_error()?
+                serde_json::to_value(&output).handle_error()
             } else {
                 panic!()
             }
-            .to_cstring_ptr() as u64;
-
-            Ok(output)
         }
 
-        let result = internal_fn(&keystore, input).await.match_result();
+        let result = internal_fn(&keystore, signer, input).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port).post_with_result(result).unwrap();
+    });
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nt_keystore_get_public_keys(
+    result_port: c_longlong,
+    keystore: *mut c_void,
+    signer: *mut c_char,
+    input: *mut c_char,
+) {
+    let keystore = keystore_from_ptr(keystore);
+
+    let signer = signer.to_string_from_ptr();
+    let input = input.to_string_from_ptr();
+
+    runtime!().spawn(async move {
+        async fn internal_fn(
+            keystore: &KeyStore,
+            signer: String,
+            input: String,
+        ) -> Result<serde_json::Value, String> {
+            if signer == ENCRYPTED_KEY_SIGNER_NAME {
+                let input =
+                    serde_json::from_str::<EncryptedKeyGetPublicKeys>(&input).handle_error()?;
+
+                let output = keystore
+                    .get_public_keys::<EncryptedKeySigner>(input)
+                    .await
+                    .handle_error()?
+                    .into_iter()
+                    .map(|e| hex::encode(e.as_bytes()))
+                    .collect::<Vec<_>>();
+
+                serde_json::to_value(&output).handle_error()
+            } else if signer == DERIVED_KEY_SIGNER_NAME {
+                let input =
+                    serde_json::from_str::<DerivedKeyGetPublicKeys>(&input).handle_error()?;
+
+                let output = keystore
+                    .get_public_keys::<DerivedKeySigner>(input)
+                    .await
+                    .handle_error()?
+                    .into_iter()
+                    .map(|e| hex::encode(e.as_bytes()))
+                    .collect::<Vec<_>>();
+
+                serde_json::to_value(&output).handle_error()
+            } else if signer == LEDGER_KEY_SIGNER_NAME {
+                let input =
+                    serde_json::from_str::<LedgerKeyGetPublicKeys>(&input).handle_error()?;
+
+                let output = keystore
+                    .get_public_keys::<LedgerKeySigner>(input)
+                    .await
+                    .handle_error()?
+                    .into_iter()
+                    .map(|e| hex::encode(e.as_bytes()))
+                    .collect::<Vec<_>>();
+
+                serde_json::to_value(&output).handle_error()
+            } else {
+                panic!()
+            }
+        }
+
+        let result = internal_fn(&keystore, signer, input).await.match_result();
+
+        Isolate::new(result_port).post_with_result(result).unwrap();
     });
 }
 
@@ -262,6 +387,7 @@ pub unsafe extern "C" fn nt_keystore_export_key(
 pub unsafe extern "C" fn nt_keystore_encrypt(
     result_port: c_longlong,
     keystore: *mut c_void,
+    signer: *mut c_char,
     data: *mut c_char,
     public_keys: *mut c_char,
     algorithm: *mut c_char,
@@ -269,6 +395,7 @@ pub unsafe extern "C" fn nt_keystore_encrypt(
 ) {
     let keystore = keystore_from_ptr(keystore);
 
+    let signer = signer.to_string_from_ptr();
     let data = data.to_string_from_ptr();
     let public_keys = public_keys.to_string_from_ptr();
     let algorithm = algorithm.to_string_from_ptr();
@@ -277,11 +404,12 @@ pub unsafe extern "C" fn nt_keystore_encrypt(
     runtime!().spawn(async move {
         async fn internal_fn(
             keystore: &KeyStore,
+            signer: String,
             data: String,
             public_keys: String,
             algorithm: String,
             input: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let data = base64::decode(data).handle_error()?;
 
             let public_keys = serde_json::from_str::<Vec<&str>>(&public_keys)
@@ -293,36 +421,39 @@ pub unsafe extern "C" fn nt_keystore_encrypt(
             let algorithm =
                 serde_json::from_str::<EncryptionAlgorithm>(&algorithm).handle_error()?;
 
-            let data = if let Ok(input) = serde_json::from_str::<EncryptedKeyPassword>(&input) {
-                let input = input.to_nekoton();
+            let data = if signer == ENCRYPTED_KEY_SIGNER_NAME {
+                let input = serde_json::from_str::<EncryptedKeyPassword>(&input).handle_error()?;
 
                 keystore
                     .encrypt::<EncryptedKeySigner>(&data, &public_keys, algorithm, input)
                     .await
                     .handle_error()?
-            } else if let Ok(input) = serde_json::from_str::<DerivedKeySignParams>(&input) {
-                let input = input.to_nekoton();
+            } else if signer == DERIVED_KEY_SIGNER_NAME {
+                let input = serde_json::from_str::<DerivedKeySignParams>(&input).handle_error()?;
 
                 keystore
                     .encrypt::<DerivedKeySigner>(&data, &public_keys, algorithm, input)
+                    .await
+                    .handle_error()?
+            } else if signer == LEDGER_KEY_SIGNER_NAME {
+                let input = serde_json::from_str::<LedgerSignInput>(&input).handle_error()?;
+
+                keystore
+                    .encrypt::<LedgerKeySigner>(&data, &public_keys, algorithm, input)
                     .await
                     .handle_error()?
             } else {
                 panic!()
             };
 
-            let data = serde_json::to_string(&data)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(data)
+            serde_json::to_value(&data).handle_error()
         }
 
-        let result = internal_fn(&keystore, data, public_keys, algorithm, input)
+        let result = internal_fn(&keystore, signer, data, public_keys, algorithm, input)
             .await
             .match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port).post_with_result(result).unwrap();
     });
 }
 
@@ -330,48 +461,60 @@ pub unsafe extern "C" fn nt_keystore_encrypt(
 pub unsafe extern "C" fn nt_keystore_decrypt(
     result_port: c_longlong,
     keystore: *mut c_void,
+    signer: *mut c_char,
     data: *mut c_char,
     input: *mut c_char,
 ) {
     let keystore = keystore_from_ptr(keystore);
 
+    let signer = signer.to_string_from_ptr();
     let data = data.to_string_from_ptr();
     let input = input.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
             keystore: &KeyStore,
+            signer: String,
             data: String,
             input: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let data = serde_json::from_str::<EncryptedData>(&data).handle_error()?;
 
-            let data = if let Ok(input) = serde_json::from_str::<EncryptedKeyPassword>(&input) {
-                let input = input.to_nekoton();
+            let data = if signer == ENCRYPTED_KEY_SIGNER_NAME {
+                let input = serde_json::from_str::<EncryptedKeyPassword>(&input).handle_error()?;
 
                 keystore
                     .decrypt::<EncryptedKeySigner>(&data, input)
                     .await
                     .handle_error()?
-            } else if let Ok(input) = serde_json::from_str::<DerivedKeySignParams>(&input) {
-                let input = input.to_nekoton();
+            } else if signer == DERIVED_KEY_SIGNER_NAME {
+                let input = serde_json::from_str::<DerivedKeySignParams>(&input).handle_error()?;
 
                 keystore
                     .decrypt::<DerivedKeySigner>(&data, input)
+                    .await
+                    .handle_error()?
+            } else if signer == LEDGER_KEY_SIGNER_NAME {
+                let input = serde_json::from_str::<LedgerSignInput>(&input).handle_error()?;
+
+                keystore
+                    .decrypt::<LedgerKeySigner>(&data, input)
                     .await
                     .handle_error()?
             } else {
                 panic!()
             };
 
-            let data = base64::encode(&data).to_cstring_ptr() as u64;
+            let data = base64::encode(&data);
 
-            Ok(data)
+            serde_json::to_value(data).handle_error()
         }
 
-        let result = internal_fn(&keystore, data, input).await.match_result();
+        let result = internal_fn(&keystore, signer, data, input)
+            .await
+            .match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port).post_with_result(result).unwrap();
     });
 }
 
@@ -379,32 +522,37 @@ pub unsafe extern "C" fn nt_keystore_decrypt(
 pub unsafe extern "C" fn nt_keystore_sign(
     result_port: c_longlong,
     keystore: *mut c_void,
+    signer: *mut c_char,
     data: *mut c_char,
     input: *mut c_char,
 ) {
     let keystore = keystore_from_ptr(keystore);
 
+    let signer = signer.to_string_from_ptr();
     let data = data.to_string_from_ptr();
     let input = input.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
             keystore: &KeyStore,
+            signer: String,
             data: String,
             input: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let data = base64::decode(&data).handle_error()?;
 
-            let signature = sign(keystore, &data, input).await?;
+            let signature = sign(keystore, signer, &data, input).await?;
 
-            let signature = base64::encode(&signature).to_cstring_ptr() as u64;
+            let signature = base64::encode(&signature);
 
-            Ok(signature)
+            serde_json::to_value(signature).handle_error()
         }
 
-        let result = internal_fn(&keystore, data, input).await.match_result();
+        let result = internal_fn(&keystore, signer, data, input)
+            .await
+            .match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port).post_with_result(result).unwrap();
     });
 }
 
@@ -412,24 +560,27 @@ pub unsafe extern "C" fn nt_keystore_sign(
 pub unsafe extern "C" fn nt_keystore_sign_data(
     result_port: c_longlong,
     keystore: *mut c_void,
+    signer: *mut c_char,
     data: *mut c_char,
     input: *mut c_char,
 ) {
     let keystore = keystore_from_ptr(keystore);
 
+    let signer = signer.to_string_from_ptr();
     let data = data.to_string_from_ptr();
     let input = input.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
             keystore: &KeyStore,
+            signer: String,
             data: String,
             input: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let data = base64::decode(data).handle_error()?;
             let hash: [u8; 32] = sha2::Sha256::digest(&data).into();
 
-            let signature = sign(keystore, &hash, input).await?;
+            let signature = sign(keystore, signer, &hash, input).await?;
 
             let signed_data = SignedData {
                 data_hash: hex::encode(hash),
@@ -441,16 +592,14 @@ pub unsafe extern "C" fn nt_keystore_sign_data(
                 },
             };
 
-            let signed_data = serde_json::to_string(&signed_data)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(signed_data)
+            serde_json::to_value(&signed_data).handle_error()
         }
 
-        let result = internal_fn(&keystore, data, input).await.match_result();
+        let result = internal_fn(&keystore, signer, data, input)
+            .await
+            .match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port).post_with_result(result).unwrap();
     });
 }
 
@@ -458,23 +607,26 @@ pub unsafe extern "C" fn nt_keystore_sign_data(
 pub unsafe extern "C" fn nt_keystore_sign_data_raw(
     result_port: c_longlong,
     keystore: *mut c_void,
+    signer: *mut c_char,
     data: *mut c_char,
     input: *mut c_char,
 ) {
     let keystore = keystore_from_ptr(keystore);
 
+    let signer = signer.to_string_from_ptr();
     let data = data.to_string_from_ptr();
     let input = input.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
             keystore: &KeyStore,
+            signer: String,
             data: String,
             input: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let data = base64::decode(data).handle_error()?;
 
-            let signature = sign(keystore, &data, input).await?;
+            let signature = sign(keystore, signer, &data, input).await?;
 
             let signed_data_raw = SignedDataRaw {
                 signature: base64::encode(&signature),
@@ -485,16 +637,14 @@ pub unsafe extern "C" fn nt_keystore_sign_data_raw(
                 },
             };
 
-            let signed_data_raw = serde_json::to_string(&signed_data_raw)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(signed_data_raw)
+            serde_json::to_value(&signed_data_raw).handle_error()
         }
 
-        let result = internal_fn(&keystore, data, input).await.match_result();
+        let result = internal_fn(&keystore, signer, data, input)
+            .await
+            .match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port).post_with_result(result).unwrap();
     });
 }
 
@@ -509,24 +659,20 @@ pub unsafe extern "C" fn nt_keystore_remove_key(
     let public_key = public_key.to_string_from_ptr();
 
     runtime!().spawn(async move {
-        async fn internal_fn(keystore: &KeyStore, public_key: String) -> Result<u64, String> {
+        async fn internal_fn(
+            keystore: &KeyStore,
+            public_key: String,
+        ) -> Result<serde_json::Value, String> {
             let public_key = parse_public_key(&public_key)?;
 
             let entry = keystore.remove_key(&public_key).await.handle_error()?;
 
-            let entry = entry
-                .as_ref()
-                .map(serde_json::to_string)
-                .transpose()
-                .handle_error()?
-                .to_optional_cstring_ptr() as u64;
-
-            Ok(entry)
+            serde_json::to_value(entry).handle_error()
         }
 
         let result = internal_fn(&keystore, public_key).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port).post_with_result(result).unwrap();
     });
 }
 
@@ -541,7 +687,10 @@ pub unsafe extern "C" fn nt_keystore_remove_keys(
     let public_keys = public_keys.to_string_from_ptr();
 
     runtime!().spawn(async move {
-        async fn internal_fn(keystore: &KeyStore, public_keys: String) -> Result<u64, String> {
+        async fn internal_fn(
+            keystore: &KeyStore,
+            public_keys: String,
+        ) -> Result<serde_json::Value, String> {
             let public_keys = serde_json::from_str::<Vec<&str>>(&public_keys)
                 .handle_error()?
                 .into_iter()
@@ -550,17 +699,40 @@ pub unsafe extern "C" fn nt_keystore_remove_keys(
 
             let entries = keystore.remove_keys(&public_keys).await.handle_error()?;
 
-            let entries = serde_json::to_string(&entries)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(entries)
+            serde_json::to_value(&entries).handle_error()
         }
 
         let result = internal_fn(&keystore, public_keys).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port).post_with_result(result).unwrap();
     });
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nt_keystore_is_password_cached(
+    keystore: *mut c_void,
+    public_key: *mut c_char,
+    duration: c_ulonglong,
+) -> *mut c_char {
+    let keystore = keystore_from_ptr(keystore);
+
+    let public_key = public_key.to_string_from_ptr();
+
+    fn internal_fn(
+        keystore: &KeyStore,
+        public_key: String,
+        duration: u64,
+    ) -> Result<serde_json::Value, String> {
+        let id = parse_public_key(&public_key)?.to_bytes();
+
+        let duration = Duration::from_millis(duration);
+
+        let is_cached = keystore.is_password_cached(&id, duration);
+
+        serde_json::to_value(is_cached).handle_error()
+    }
+
+    internal_fn(&keystore, public_key, duration).match_result()
 }
 
 #[no_mangle]
@@ -568,15 +740,15 @@ pub unsafe extern "C" fn nt_keystore_clear(result_port: c_longlong, keystore: *m
     let keystore = keystore_from_ptr(keystore);
 
     runtime!().spawn(async move {
-        async fn internal_fn(keystore: &KeyStore) -> Result<u64, String> {
+        async fn internal_fn(keystore: &KeyStore) -> Result<serde_json::Value, String> {
             keystore.clear().await.handle_error()?;
 
-            Ok(u64::default())
+            Ok(serde_json::Value::Null)
         }
 
         let result = internal_fn(&keystore).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port).post_with_result(result).unwrap();
     });
 }
 
@@ -585,86 +757,110 @@ pub unsafe extern "C" fn nt_keystore_reload(result_port: c_longlong, keystore: *
     let keystore = keystore_from_ptr(keystore);
 
     runtime!().spawn(async move {
-        async fn internal_fn(keystore: &KeyStore) -> Result<u64, String> {
+        async fn internal_fn(keystore: &KeyStore) -> Result<serde_json::Value, String> {
             keystore.reload().await.handle_error()?;
 
-            Ok(u64::default())
+            Ok(serde_json::Value::Null)
         }
 
         let result = internal_fn(&keystore).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port).post_with_result(result).unwrap();
     });
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nt_keystore_verify_data(data: *mut c_char) -> *mut c_void {
+pub unsafe extern "C" fn nt_keystore_verify_data(
+    connection: *mut c_void,
+    signers: *mut c_char,
+    data: *mut c_char,
+) -> *mut c_char {
+    let connection = if !connection.is_null() {
+        Some(ledger_connection_from_ptr(connection))
+    } else {
+        None
+    };
+
+    let signers = signers.to_string_from_ptr();
     let data = data.to_string_from_ptr();
 
-    fn internal_fn(data: String) -> Result<u64, String> {
-        let is_valid = build_keystore()?.verify(&data).is_ok() as u64;
+    fn internal_fn(
+        connection: Option<Arc<LedgerConnectionImpl>>,
+        signers: String,
+        data: String,
+    ) -> Result<serde_json::Value, String> {
+        let signers = serde_json::from_str::<Vec<String>>(&signers).handle_error()?;
 
-        Ok(is_valid)
+        let keystore_builder = map_keystore_builder(signers, connection)?;
+
+        let is_valid = keystore_builder.verify(&data).is_ok();
+
+        serde_json::to_value(is_valid).handle_error()
     }
 
-    internal_fn(data).match_result()
+    internal_fn(connection, signers, data).match_result()
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn nt_keystore_is_password_cached(
-    keystore: *mut c_void,
-    public_key: *mut c_char,
-    duration: c_ulonglong,
-) -> *mut c_void {
-    let keystore = keystore_from_ptr(keystore);
-
-    let public_key = public_key.to_string_from_ptr();
-
-    fn internal_fn(keystore: &KeyStore, public_key: String, duration: u64) -> Result<u64, String> {
-        let id = parse_public_key(&public_key)?.to_bytes();
-
-        let duration = Duration::from_millis(duration);
-
-        let is_cached = keystore.is_password_cached(&id, duration) as u64;
-
-        Ok(is_cached)
-    }
-
-    internal_fn(&keystore, public_key, duration).match_result()
-}
-
-fn build_keystore() -> Result<KeyStoreBuilder, String> {
-    KeyStore::builder()
-        .with_signer::<EncryptedKeySigner>(
-            &KeySigner::EncryptedKeySigner.to_string(),
-            EncryptedKeySigner::new(),
-        )
-        .handle_error()?
-        .with_signer::<DerivedKeySigner>(
-            &KeySigner::DerivedKeySigner.to_string(),
-            DerivedKeySigner::new(),
-        )
-        .handle_error()
-}
-
-async fn sign(keystore: &KeyStore, data: &[u8], input: String) -> Result<Signature, String> {
-    if let Ok(input) = serde_json::from_str::<EncryptedKeyPassword>(&input) {
-        let input = input.to_nekoton();
+async fn sign(
+    keystore: &KeyStore,
+    signer: String,
+    data: &[u8],
+    input: String,
+) -> Result<Signature, String> {
+    if signer == ENCRYPTED_KEY_SIGNER_NAME {
+        let input = serde_json::from_str::<EncryptedKeyPassword>(&input).handle_error()?;
 
         keystore
             .sign::<EncryptedKeySigner>(data, input)
             .await
             .handle_error()
-    } else if let Ok(input) = serde_json::from_str::<DerivedKeySignParams>(&input) {
-        let input = input.to_nekoton();
+    } else if signer == DERIVED_KEY_SIGNER_NAME {
+        let input = serde_json::from_str::<DerivedKeySignParams>(&input).handle_error()?;
 
         keystore
             .sign::<DerivedKeySigner>(data, input)
             .await
             .handle_error()
+    } else if signer == LEDGER_KEY_SIGNER_NAME {
+        let input = serde_json::from_str::<LedgerSignInput>(&input).handle_error()?;
+
+        keystore
+            .sign::<LedgerKeySigner>(data, input)
+            .await
+            .handle_error()
     } else {
         panic!()
     }
+}
+
+fn map_keystore_builder(
+    signers: Vec<String>,
+    connection: Option<Arc<LedgerConnectionImpl>>,
+) -> Result<KeyStoreBuilder, String> {
+    let mut keystore_builder = KeyStore::builder();
+
+    if signers.contains(&ENCRYPTED_KEY_SIGNER_NAME.to_owned()) {
+        keystore_builder = keystore_builder
+            .with_signer::<EncryptedKeySigner>(ENCRYPTED_KEY_SIGNER_NAME, EncryptedKeySigner::new())
+            .handle_error()?;
+    }
+
+    if signers.contains(&DERIVED_KEY_SIGNER_NAME.to_owned()) {
+        keystore_builder = keystore_builder
+            .with_signer::<DerivedKeySigner>(DERIVED_KEY_SIGNER_NAME, DerivedKeySigner::new())
+            .handle_error()?;
+    }
+
+    if signers.contains(&LEDGER_KEY_SIGNER_NAME.to_owned()) {
+        keystore_builder = keystore_builder
+            .with_signer::<LedgerKeySigner>(
+                LEDGER_KEY_SIGNER_NAME,
+                LedgerKeySigner::new(connection.unwrap()),
+            )
+            .handle_error()?;
+    }
+
+    Ok(keystore_builder)
 }
 
 #[no_mangle]

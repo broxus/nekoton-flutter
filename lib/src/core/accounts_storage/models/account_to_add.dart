@@ -7,10 +7,6 @@ part 'account_to_add.g.dart';
 
 @freezed
 class AccountToAdd with _$AccountToAdd {
-  @JsonSerializable(
-    fieldRename: FieldRename.snake,
-    explicitToJson: true,
-  )
   const factory AccountToAdd({
     required String name,
     required String publicKey,

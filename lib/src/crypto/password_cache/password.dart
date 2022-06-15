@@ -1,20 +1,13 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import 'password_cache_behavior.dart';
+import 'password_explicit.dart';
 
 part 'password.freezed.dart';
 part 'password.g.dart';
 
-@Freezed(unionValueCase: FreezedUnionCase.pascal)
+@Freezed(unionKey: 'type', unionValueCase: FreezedUnionCase.snake)
 class Password with _$Password {
-  @JsonSerializable(
-    fieldRename: FieldRename.snake,
-    explicitToJson: true,
-  )
-  const factory Password.explicit({
-    required String password,
-    required PasswordCacheBehavior cacheBehavior,
-  }) = _PasswordExplicit;
+  const factory Password.explicit(PasswordExplicit data) = _PasswordExplicit;
 
   const factory Password.fromCache() = _PasswordFromCache;
 

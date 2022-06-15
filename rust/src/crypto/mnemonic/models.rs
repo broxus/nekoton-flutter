@@ -1,62 +1,41 @@
-use nekoton::crypto;
+use nekoton::crypto::{GeneratedKey, MnemonicType};
 use nekoton_utils::{serde_public_key, serde_secret_key};
 use serde::{Deserialize, Serialize};
 
-use crate::models::{ToNekoton, ToSerializable};
+#[derive(Serialize)]
+pub struct GeneratedKeyHelper(#[serde(with = "GeneratedKeyDef")] pub GeneratedKey);
 
 #[derive(Serialize)]
-pub struct GeneratedKey {
+#[serde(remote = "GeneratedKey", rename_all = "camelCase")]
+pub struct GeneratedKeyDef {
     pub words: Vec<String>,
+    #[serde(with = "MnemonicTypeDef")]
     pub account_type: MnemonicType,
 }
 
-impl ToSerializable<GeneratedKey> for crypto::GeneratedKey {
-    fn to_serializable(self) -> GeneratedKey {
-        GeneratedKey {
-            words: self.words,
-            account_type: self.account_type.to_serializable(),
-        }
-    }
-}
+#[derive(Serialize, Deserialize)]
+pub struct MnemonicTypeHelper(#[serde(with = "MnemonicTypeDef")] pub MnemonicType);
 
 #[derive(Serialize, Deserialize)]
-#[serde(tag = "runtimeType")]
-pub enum MnemonicType {
+#[serde(
+    remote = "MnemonicType",
+    rename_all = "camelCase",
+    tag = "type",
+    content = "data"
+)]
+pub enum MnemonicTypeDef {
     Legacy,
-    Labs { id: u16 },
-}
-
-impl ToSerializable<MnemonicType> for crypto::MnemonicType {
-    fn to_serializable(self) -> MnemonicType {
-        match self {
-            crypto::MnemonicType::Legacy => MnemonicType::Legacy,
-            crypto::MnemonicType::Labs(id) => MnemonicType::Labs { id },
-        }
-    }
-}
-
-impl ToNekoton<crypto::MnemonicType> for MnemonicType {
-    fn to_nekoton(self) -> crypto::MnemonicType {
-        match self {
-            MnemonicType::Legacy => crypto::MnemonicType::Legacy,
-            MnemonicType::Labs { id } => crypto::MnemonicType::Labs(id),
-        }
-    }
+    Labs(u16),
 }
 
 #[derive(Serialize)]
-pub struct Keypair {
+pub struct KeypairHelper(#[serde(with = "KeypairDef")] pub ed25519_dalek::Keypair);
+
+#[derive(Serialize)]
+#[serde(remote = "ed25519_dalek::Keypair")]
+pub struct KeypairDef {
     #[serde(with = "serde_public_key")]
     pub public: ed25519_dalek::PublicKey,
     #[serde(with = "serde_secret_key")]
     pub secret: ed25519_dalek::SecretKey,
-}
-
-impl ToSerializable<Keypair> for ed25519_dalek::Keypair {
-    fn to_serializable(self) -> Keypair {
-        Keypair {
-            public: self.public,
-            secret: self.secret,
-        }
-    }
 }

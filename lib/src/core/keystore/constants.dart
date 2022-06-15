@@ -1,1 +1,1 @@
-const kSignatureLength = 64;
+const kKeystoreStorageKey = '__core__keystore';

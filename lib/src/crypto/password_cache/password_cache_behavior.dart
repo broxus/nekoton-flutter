@@ -3,16 +3,13 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'password_cache_behavior.freezed.dart';
 part 'password_cache_behavior.g.dart';
 
-@Freezed(unionValueCase: FreezedUnionCase.pascal)
+@Freezed(unionKey: 'type')
 class PasswordCacheBehavior with _$PasswordCacheBehavior {
-  @JsonSerializable(
-    fieldRename: FieldRename.snake,
-  )
-  const factory PasswordCacheBehavior.store({
-    required int duration,
-  }) = _PasswordCacheBehaviorStore;
+  const factory PasswordCacheBehavior.store(int data) = _PasswordCacheBehaviorStore;
 
   const factory PasswordCacheBehavior.remove() = _PasswordCacheBehaviorRemove;
+
+  const factory PasswordCacheBehavior.nop() = _PasswordCacheBehaviorNop;
 
   factory PasswordCacheBehavior.fromJson(Map<String, dynamic> json) => _$PasswordCacheBehaviorFromJson(json);
 }

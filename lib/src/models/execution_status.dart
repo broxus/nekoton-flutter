@@ -1,4 +1,0 @@
-enum ExecutionStatus {
-  ok,
-  err,
-}

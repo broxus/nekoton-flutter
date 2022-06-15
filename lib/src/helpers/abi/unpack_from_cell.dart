@@ -16,15 +16,14 @@ TokensObject unpackFromCell({
   final paramsStr = jsonEncode(params);
 
   final result = executeSync(
-    () => NekotonFlutter.bindings.nt_unpack_from_cell(
-      paramsStr.toNativeUtf8().cast<Char>(),
-      boc.toNativeUtf8().cast<Char>(),
-      allowPartial ? 1 : 0,
-    ),
+    () => NekotonFlutter.instance().bindings.nt_unpack_from_cell(
+          paramsStr.toNativeUtf8().cast<Char>(),
+          boc.toNativeUtf8().cast<Char>(),
+          allowPartial ? 1 : 0,
+        ),
   );
 
-  final string = cStringToDart(result);
-  final json = jsonDecode(string) as dynamic;
+  final json = result as dynamic;
   final tokensObject = json as TokensObject;
 
   return tokensObject;

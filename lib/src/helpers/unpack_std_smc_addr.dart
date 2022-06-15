@@ -10,13 +10,11 @@ String unpackStdSmcAddr({
   required bool base64Url,
 }) {
   final result = executeSync(
-    () => NekotonFlutter.bindings.nt_unpack_std_smc_addr(
-      packed.toNativeUtf8().cast<Char>(),
-      base64Url ? 1 : 0,
-    ),
+    () => NekotonFlutter.instance().bindings.nt_unpack_std_smc_addr(
+          packed.toNativeUtf8().cast<Char>(),
+          base64Url ? 1 : 0,
+        ),
   );
 
-  final string = cStringToDart(result);
-
-  return string;
+  return result as String;
 }

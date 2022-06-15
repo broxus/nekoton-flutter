@@ -9,10 +9,6 @@ part 'encrypted_key_create_input.g.dart';
 
 @freezed
 class EncryptedKeyCreateInput with _$EncryptedKeyCreateInput implements CreateKeyInput {
-  @JsonSerializable(
-    fieldRename: FieldRename.snake,
-    explicitToJson: true,
-  )
   const factory EncryptedKeyCreateInput({
     String? name,
     required String phrase,

@@ -1,0 +1,1 @@
+const kLedgerKeySignerName = 'LedgerKeySigner';

@@ -7,7 +7,6 @@ part 'signed_data_raw.g.dart';
 
 @freezed
 class SignedDataRaw with _$SignedDataRaw {
-  @JsonSerializable(fieldRename: FieldRename.snake)
   const factory SignedDataRaw({
     required String signature,
     required String signatureHex,

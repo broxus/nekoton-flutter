@@ -17,16 +17,14 @@ String getExpectedAddress({
   final initDataStr = jsonEncode(initData);
 
   final result = executeSync(
-    () => NekotonFlutter.bindings.nt_get_expected_address(
-      tvc.toNativeUtf8().cast<Char>(),
-      contractAbi.toNativeUtf8().cast<Char>(),
-      workchainId,
-      publicKey?.toNativeUtf8().cast<Char>() ?? nullptr,
-      initDataStr.toNativeUtf8().cast<Char>(),
-    ),
+    () => NekotonFlutter.instance().bindings.nt_get_expected_address(
+          tvc.toNativeUtf8().cast<Char>(),
+          contractAbi.toNativeUtf8().cast<Char>(),
+          workchainId,
+          publicKey?.toNativeUtf8().cast<Char>() ?? nullptr,
+          initDataStr.toNativeUtf8().cast<Char>(),
+        ),
   );
 
-  final string = cStringToDart(result);
-
-  return string;
+  return result as String;
 }

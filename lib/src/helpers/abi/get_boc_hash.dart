@@ -7,12 +7,10 @@ import '../../ffi_utils.dart';
 
 String getBocHash(String boc) {
   final result = executeSync(
-    () => NekotonFlutter.bindings.nt_get_boc_hash(
-      boc.toNativeUtf8().cast<Char>(),
-    ),
+    () => NekotonFlutter.instance().bindings.nt_get_boc_hash(
+          boc.toNativeUtf8().cast<Char>(),
+        ),
   );
 
-  final string = cStringToDart(result);
-
-  return string;
+  return result as String;
 }

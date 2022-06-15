@@ -2,7 +2,7 @@
 authors = [ "Vadim Ledyaev <v.o.ledyaev@gmail.com>" ]
 edition = "2021"
 name = "nekoton-flutter"
-version = "0.3.0"
+version = "0.0.1"
 
 [lib]
 crate-type = [ "staticlib", "cdylib" ]
@@ -21,21 +21,13 @@ nekoton = { git = "https://github.com/broxus/nekoton.git", features = [
     "jrpc_transport",
 ] }
 nekoton-abi = { git = "https://github.com/broxus/nekoton.git" }
-nekoton-transport = { git = "https://github.com/broxus/nekoton.git", features = [
-    "gql_transport",
-    "jrpc_transport",
-] }
 nekoton-utils = { git = "https://github.com/broxus/nekoton.git" }
-num-derive = "0.3.3"
-num-traits = "0.2.14"
-openssl = { version = "0.10.38", features = [ "vendored" ] }
-pickledb = "0.4.1"
 secstr = { version = "0.4.0", features = [ "serde" ] }
 serde = { version = "1.0.136", features = [ "derive" ] }
 serde_json = "1.0.79"
 sha2 = "0.9"
 thiserror = "1.0.30"
-tokio = { version = "1.17.0", features = [ "full" ] }
+tokio = { version = "1.17.0", features = [ "rt-multi-thread", "sync" ] }
 ton_abi = { git = "https://github.com/broxus/ton-labs-abi" }
 ton_block = { git = "https://github.com/broxus/ton-labs-block.git" }
 ton_types = { git = "https://github.com/broxus/ton-labs-types.git" }

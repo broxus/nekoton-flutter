@@ -1,35 +1,40 @@
 import 'dart:async';
 import 'dart:ffi';
 
-import 'package:ffi/ffi.dart';
 import 'package:synchronized/synchronized.dart';
 
 import '../bindings.dart';
+import '../external/jrpc_connection.dart';
 import '../ffi_utils.dart';
-import 'models/connection_data.dart';
+import 'models/transport_type.dart';
 import 'transport.dart';
 
 class JrpcTransport extends Transport {
   final _lock = Lock();
   Pointer<Void>? _ptr;
-  @override
-  late final ConnectionData connectionData;
+  late final JrpcConnection _jrpcConnection;
 
   JrpcTransport._();
 
-  static Future<JrpcTransport> create(ConnectionData connectionData) async {
+  static Future<JrpcTransport> create(JrpcConnection jrpcConnection) async {
     final instance = JrpcTransport._();
-    await instance._initialize(connectionData);
+    await instance._initialize(jrpcConnection);
     return instance;
   }
 
   @override
-  Future<Pointer<Void>> clonePtr() => _lock.synchronized(() {
-        if (_ptr == null) throw Exception('Jrpc transport use after free');
+  TransportType get type => _jrpcConnection.type;
 
-        final ptr = NekotonFlutter.bindings.nt_jrpc_transport_clone_ptr(
-          _ptr!,
-        );
+  @override
+  String get group => _jrpcConnection.group;
+
+  @override
+  Future<Pointer<Void>> clonePtr() => _lock.synchronized(() {
+        if (_ptr == null) throw Exception('JrpcTransport use after free');
+
+        final ptr = NekotonFlutter.instance().bindings.nt_jrpc_transport_clone_ptr(
+              _ptr!,
+            );
 
         return ptr;
       });
@@ -38,24 +43,24 @@ class JrpcTransport extends Transport {
   Future<void> freePtr() => _lock.synchronized(() {
         if (_ptr == null) return;
 
-        NekotonFlutter.bindings.nt_jrpc_transport_free_ptr(
-          _ptr!,
-        );
+        NekotonFlutter.instance().bindings.nt_jrpc_transport_free_ptr(
+              _ptr!,
+            );
 
         _ptr = null;
       });
 
-  Future<void> _initialize(ConnectionData connectionData) => _lock.synchronized(() async {
-        this.connectionData = connectionData;
+  Future<void> _initialize(JrpcConnection jrpcConnection) async {
+    _jrpcConnection = jrpcConnection;
 
-        final endpoint = this.connectionData.endpoints.first;
+    final jrpcConnectionPtr = await _jrpcConnection.clonePtr();
 
-        final result = executeSync(
-          () => NekotonFlutter.bindings.nt_jrpc_transport_create(
-            endpoint.toNativeUtf8().cast<Char>(),
+    final result = executeSync(
+      () => NekotonFlutter.instance().bindings.nt_jrpc_transport_create(
+            jrpcConnectionPtr,
           ),
-        );
+    );
 
-        _ptr = Pointer.fromAddress(result).cast<Void>();
-      });
+    _ptr = Pointer.fromAddress(result as int).cast<Void>();
+  }
 }

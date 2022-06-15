@@ -7,10 +7,6 @@ part 'generated_key.g.dart';
 
 @freezed
 class GeneratedKey with _$GeneratedKey {
-  @JsonSerializable(
-    fieldRename: FieldRename.snake,
-    explicitToJson: true,
-  )
   const factory GeneratedKey({
     required List<String> words,
     required MnemonicType accountType,

@@ -4,10 +4,10 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'nekoton_flutter'
-  s.version          = '0.2.0'
-  s.summary          = 'Flutter plugin for TON wallets core'
+  s.version          = '0.0.1'
+  s.summary          = 'A new Flutter plugin project.'
   s.description      = <<-DESC
-Flutter plugin for TON wallets core
+A new Flutter plugin project.
                        DESC
   s.homepage         = 'http://example.com'
   s.license          = { :file => '../LICENSE' }
@@ -18,7 +18,7 @@ Flutter plugin for TON wallets core
   s.static_framework = true
   s.vendored_libraries = '**/*.a'
   s.dependency 'Flutter'
-  s.platform = :ios, '8.0'
+  s.platform = :ios, '9.0'
 
   # Flutter.framework does not contain a i386 slice.
   s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'EXCLUDED_ARCHS[sdk=iphonesimulator*]' => 'i386', 'STRIP_STYLE' => 'non-global' }
