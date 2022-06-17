@@ -5,9 +5,9 @@
 Pod::Spec.new do |s|
   s.name             = 'nekoton_flutter'
   s.version          = '0.0.1'
-  s.summary          = 'A new Flutter plugin project.'
+  s.summary          = 'Flutter plugin for TON wallets core.'
   s.description      = <<-DESC
-A new Flutter plugin project.
+Flutter plugin for TON wallets core.
                        DESC
   s.homepage         = 'http://example.com'
   s.license          = { :file => '../LICENSE' }
