@@ -48,8 +48,6 @@ public class NekotonFlutterPlugin: NSObject, FlutterPlugin {
 
     nt_accounts_storage_verify_data(nil);
 
-    nt_accounts_storage_clone_ptr(nil);
-
     nt_accounts_storage_free_ptr(nil);
 
     nt_generic_contract_subscribe(0, 0, 0, 0, 0, nil, nil, nil);
@@ -73,8 +71,6 @@ public class NekotonFlutterPlugin: NSObject, FlutterPlugin {
     nt_generic_contract_preload_transactions(0, nil, nil);
 
     nt_generic_contract_handle_block(0, nil, nil);
-
-    nt_generic_contract_clone_ptr(nil);
 
     nt_generic_contract_free_ptr(nil);
 
@@ -114,8 +110,6 @@ public class NekotonFlutterPlugin: NSObject, FlutterPlugin {
 
     nt_keystore_verify_data(nil, nil, nil);
 
-    nt_keystore_clone_ptr(nil);
-
     nt_keystore_free_ptr(nil);
 
     nt_token_wallet_subscribe(0, 0, 0, nil, nil, nil, nil);
@@ -145,8 +139,6 @@ public class NekotonFlutterPlugin: NSObject, FlutterPlugin {
     nt_get_token_wallet_details(0, nil, nil, nil);
 
     nt_get_token_root_details_from_token_wallet(0, nil, nil, nil);
-
-    nt_token_wallet_clone_ptr(nil);
 
     nt_token_wallet_free_ptr(nil);
 
@@ -200,8 +192,6 @@ public class NekotonFlutterPlugin: NSObject, FlutterPlugin {
 
     nt_get_wallet_custodians(0, nil, nil, nil);
 
-    nt_ton_wallet_clone_ptr(nil);
-
     nt_ton_wallet_free_ptr(nil);
 
     nt_unsigned_message_refresh_timeout(0, nil);
@@ -211,8 +201,6 @@ public class NekotonFlutterPlugin: NSObject, FlutterPlugin {
     nt_unsigned_message_hash(0, nil);
 
     nt_unsigned_message_sign(0, nil, nil);
-
-    nt_unsigned_message_clone_ptr(nil);
 
     nt_unsigned_message_free_ptr(nil);
 
@@ -232,25 +220,17 @@ public class NekotonFlutterPlugin: NSObject, FlutterPlugin {
 
     nt_gql_connection_create(0, 0);
 
-    nt_gql_connection_clone_ptr(nil);
-
     nt_gql_connection_free_ptr(nil);
 
     nt_jrpc_connection_create(0);
-
-    nt_jrpc_connection_clone_ptr(nil);
 
     nt_jrpc_connection_free_ptr(nil);
 
     nt_ledger_connection_create(0, 0);
 
-    nt_ledger_connection_clone_ptr(nil);
-
     nt_ledger_connection_free_ptr(nil);
 
     nt_storage_create(0, 0, 0, 0, 0);
-
-    nt_storage_clone_ptr(nil);
 
     nt_storage_free_ptr(nil);
 
@@ -316,13 +296,9 @@ public class NekotonFlutterPlugin: NSObject, FlutterPlugin {
 
     nt_gql_transport_wait_for_next_block_id(0, nil, nil, nil, 0);
 
-    nt_gql_transport_clone_ptr(nil);
-
     nt_gql_transport_free_ptr(nil);
 
     nt_jrpc_transport_create(nil);
-
-    nt_jrpc_transport_clone_ptr(nil);
 
     nt_jrpc_transport_free_ptr(nil);
   }

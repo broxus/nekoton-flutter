@@ -3,14 +3,13 @@ import 'dart:async';
 import 'package:async/async.dart';
 import 'package:flutter/material.dart';
 
-import '../../models/pointed.dart';
 import '../../transport/gql_transport.dart';
 import '../../transport/models/transport_type.dart';
 import '../../transport/transport.dart';
 import '../models/polling_method.dart';
 import 'constants.dart';
 
-abstract class ContractSubscription implements Pointed {
+abstract class ContractSubscription {
   abstract final Transport transport;
   Future<void>? _loopFuture;
   CancelableCompleter? _refreshCompleter;
@@ -45,18 +44,6 @@ abstract class ContractSubscription implements Pointed {
       var previousPollingMethod = _currentPollingMethod;
 
       while (_isRunning) {
-        // TODO: Replace with proper polling task and remove this ugly crutch
-        // possibly when Finalizable will be working as intended there will be no need for that at all
-        bool transportAvailable;
-        try {
-          await transport.clonePtr();
-          transportAvailable = true;
-        } catch (_) {
-          transportAvailable = false;
-        }
-
-        if (!transportAvailable) break;
-
         final pollingMethodChanged = previousPollingMethod != _currentPollingMethod;
         previousPollingMethod = _currentPollingMethod;
 

@@ -32,14 +32,10 @@ class NekotonRepository {
   }
 
   Future<void> dispose() async {
-    await storage.then((v) => v.freePtr());
-    await gqlConnection.then((v) => v.freePtr());
-    await jrpcConnection.then((v) => v.freePtr());
-    await ledgerConnection.then((v) => v.freePtr());
-    await keystore.then((v) => v.freePtr());
-    await accountsStorage.then((v) => v.freePtr());
-    await gqlTransport.then((v) => v.freePtr());
-    await jrpcTransport.then((v) => v.freePtr());
+    await storage.then((v) => v.dispose());
+    await gqlConnection.then((v) => v.dispose());
+    await jrpcConnection.then((v) => v.dispose());
+    await ledgerConnection.then((v) => v.dispose());
   }
 
   Future<SharedPreferences> get sharedPreferences =>

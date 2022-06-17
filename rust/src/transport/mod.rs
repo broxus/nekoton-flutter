@@ -285,8 +285,12 @@ pub unsafe fn match_transport(transport: *mut c_void, transport_type: &str) -> A
     let transport_type = serde_json::from_str::<TransportType>(transport_type).unwrap();
 
     match transport_type {
-        TransportType::Jrpc => Arc::from_raw(transport as *mut JrpcTransport) as Arc<dyn Transport>,
-        TransportType::Gql => Arc::from_raw(transport as *mut GqlTransport) as Arc<dyn Transport>,
+        TransportType::Jrpc => {
+            (&*(transport as *mut Arc<JrpcTransport>)).clone() as Arc<dyn Transport>
+        },
+        TransportType::Gql => {
+            (&*(transport as *mut Arc<GqlTransport>)).clone() as Arc<dyn Transport>
+        },
     }
 }
 

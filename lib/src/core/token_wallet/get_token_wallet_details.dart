@@ -14,7 +14,7 @@ Future<Tuple2<TokenWalletDetails, RootTokenContractDetails>> getTokenWalletDetai
   required Transport transport,
   required String tokenWallet,
 }) async {
-  final ptr = await transport.clonePtr();
+  final ptr = transport.pointerWrapper.ptr;
   final transportTypeStr = jsonEncode(transport.type.toString());
 
   final result = await executeAsync(

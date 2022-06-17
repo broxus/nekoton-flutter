@@ -5,20 +5,22 @@ import 'dart:isolate';
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/material.dart';
-import 'package:synchronized/synchronized.dart';
 
 import '../bindings.dart';
 import '../ffi_utils.dart';
-import '../models/pointed.dart';
+import '../models/pointer_wrapper.dart';
 import 'models/storage_get_request.dart';
 import 'models/storage_remove_request.dart';
 import 'models/storage_remove_unchecked_request.dart';
 import 'models/storage_set_request.dart';
 import 'models/storage_set_unchecked_request.dart';
 
-class Storage implements Pointed {
-  final _lock = Lock();
-  Pointer<Void>? _ptr;
+final _nativeFinalizer = NativeFinalizer(NekotonFlutter.instance().bindings.addresses.nt_storage_free_ptr);
+
+void _attach(PointerWrapper pointerWrapper) => _nativeFinalizer.attach(pointerWrapper, pointerWrapper.ptr);
+
+class Storage {
+  late final PointerWrapper pointerWrapper;
   final _getPort = ReceivePort();
   final _setPort = ReceivePort();
   final _setUncheckedPort = ReceivePort();
@@ -88,42 +90,24 @@ class Storage implements Pointed {
           ),
     );
 
-    _ptr = Pointer.fromAddress(result as int).cast<Void>();
+    pointerWrapper = PointerWrapper(Pointer.fromAddress(result as int).cast<Void>());
+
+    _attach(pointerWrapper);
   }
 
-  @override
-  Future<Pointer<Void>> clonePtr() => _lock.synchronized(() {
-        if (_ptr == null) throw Exception('Storage use after free');
+  Future<void> dispose() async {
+    await _getSubscription.cancel();
+    await _setSubscription.cancel();
+    await _setUncheckedSubscription.cancel();
+    await _removeSubscription.cancel();
+    await _removeUncheckedSubscription.cancel();
 
-        final ptr = NekotonFlutter.instance().bindings.nt_storage_clone_ptr(
-              _ptr!,
-            );
-
-        return ptr;
-      });
-
-  @override
-  Future<void> freePtr() => _lock.synchronized(() async {
-        await _getSubscription.cancel();
-        await _setSubscription.cancel();
-        await _setUncheckedSubscription.cancel();
-        await _removeSubscription.cancel();
-        await _removeUncheckedSubscription.cancel();
-
-        _getPort.close();
-        _setPort.close();
-        _setUncheckedPort.close();
-        _removePort.close();
-        _removeUncheckedPort.close();
-
-        if (_ptr == null) return;
-
-        NekotonFlutter.instance().bindings.nt_storage_free_ptr(
-              _ptr!,
-            );
-
-        _ptr = null;
-      });
+    _getPort.close();
+    _setPort.close();
+    _setUncheckedPort.close();
+    _removePort.close();
+    _removeUncheckedPort.close();
+  }
 
   Future<void> _getRequestHandler(StorageGetRequest event) async {
     final tx = Pointer.fromAddress(event.tx).cast<Void>();

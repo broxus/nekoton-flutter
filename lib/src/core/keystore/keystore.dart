@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
-import 'package:synchronized/synchronized.dart';
 
 import '../../bindings.dart';
 import '../../crypto/derived_key/constants.dart';
@@ -24,12 +23,15 @@ import '../../crypto/models/update_key_input.dart';
 import '../../external/ledger_connection.dart';
 import '../../external/storage.dart';
 import '../../ffi_utils.dart';
-import '../../models/pointed.dart';
+import '../../models/pointer_wrapper.dart';
 import 'models/key_store_entry.dart';
 
-class Keystore implements Pointed {
-  final _lock = Lock();
-  Pointer<Void>? _ptr;
+final _nativeFinalizer = NativeFinalizer(NekotonFlutter.instance().bindings.addresses.nt_keystore_free_ptr);
+
+void _attach(PointerWrapper pointerWrapper) => _nativeFinalizer.attach(pointerWrapper, pointerWrapper.ptr);
+
+class Keystore {
+  late final PointerWrapper pointerWrapper;
 
   Keystore._();
 
@@ -48,12 +50,10 @@ class Keystore implements Pointed {
   }
 
   Future<List<KeyStoreEntry>> get entries async {
-    final ptr = await clonePtr();
-
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_keystore_entries(
             port,
-            ptr,
+            pointerWrapper.ptr,
           ),
     );
 
@@ -65,14 +65,13 @@ class Keystore implements Pointed {
   }
 
   Future<KeyStoreEntry> addKey(CreateKeyInput input) async {
-    final ptr = await clonePtr();
     final signer = input.toSigner();
     final inputStr = jsonEncode(input);
 
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_keystore_add_key(
             port,
-            ptr,
+            pointerWrapper.ptr,
             signer.toNativeUtf8().cast<Char>(),
             inputStr.toNativeUtf8().cast<Char>(),
           ),
@@ -89,14 +88,13 @@ class Keystore implements Pointed {
 
     assert(signers.length == 1);
 
-    final ptr = await clonePtr();
     final signer = signers.first;
     final inputStr = jsonEncode(input);
 
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_keystore_add_key(
             port,
-            ptr,
+            pointerWrapper.ptr,
             signer.toNativeUtf8().cast<Char>(),
             inputStr.toNativeUtf8().cast<Char>(),
           ),
@@ -110,14 +108,13 @@ class Keystore implements Pointed {
   }
 
   Future<KeyStoreEntry> updateKey(UpdateKeyInput input) async {
-    final ptr = await clonePtr();
     final signer = input.toSigner();
     final inputStr = jsonEncode(input);
 
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_keystore_update_key(
             port,
-            ptr,
+            pointerWrapper.ptr,
             signer.toNativeUtf8().cast<Char>(),
             inputStr.toNativeUtf8().cast<Char>(),
           ),
@@ -130,14 +127,13 @@ class Keystore implements Pointed {
   }
 
   Future<ExportKeyOutput> exportKey(ExportKeyInput input) async {
-    final ptr = await clonePtr();
     final signer = input.toSigner();
     final inputStr = jsonEncode(input);
 
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_keystore_export_key(
             port,
-            ptr,
+            pointerWrapper.ptr,
             signer.toNativeUtf8().cast<Char>(),
             inputStr.toNativeUtf8().cast<Char>(),
           ),
@@ -159,14 +155,13 @@ class Keystore implements Pointed {
   }
 
   Future<List<String>> getPublicKeys(GetPublicKeys input) async {
-    final ptr = await clonePtr();
     final signer = input.toSigner();
     final inputStr = jsonEncode(input);
 
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_keystore_get_public_keys(
             port,
-            ptr,
+            pointerWrapper.ptr,
             signer.toNativeUtf8().cast<Char>(),
             inputStr.toNativeUtf8().cast<Char>(),
           ),
@@ -184,7 +179,6 @@ class Keystore implements Pointed {
     required EncryptionAlgorithm algorithm,
     required SignInput input,
   }) async {
-    final ptr = await clonePtr();
     final signer = input.toSigner();
     final publicKeysStr = jsonEncode(publicKeys);
     final algorithmStr = algorithm.toString();
@@ -193,7 +187,7 @@ class Keystore implements Pointed {
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_keystore_encrypt(
             port,
-            ptr,
+            pointerWrapper.ptr,
             signer.toNativeUtf8().cast<Char>(),
             data.toNativeUtf8().cast<Char>(),
             publicKeysStr.toNativeUtf8().cast<Char>(),
@@ -213,7 +207,6 @@ class Keystore implements Pointed {
     required EncryptedData data,
     required SignInput input,
   }) async {
-    final ptr = await clonePtr();
     final signer = input.toSigner();
     final dataStr = jsonEncode(data);
     final inputStr = jsonEncode(input);
@@ -221,7 +214,7 @@ class Keystore implements Pointed {
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_keystore_decrypt(
             port,
-            ptr,
+            pointerWrapper.ptr,
             signer.toNativeUtf8().cast<Char>(),
             dataStr.toNativeUtf8().cast<Char>(),
             inputStr.toNativeUtf8().cast<Char>(),
@@ -237,14 +230,13 @@ class Keystore implements Pointed {
     required String data,
     required SignInput input,
   }) async {
-    final ptr = await clonePtr();
     final signer = input.toSigner();
     final inputStr = jsonEncode(input);
 
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_keystore_sign(
             port,
-            ptr,
+            pointerWrapper.ptr,
             signer.toNativeUtf8().cast<Char>(),
             data.toNativeUtf8().cast<Char>(),
             inputStr.toNativeUtf8().cast<Char>(),
@@ -260,14 +252,13 @@ class Keystore implements Pointed {
     required String data,
     required SignInput input,
   }) async {
-    final ptr = await clonePtr();
     final signer = input.toSigner();
     final inputStr = jsonEncode(input);
 
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_keystore_sign_data(
             port,
-            ptr,
+            pointerWrapper.ptr,
             signer.toNativeUtf8().cast<Char>(),
             data.toNativeUtf8().cast<Char>(),
             inputStr.toNativeUtf8().cast<Char>(),
@@ -284,14 +275,13 @@ class Keystore implements Pointed {
     required String data,
     required SignInput input,
   }) async {
-    final ptr = await clonePtr();
     final signer = input.toSigner();
     final inputStr = jsonEncode(input);
 
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_keystore_sign_data_raw(
             port,
-            ptr,
+            pointerWrapper.ptr,
             signer.toNativeUtf8().cast<Char>(),
             data.toNativeUtf8().cast<Char>(),
             inputStr.toNativeUtf8().cast<Char>(),
@@ -305,12 +295,10 @@ class Keystore implements Pointed {
   }
 
   Future<KeyStoreEntry?> removeKey(String publicKey) async {
-    final ptr = await clonePtr();
-
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_keystore_remove_key(
             port,
-            ptr,
+            pointerWrapper.ptr,
             publicKey.toNativeUtf8().cast<Char>(),
           ),
     );
@@ -322,13 +310,12 @@ class Keystore implements Pointed {
   }
 
   Future<List<KeyStoreEntry>> removeKeys(List<String> publicKeys) async {
-    final ptr = await clonePtr();
     final publicKeysStr = jsonEncode(publicKeys);
 
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_keystore_remove_keys(
             port,
-            ptr,
+            pointerWrapper.ptr,
             publicKeysStr.toNativeUtf8().cast<Char>(),
           ),
     );
@@ -344,11 +331,9 @@ class Keystore implements Pointed {
     required String publicKey,
     required int duration,
   }) async {
-    final ptr = await clonePtr();
-
     final result = executeSync(
       () => NekotonFlutter.instance().bindings.nt_keystore_is_password_cached(
-            ptr,
+            pointerWrapper.ptr,
             publicKey.toNativeUtf8().cast<Char>(),
             duration,
           ),
@@ -360,23 +345,19 @@ class Keystore implements Pointed {
   }
 
   Future<void> clear() async {
-    final ptr = await clonePtr();
-
     await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_keystore_clear(
             port,
-            ptr,
+            pointerWrapper.ptr,
           ),
     );
   }
 
   Future<void> reload() async {
-    final ptr = await clonePtr();
-
     await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_keystore_reload(
             port,
-            ptr,
+            pointerWrapper.ptr,
           ),
     );
   }
@@ -388,7 +369,7 @@ class Keystore implements Pointed {
   ) async {
     assert(!signers.contains(kLedgerKeySignerName) || ledgerConnection != null);
 
-    final ledgerConnectionPtr = await ledgerConnection?.clonePtr();
+    final ledgerConnectionPtr = ledgerConnection?.pointerWrapper.ptr;
     final signersStr = jsonEncode(signers);
 
     final result = executeSync(
@@ -404,49 +385,28 @@ class Keystore implements Pointed {
     return isValid;
   }
 
-  @override
-  Future<Pointer<Void>> clonePtr() => _lock.synchronized(() {
-        if (_ptr == null) throw Exception('Keystore use after free');
-
-        final ptr = NekotonFlutter.instance().bindings.nt_keystore_clone_ptr(
-              _ptr!,
-            );
-
-        return ptr;
-      });
-
-  @override
-  Future<void> freePtr() => _lock.synchronized(() {
-        if (_ptr == null) return;
-
-        NekotonFlutter.instance().bindings.nt_keystore_free_ptr(
-              _ptr!,
-            );
-
-        _ptr = null;
-      });
-
   Future<void> _initialize({
     required Storage storage,
     LedgerConnection? ledgerConnection,
     required List<String> signers,
-  }) =>
-      _lock.synchronized(() async {
-        assert(!signers.contains(kLedgerKeySignerName) || ledgerConnection != null);
+  }) async {
+    assert(!signers.contains(kLedgerKeySignerName) || ledgerConnection != null);
 
-        final storagePtr = await storage.clonePtr();
-        final ledgerConnectionPtr = await ledgerConnection?.clonePtr();
-        final signersStr = jsonEncode(signers);
+    final storagePtr = storage.pointerWrapper.ptr;
+    final ledgerConnectionPtr = ledgerConnection?.pointerWrapper.ptr;
+    final signersStr = jsonEncode(signers);
 
-        final result = await executeAsync(
-          (port) => NekotonFlutter.instance().bindings.nt_keystore_create(
-                port,
-                storagePtr,
-                ledgerConnectionPtr ?? nullptr,
-                signersStr.toNativeUtf8().cast<Char>(),
-              ),
-        );
+    final result = await executeAsync(
+      (port) => NekotonFlutter.instance().bindings.nt_keystore_create(
+            port,
+            storagePtr,
+            ledgerConnectionPtr ?? nullptr,
+            signersStr.toNativeUtf8().cast<Char>(),
+          ),
+    );
 
-        _ptr = Pointer.fromAddress(result as int).cast<Void>();
-      });
+    pointerWrapper = PointerWrapper(Pointer.fromAddress(result as int).cast<Void>());
+
+    _attach(pointerWrapper);
+  }
 }

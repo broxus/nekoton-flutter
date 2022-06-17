@@ -10,13 +10,13 @@ use nekoton::transport::gql::GqlTransport;
 use ton_block::Serializable;
 
 use crate::{
-    external::gql_connection::{gql_connection_from_ptr, GqlConnectionImpl},
-    parse_address, runtime, HandleError, MatchResult, PostWithResult, ToStringFromPtr, RUNTIME,
+    external::gql_connection::GqlConnectionImpl, parse_address, runtime, HandleError, MatchResult,
+    PostWithResult, ToStringFromPtr, RUNTIME,
 };
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_gql_transport_create(gql_connection: *mut c_void) -> *mut c_char {
-    let gql_connection = gql_connection_from_ptr(gql_connection);
+    let gql_connection = (&*(gql_connection as *mut Arc<GqlConnectionImpl>)).clone();
 
     fn internal_fn(gql_connection: Arc<GqlConnectionImpl>) -> Result<serde_json::Value, String> {
         let gql_transport = GqlTransport::new(gql_connection);
@@ -35,7 +35,7 @@ pub unsafe extern "C" fn nt_gql_transport_get_latest_block_id(
     gql_transport: *mut c_void,
     address: *mut c_char,
 ) {
-    let gql_transport = gql_transport_from_ptr(gql_transport);
+    let gql_transport = (&*(gql_transport as *mut Arc<GqlTransport>)).clone();
 
     let address = address.to_string_from_ptr();
 
@@ -67,7 +67,7 @@ pub unsafe extern "C" fn nt_gql_transport_get_block(
     gql_transport: *mut c_void,
     id: *mut c_char,
 ) {
-    let gql_transport = gql_transport_from_ptr(gql_transport);
+    let gql_transport = (&*(gql_transport as *mut Arc<GqlTransport>)).clone();
 
     let id = id.to_string_from_ptr();
 
@@ -103,7 +103,7 @@ pub unsafe extern "C" fn nt_gql_transport_wait_for_next_block_id(
     address: *mut c_char,
     timeout: c_ulonglong,
 ) {
-    let gql_transport = gql_transport_from_ptr(gql_transport);
+    let gql_transport = (&*(gql_transport as *mut Arc<GqlTransport>)).clone();
 
     let current_block_id = current_block_id.to_string_from_ptr();
     let address = address.to_string_from_ptr();
@@ -136,15 +136,7 @@ pub unsafe extern "C" fn nt_gql_transport_wait_for_next_block_id(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nt_gql_transport_clone_ptr(ptr: *mut c_void) -> *mut c_void {
-    Arc::into_raw(Arc::clone(&*(ptr as *mut Arc<GqlTransport>))) as *mut c_void
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn nt_gql_transport_free_ptr(ptr: *mut c_void) {
+    println!("nt_gql_transport_free_ptr");
     Box::from_raw(ptr as *mut Arc<GqlTransport>);
-}
-
-unsafe fn gql_transport_from_ptr(ptr: *mut c_void) -> Arc<GqlTransport> {
-    Arc::from_raw(ptr as *mut GqlTransport)
 }

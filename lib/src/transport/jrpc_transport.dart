@@ -1,17 +1,20 @@
 import 'dart:async';
 import 'dart:ffi';
 
-import 'package:synchronized/synchronized.dart';
-
 import '../bindings.dart';
 import '../external/jrpc_connection.dart';
 import '../ffi_utils.dart';
+import '../models/pointer_wrapper.dart';
 import 'models/transport_type.dart';
 import 'transport.dart';
 
+final _nativeFinalizer = NativeFinalizer(NekotonFlutter.instance().bindings.addresses.nt_jrpc_transport_free_ptr);
+
+void _attach(PointerWrapper pointerWrapper) => _nativeFinalizer.attach(pointerWrapper, pointerWrapper.ptr);
+
 class JrpcTransport extends Transport {
-  final _lock = Lock();
-  Pointer<Void>? _ptr;
+  @override
+  late final PointerWrapper pointerWrapper;
   late final JrpcConnection _jrpcConnection;
 
   JrpcTransport._();
@@ -28,32 +31,10 @@ class JrpcTransport extends Transport {
   @override
   String get group => _jrpcConnection.group;
 
-  @override
-  Future<Pointer<Void>> clonePtr() => _lock.synchronized(() {
-        if (_ptr == null) throw Exception('JrpcTransport use after free');
-
-        final ptr = NekotonFlutter.instance().bindings.nt_jrpc_transport_clone_ptr(
-              _ptr!,
-            );
-
-        return ptr;
-      });
-
-  @override
-  Future<void> freePtr() => _lock.synchronized(() {
-        if (_ptr == null) return;
-
-        NekotonFlutter.instance().bindings.nt_jrpc_transport_free_ptr(
-              _ptr!,
-            );
-
-        _ptr = null;
-      });
-
   Future<void> _initialize(JrpcConnection jrpcConnection) async {
     _jrpcConnection = jrpcConnection;
 
-    final jrpcConnectionPtr = await _jrpcConnection.clonePtr();
+    final jrpcConnectionPtr = _jrpcConnection.pointerWrapper.ptr;
 
     final result = executeSync(
       () => NekotonFlutter.instance().bindings.nt_jrpc_transport_create(
@@ -61,6 +42,8 @@ class JrpcTransport extends Transport {
           ),
     );
 
-    _ptr = Pointer.fromAddress(result as int).cast<Void>();
+    pointerWrapper = PointerWrapper(Pointer.fromAddress(result as int).cast<Void>());
+
+    _attach(pointerWrapper);
   }
 }

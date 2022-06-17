@@ -66,7 +66,7 @@ pub unsafe extern "C" fn nt_token_wallet_subscribe(
                     .await
                     .handle_error()?;
 
-            let ptr = Box::into_raw(Box::new(Arc::new(RwLock::new(token_wallet))));
+            let ptr = Box::into_raw(Box::new(RwLock::new(token_wallet)));
 
             serde_json::to_value(ptr as usize).handle_error()
         }
@@ -87,7 +87,7 @@ pub unsafe extern "C" fn nt_token_wallet_subscribe(
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_token_wallet_owner(result_port: c_longlong, token_wallet: *mut c_void) {
-    let token_wallet = token_wallet_from_ptr(token_wallet);
+    let token_wallet = &*(token_wallet as *mut RwLock<TokenWallet>);
 
     runtime!().spawn(async move {
         fn internal_fn(token_wallet: &TokenWallet) -> Result<serde_json::Value, String> {
@@ -109,7 +109,7 @@ pub unsafe extern "C" fn nt_token_wallet_address(
     result_port: c_longlong,
     token_wallet: *mut c_void,
 ) {
-    let token_wallet = token_wallet_from_ptr(token_wallet);
+    let token_wallet = &*(token_wallet as *mut RwLock<TokenWallet>);
 
     runtime!().spawn(async move {
         fn internal_fn(token_wallet: &TokenWallet) -> Result<serde_json::Value, String> {
@@ -131,7 +131,7 @@ pub unsafe extern "C" fn nt_token_wallet_symbol(
     result_port: c_longlong,
     token_wallet: *mut c_void,
 ) {
-    let token_wallet = token_wallet_from_ptr(token_wallet);
+    let token_wallet = &*(token_wallet as *mut RwLock<TokenWallet>);
 
     runtime!().spawn(async move {
         fn internal_fn(token_wallet: &TokenWallet) -> Result<serde_json::Value, String> {
@@ -153,7 +153,7 @@ pub unsafe extern "C" fn nt_token_wallet_version(
     result_port: c_longlong,
     token_wallet: *mut c_void,
 ) {
-    let token_wallet = token_wallet_from_ptr(token_wallet);
+    let token_wallet = &*(token_wallet as *mut RwLock<TokenWallet>);
 
     runtime!().spawn(async move {
         fn internal_fn(token_wallet: &TokenWallet) -> Result<serde_json::Value, String> {
@@ -175,7 +175,7 @@ pub unsafe extern "C" fn nt_token_wallet_balance(
     result_port: c_longlong,
     token_wallet: *mut c_void,
 ) {
-    let token_wallet = token_wallet_from_ptr(token_wallet);
+    let token_wallet = &*(token_wallet as *mut RwLock<TokenWallet>);
 
     runtime!().spawn(async move {
         fn internal_fn(token_wallet: &TokenWallet) -> Result<serde_json::Value, String> {
@@ -197,7 +197,7 @@ pub unsafe extern "C" fn nt_token_wallet_contract_state(
     result_port: c_longlong,
     token_wallet: *mut c_void,
 ) {
-    let token_wallet = token_wallet_from_ptr(token_wallet);
+    let token_wallet = &*(token_wallet as *mut RwLock<TokenWallet>);
 
     runtime!().spawn(async move {
         fn internal_fn(token_wallet: &TokenWallet) -> Result<serde_json::Value, String> {
@@ -223,7 +223,7 @@ pub unsafe extern "C" fn nt_token_wallet_prepare_transfer(
     notify_receiver: c_uint,
     payload: *mut c_char,
 ) {
-    let token_wallet = token_wallet_from_ptr(token_wallet);
+    let token_wallet = &*(token_wallet as *mut RwLock<TokenWallet>);
 
     let destination = destination.to_string_from_ptr();
     let tokens = tokens.to_string_from_ptr();
@@ -273,7 +273,7 @@ pub unsafe extern "C" fn nt_token_wallet_refresh(
     result_port: c_longlong,
     token_wallet: *mut c_void,
 ) {
-    let token_wallet = token_wallet_from_ptr(token_wallet);
+    let token_wallet = &*(token_wallet as *mut RwLock<TokenWallet>);
 
     runtime!().spawn(async move {
         async fn internal_fn(token_wallet: &mut TokenWallet) -> Result<serde_json::Value, String> {
@@ -296,7 +296,7 @@ pub unsafe extern "C" fn nt_token_wallet_preload_transactions(
     token_wallet: *mut c_void,
     from: *mut c_char,
 ) {
-    let token_wallet = token_wallet_from_ptr(token_wallet);
+    let token_wallet = &*(token_wallet as *mut RwLock<TokenWallet>);
 
     let from = from.to_string_from_ptr();
 
@@ -329,7 +329,7 @@ pub unsafe extern "C" fn nt_token_wallet_handle_block(
     token_wallet: *mut c_void,
     block: *mut c_char,
 ) {
-    let token_wallet = token_wallet_from_ptr(token_wallet);
+    let token_wallet = &*(token_wallet as *mut RwLock<TokenWallet>);
 
     let block = block.to_string_from_ptr();
 
@@ -462,15 +462,7 @@ pub unsafe extern "C" fn nt_get_token_root_details_from_token_wallet(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nt_token_wallet_clone_ptr(ptr: *mut c_void) -> *mut c_void {
-    Arc::into_raw(Arc::clone(&*(ptr as *mut Arc<RwLock<TokenWallet>>))) as *mut c_void
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn nt_token_wallet_free_ptr(ptr: *mut c_void) {
+    println!("nt_token_wallet_free_ptr");
     Box::from_raw(ptr as *mut Arc<RwLock<TokenWallet>>);
-}
-
-unsafe fn token_wallet_from_ptr(ptr: *mut c_void) -> Arc<RwLock<TokenWallet>> {
-    Arc::from_raw(ptr as *mut RwLock<TokenWallet>)
 }

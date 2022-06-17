@@ -11,7 +11,7 @@ Future<List<String>> getWalletCustodians({
   required Transport transport,
   required String address,
 }) async {
-  final ptr = await transport.clonePtr();
+  final ptr = transport.pointerWrapper.ptr;
   final transportTypeStr = jsonEncode(transport.type.toString());
 
   final result = await executeAsync(

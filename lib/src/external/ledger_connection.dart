@@ -4,18 +4,20 @@ import 'dart:ffi';
 import 'dart:isolate';
 
 import 'package:ffi/ffi.dart';
-import 'package:synchronized/synchronized.dart';
 
 import '../bindings.dart';
 import '../ffi_utils.dart';
-import '../models/pointed.dart';
+import '../models/pointer_wrapper.dart';
 import 'models/ledger_connection_get_public_key_request.dart';
 import 'models/ledger_connection_sign_request.dart';
 import 'models/ledger_signature_context.dart';
 
-class LedgerConnection implements Pointed {
-  final _lock = Lock();
-  Pointer<Void>? _ptr;
+final _nativeFinalizer = NativeFinalizer(NekotonFlutter.instance().bindings.addresses.nt_ledger_connection_free_ptr);
+
+void _attach(PointerWrapper pointerWrapper) => _nativeFinalizer.attach(pointerWrapper, pointerWrapper.ptr);
+
+class LedgerConnection {
+  late final PointerWrapper pointerWrapper;
   final _getPublicKeyPort = ReceivePort();
   final _signPort = ReceivePort();
   late final StreamSubscription _getPublicKeySubscription;
@@ -50,36 +52,18 @@ class LedgerConnection implements Pointed {
           ),
     );
 
-    _ptr = Pointer.fromAddress(result as int).cast<Void>();
+    pointerWrapper = PointerWrapper(Pointer.fromAddress(result as int).cast<Void>());
+
+    _attach(pointerWrapper);
   }
 
-  @override
-  Future<Pointer<Void>> clonePtr() => _lock.synchronized(() {
-        if (_ptr == null) throw Exception('LedgerConnection use after free');
+  Future<void> dispose() async {
+    await _getPublicKeySubscription.cancel();
+    await _signSubscription.cancel();
 
-        final ptr = NekotonFlutter.instance().bindings.nt_storage_clone_ptr(
-              _ptr!,
-            );
-
-        return ptr;
-      });
-
-  @override
-  Future<void> freePtr() => _lock.synchronized(() async {
-        await _getPublicKeySubscription.cancel();
-        await _signSubscription.cancel();
-
-        _getPublicKeyPort.close();
-        _signPort.close();
-
-        if (_ptr == null) return;
-
-        NekotonFlutter.instance().bindings.nt_storage_free_ptr(
-              _ptr!,
-            );
-
-        _ptr = null;
-      });
+    _getPublicKeyPort.close();
+    _signPort.close();
+  }
 
   Future<void> _getPublicKeyRequestHandler(LedgerConnectionGetPublicKeyRequest event) async {
     final tx = Pointer.fromAddress(event.tx).cast<Void>();

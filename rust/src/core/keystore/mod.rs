@@ -28,10 +28,7 @@ use crate::{
         ledger_key::LEDGER_KEY_SIGNER_NAME,
         models::{SignatureParts, SignedData, SignedDataRaw},
     },
-    external::{
-        ledger_connection::{ledger_connection_from_ptr, LedgerConnectionImpl},
-        storage::storage_from_ptr,
-    },
+    external::{ledger_connection::LedgerConnectionImpl, storage::StorageImpl},
     parse_public_key, runtime, HandleError, MatchResult, PostWithResult, ToStringFromPtr, RUNTIME,
 };
 
@@ -42,9 +39,9 @@ pub unsafe extern "C" fn nt_keystore_create(
     connection: *mut c_void,
     signers: *mut c_char,
 ) {
-    let storage = storage_from_ptr(storage);
+    let storage = (&*(storage as *mut Arc<StorageImpl>)).clone();
     let connection = if !connection.is_null() {
-        Some(ledger_connection_from_ptr(connection))
+        Some((&*(connection as *mut Arc<LedgerConnectionImpl>)).clone())
     } else {
         None
     };
@@ -63,7 +60,7 @@ pub unsafe extern "C" fn nt_keystore_create(
 
             let keystore = keystore_builder.load(storage).await.handle_error()?;
 
-            let ptr = Box::into_raw(Box::new(Arc::new(keystore)));
+            let ptr = Box::into_raw(Box::new(keystore));
 
             serde_json::to_value(ptr as usize).handle_error()
         }
@@ -78,7 +75,7 @@ pub unsafe extern "C" fn nt_keystore_create(
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_keystore_entries(result_port: c_longlong, keystore: *mut c_void) {
-    let keystore = keystore_from_ptr(keystore);
+    let keystore = &*(keystore as *mut KeyStore);
 
     runtime!().spawn(async move {
         async fn internal_fn(keystore: &KeyStore) -> Result<serde_json::Value, String> {
@@ -87,7 +84,7 @@ pub unsafe extern "C" fn nt_keystore_entries(result_port: c_longlong, keystore: 
             serde_json::to_value(&entries).handle_error()
         }
 
-        let result = internal_fn(&keystore).await.match_result();
+        let result = internal_fn(keystore).await.match_result();
 
         Isolate::new(result_port).post_with_result(result).unwrap();
     });
@@ -100,7 +97,7 @@ pub unsafe extern "C" fn nt_keystore_add_key(
     signer: *mut c_char,
     input: *mut c_char,
 ) {
-    let keystore = keystore_from_ptr(keystore);
+    let keystore = &*(keystore as *mut KeyStore);
 
     let signer = signer.to_string_from_ptr();
     let input = input.to_string_from_ptr();
@@ -145,7 +142,7 @@ pub unsafe extern "C" fn nt_keystore_add_key(
             serde_json::to_value(&entry).handle_error()
         }
 
-        let result = internal_fn(&keystore, signer, input).await.match_result();
+        let result = internal_fn(keystore, signer, input).await.match_result();
 
         Isolate::new(result_port).post_with_result(result).unwrap();
     });
@@ -158,7 +155,7 @@ pub unsafe extern "C" fn nt_keystore_add_keys(
     signer: *mut c_char,
     input: *mut c_char,
 ) {
-    let keystore = keystore_from_ptr(keystore);
+    let keystore = &*(keystore as *mut KeyStore);
 
     let signer = signer.to_string_from_ptr();
     let input = input.to_string_from_ptr();
@@ -207,7 +204,7 @@ pub unsafe extern "C" fn nt_keystore_add_keys(
             serde_json::to_value(&entries).handle_error()
         }
 
-        let result = internal_fn(&keystore, signer, input).await.match_result();
+        let result = internal_fn(keystore, signer, input).await.match_result();
 
         Isolate::new(result_port).post_with_result(result).unwrap();
     });
@@ -220,7 +217,7 @@ pub unsafe extern "C" fn nt_keystore_update_key(
     signer: *mut c_char,
     input: *mut c_char,
 ) {
-    let keystore = keystore_from_ptr(keystore);
+    let keystore = &*(keystore as *mut KeyStore);
 
     let signer = signer.to_string_from_ptr();
     let input = input.to_string_from_ptr();
@@ -261,7 +258,7 @@ pub unsafe extern "C" fn nt_keystore_update_key(
             serde_json::to_value(&entry).handle_error()
         }
 
-        let result = internal_fn(&keystore, signer, input).await.match_result();
+        let result = internal_fn(keystore, signer, input).await.match_result();
 
         Isolate::new(result_port).post_with_result(result).unwrap();
     });
@@ -274,7 +271,7 @@ pub unsafe extern "C" fn nt_keystore_export_key(
     signer: *mut c_char,
     input: *mut c_char,
 ) {
-    let keystore = keystore_from_ptr(keystore);
+    let keystore = &*(keystore as *mut KeyStore);
 
     let signer = signer.to_string_from_ptr();
     let input = input.to_string_from_ptr();
@@ -309,7 +306,7 @@ pub unsafe extern "C" fn nt_keystore_export_key(
             }
         }
 
-        let result = internal_fn(&keystore, signer, input).await.match_result();
+        let result = internal_fn(keystore, signer, input).await.match_result();
 
         Isolate::new(result_port).post_with_result(result).unwrap();
     });
@@ -322,7 +319,7 @@ pub unsafe extern "C" fn nt_keystore_get_public_keys(
     signer: *mut c_char,
     input: *mut c_char,
 ) {
-    let keystore = keystore_from_ptr(keystore);
+    let keystore = &*(keystore as *mut KeyStore);
 
     let signer = signer.to_string_from_ptr();
     let input = input.to_string_from_ptr();
@@ -377,7 +374,7 @@ pub unsafe extern "C" fn nt_keystore_get_public_keys(
             }
         }
 
-        let result = internal_fn(&keystore, signer, input).await.match_result();
+        let result = internal_fn(keystore, signer, input).await.match_result();
 
         Isolate::new(result_port).post_with_result(result).unwrap();
     });
@@ -393,7 +390,7 @@ pub unsafe extern "C" fn nt_keystore_encrypt(
     algorithm: *mut c_char,
     input: *mut c_char,
 ) {
-    let keystore = keystore_from_ptr(keystore);
+    let keystore = &*(keystore as *mut KeyStore);
 
     let signer = signer.to_string_from_ptr();
     let data = data.to_string_from_ptr();
@@ -449,7 +446,7 @@ pub unsafe extern "C" fn nt_keystore_encrypt(
             serde_json::to_value(&data).handle_error()
         }
 
-        let result = internal_fn(&keystore, signer, data, public_keys, algorithm, input)
+        let result = internal_fn(keystore, signer, data, public_keys, algorithm, input)
             .await
             .match_result();
 
@@ -465,7 +462,7 @@ pub unsafe extern "C" fn nt_keystore_decrypt(
     data: *mut c_char,
     input: *mut c_char,
 ) {
-    let keystore = keystore_from_ptr(keystore);
+    let keystore = &*(keystore as *mut KeyStore);
 
     let signer = signer.to_string_from_ptr();
     let data = data.to_string_from_ptr();
@@ -510,7 +507,7 @@ pub unsafe extern "C" fn nt_keystore_decrypt(
             serde_json::to_value(data).handle_error()
         }
 
-        let result = internal_fn(&keystore, signer, data, input)
+        let result = internal_fn(keystore, signer, data, input)
             .await
             .match_result();
 
@@ -526,7 +523,7 @@ pub unsafe extern "C" fn nt_keystore_sign(
     data: *mut c_char,
     input: *mut c_char,
 ) {
-    let keystore = keystore_from_ptr(keystore);
+    let keystore = &*(keystore as *mut KeyStore);
 
     let signer = signer.to_string_from_ptr();
     let data = data.to_string_from_ptr();
@@ -548,7 +545,7 @@ pub unsafe extern "C" fn nt_keystore_sign(
             serde_json::to_value(signature).handle_error()
         }
 
-        let result = internal_fn(&keystore, signer, data, input)
+        let result = internal_fn(keystore, signer, data, input)
             .await
             .match_result();
 
@@ -564,7 +561,7 @@ pub unsafe extern "C" fn nt_keystore_sign_data(
     data: *mut c_char,
     input: *mut c_char,
 ) {
-    let keystore = keystore_from_ptr(keystore);
+    let keystore = &*(keystore as *mut KeyStore);
 
     let signer = signer.to_string_from_ptr();
     let data = data.to_string_from_ptr();
@@ -595,7 +592,7 @@ pub unsafe extern "C" fn nt_keystore_sign_data(
             serde_json::to_value(&signed_data).handle_error()
         }
 
-        let result = internal_fn(&keystore, signer, data, input)
+        let result = internal_fn(keystore, signer, data, input)
             .await
             .match_result();
 
@@ -611,7 +608,7 @@ pub unsafe extern "C" fn nt_keystore_sign_data_raw(
     data: *mut c_char,
     input: *mut c_char,
 ) {
-    let keystore = keystore_from_ptr(keystore);
+    let keystore = &*(keystore as *mut KeyStore);
 
     let signer = signer.to_string_from_ptr();
     let data = data.to_string_from_ptr();
@@ -640,7 +637,7 @@ pub unsafe extern "C" fn nt_keystore_sign_data_raw(
             serde_json::to_value(&signed_data_raw).handle_error()
         }
 
-        let result = internal_fn(&keystore, signer, data, input)
+        let result = internal_fn(keystore, signer, data, input)
             .await
             .match_result();
 
@@ -654,7 +651,7 @@ pub unsafe extern "C" fn nt_keystore_remove_key(
     keystore: *mut c_void,
     public_key: *mut c_char,
 ) {
-    let keystore = keystore_from_ptr(keystore);
+    let keystore = &*(keystore as *mut KeyStore);
 
     let public_key = public_key.to_string_from_ptr();
 
@@ -670,7 +667,7 @@ pub unsafe extern "C" fn nt_keystore_remove_key(
             serde_json::to_value(entry).handle_error()
         }
 
-        let result = internal_fn(&keystore, public_key).await.match_result();
+        let result = internal_fn(keystore, public_key).await.match_result();
 
         Isolate::new(result_port).post_with_result(result).unwrap();
     });
@@ -682,7 +679,7 @@ pub unsafe extern "C" fn nt_keystore_remove_keys(
     keystore: *mut c_void,
     public_keys: *mut c_char,
 ) {
-    let keystore = keystore_from_ptr(keystore);
+    let keystore = &*(keystore as *mut KeyStore);
 
     let public_keys = public_keys.to_string_from_ptr();
 
@@ -702,7 +699,7 @@ pub unsafe extern "C" fn nt_keystore_remove_keys(
             serde_json::to_value(&entries).handle_error()
         }
 
-        let result = internal_fn(&keystore, public_keys).await.match_result();
+        let result = internal_fn(keystore, public_keys).await.match_result();
 
         Isolate::new(result_port).post_with_result(result).unwrap();
     });
@@ -714,7 +711,7 @@ pub unsafe extern "C" fn nt_keystore_is_password_cached(
     public_key: *mut c_char,
     duration: c_ulonglong,
 ) -> *mut c_char {
-    let keystore = keystore_from_ptr(keystore);
+    let keystore = &*(keystore as *mut KeyStore);
 
     let public_key = public_key.to_string_from_ptr();
 
@@ -732,12 +729,12 @@ pub unsafe extern "C" fn nt_keystore_is_password_cached(
         serde_json::to_value(is_cached).handle_error()
     }
 
-    internal_fn(&keystore, public_key, duration).match_result()
+    internal_fn(keystore, public_key, duration).match_result()
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_keystore_clear(result_port: c_longlong, keystore: *mut c_void) {
-    let keystore = keystore_from_ptr(keystore);
+    let keystore = &*(keystore as *mut KeyStore);
 
     runtime!().spawn(async move {
         async fn internal_fn(keystore: &KeyStore) -> Result<serde_json::Value, String> {
@@ -746,7 +743,7 @@ pub unsafe extern "C" fn nt_keystore_clear(result_port: c_longlong, keystore: *m
             Ok(serde_json::Value::Null)
         }
 
-        let result = internal_fn(&keystore).await.match_result();
+        let result = internal_fn(keystore).await.match_result();
 
         Isolate::new(result_port).post_with_result(result).unwrap();
     });
@@ -754,7 +751,7 @@ pub unsafe extern "C" fn nt_keystore_clear(result_port: c_longlong, keystore: *m
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_keystore_reload(result_port: c_longlong, keystore: *mut c_void) {
-    let keystore = keystore_from_ptr(keystore);
+    let keystore = &*(keystore as *mut KeyStore);
 
     runtime!().spawn(async move {
         async fn internal_fn(keystore: &KeyStore) -> Result<serde_json::Value, String> {
@@ -763,7 +760,7 @@ pub unsafe extern "C" fn nt_keystore_reload(result_port: c_longlong, keystore: *
             Ok(serde_json::Value::Null)
         }
 
-        let result = internal_fn(&keystore).await.match_result();
+        let result = internal_fn(keystore).await.match_result();
 
         Isolate::new(result_port).post_with_result(result).unwrap();
     });
@@ -776,7 +773,7 @@ pub unsafe extern "C" fn nt_keystore_verify_data(
     data: *mut c_char,
 ) -> *mut c_char {
     let connection = if !connection.is_null() {
-        Some(ledger_connection_from_ptr(connection))
+        Some((&*(connection as *mut Arc<LedgerConnectionImpl>)).clone())
     } else {
         None
     };
@@ -864,15 +861,7 @@ fn map_keystore_builder(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nt_keystore_clone_ptr(ptr: *mut c_void) -> *mut c_void {
-    Arc::into_raw(Arc::clone(&*(ptr as *mut Arc<KeyStore>))) as *mut c_void
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn nt_keystore_free_ptr(ptr: *mut c_void) {
-    Box::from_raw(ptr as *mut Arc<KeyStore>);
-}
-
-unsafe fn keystore_from_ptr(ptr: *mut c_void) -> Arc<KeyStore> {
-    Arc::from_raw(ptr as *mut KeyStore)
+    println!("nt_keystore_free_ptr");
+    Box::from_raw(ptr as *mut KeyStore);
 }

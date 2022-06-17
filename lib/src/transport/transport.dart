@@ -12,22 +12,23 @@ import '../core/models/transaction.dart';
 import '../core/models/transaction_id.dart';
 import '../core/models/transactions_list.dart';
 import '../ffi_utils.dart';
-import '../models/pointed.dart';
+import '../models/pointer_wrapper.dart';
 import 'models/transport_type.dart';
 
-abstract class Transport implements Pointed {
+abstract class Transport {
+  abstract final PointerWrapper pointerWrapper;
+
   TransportType get type;
 
   String get group;
 
   Future<RawContractState> getContractState(String address) async {
-    final ptr = await clonePtr();
     final transportTypeStr = jsonEncode(type.toString());
 
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_transport_get_contract_state(
             port,
-            ptr,
+            pointerWrapper.ptr,
             transportTypeStr.toNativeUtf8().cast<Char>(),
             address.toNativeUtf8().cast<Char>(),
           ),
@@ -40,13 +41,12 @@ abstract class Transport implements Pointed {
   }
 
   Future<FullContractState?> getFullContractState(String address) async {
-    final ptr = await clonePtr();
     final transportTypeStr = jsonEncode(type.toString());
 
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_transport_get_full_contract_state(
             port,
-            ptr,
+            pointerWrapper.ptr,
             transportTypeStr.toNativeUtf8().cast<Char>(),
             address.toNativeUtf8().cast<Char>(),
           ),
@@ -63,13 +63,12 @@ abstract class Transport implements Pointed {
     required int limit,
     String? continuation,
   }) async {
-    final ptr = await clonePtr();
     final transportTypeStr = jsonEncode(type.toString());
 
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_transport_get_accounts_by_code_hash(
             port,
-            ptr,
+            pointerWrapper.ptr,
             transportTypeStr.toNativeUtf8().cast<Char>(),
             codeHash.toNativeUtf8().cast<Char>(),
             limit,
@@ -88,14 +87,13 @@ abstract class Transport implements Pointed {
     TransactionId? continuation,
     required int limit,
   }) async {
-    final ptr = await clonePtr();
     final transportTypeStr = jsonEncode(type.toString());
     final continuationStr = continuation != null ? jsonEncode(continuation) : null;
 
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_transport_get_transactions(
             port,
-            ptr,
+            pointerWrapper.ptr,
             transportTypeStr.toNativeUtf8().cast<Char>(),
             address.toNativeUtf8().cast<Char>(),
             continuationStr?.toNativeUtf8().cast<Char>() ?? nullptr,
@@ -110,13 +108,12 @@ abstract class Transport implements Pointed {
   }
 
   Future<Transaction?> getTransaction(String hash) async {
-    final ptr = await clonePtr();
     final transportTypeStr = jsonEncode(type.toString());
 
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_transport_get_transaction(
             port,
-            ptr,
+            pointerWrapper.ptr,
             transportTypeStr.toNativeUtf8().cast<Char>(),
             hash.toNativeUtf8().cast<Char>(),
           ),

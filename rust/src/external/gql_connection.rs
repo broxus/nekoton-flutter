@@ -72,15 +72,7 @@ pub unsafe extern "C" fn nt_gql_connection_create(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nt_gql_connection_clone_ptr(ptr: *mut c_void) -> *mut c_void {
-    Arc::into_raw(Arc::clone(&*(ptr as *mut Arc<GqlConnectionImpl>))) as *mut c_void
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn nt_gql_connection_free_ptr(ptr: *mut c_void) {
+    println!("nt_gql_connection_free_ptr");
     Box::from_raw(ptr as *mut Arc<GqlConnectionImpl>);
-}
-
-pub unsafe fn gql_connection_from_ptr(ptr: *mut c_void) -> Arc<GqlConnectionImpl> {
-    Arc::from_raw(ptr as *mut GqlConnectionImpl)
 }

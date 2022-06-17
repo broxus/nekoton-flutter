@@ -6,13 +6,13 @@ import 'dart:isolate';
 import 'package:async/async.dart';
 import 'package:ffi/ffi.dart';
 import 'package:rxdart/rxdart.dart';
-import 'package:synchronized/synchronized.dart';
 import 'package:tuple/tuple.dart';
 
 import '../../bindings.dart';
 import '../../crypto/models/signed_message.dart';
 import '../../crypto/unsigned_message.dart';
 import '../../ffi_utils.dart';
+import '../../models/pointer_wrapper.dart';
 import '../../transport/transport.dart';
 import '../accounts_storage/models/wallet_type.dart';
 import '../contract_subscription/contract_subscription.dart';
@@ -32,9 +32,12 @@ import 'models/on_ton_wallet_transactions_found_payload.dart';
 import 'models/ton_wallet_details.dart';
 import 'models/ton_wallet_transaction_with_data.dart';
 
+final _nativeFinalizer = NativeFinalizer(NekotonFlutter.instance().bindings.addresses.nt_ton_wallet_free_ptr);
+
+void _attach(PointerWrapper pointerWrapper) => _nativeFinalizer.attach(pointerWrapper, pointerWrapper.ptr);
+
 class TonWallet extends ContractSubscription {
-  final _lock = Lock();
-  Pointer<Void>? _ptr;
+  late final PointerWrapper pointerWrapper;
   final _onMessageSentPort = ReceivePort();
   final _onMessageExpiredPort = ReceivePort();
   final _onStateChangedPort = ReceivePort();
@@ -104,12 +107,10 @@ class TonWallet extends ContractSubscription {
   }
 
   Future<int> get workchain => _workchainMemo.runOnce(() async {
-        final ptr = await clonePtr();
-
         final workchain = await executeAsync(
           (port) => NekotonFlutter.instance().bindings.nt_ton_wallet_workchain(
                 port,
-                ptr,
+                pointerWrapper.ptr,
               ),
         );
 
@@ -118,12 +119,10 @@ class TonWallet extends ContractSubscription {
 
   @override
   Future<String> get address => _addressMemo.runOnce(() async {
-        final ptr = await clonePtr();
-
         final result = await executeAsync(
           (port) => NekotonFlutter.instance().bindings.nt_ton_wallet_address(
                 port,
-                ptr,
+                pointerWrapper.ptr,
               ),
         );
 
@@ -133,12 +132,10 @@ class TonWallet extends ContractSubscription {
       });
 
   Future<String> get publicKey => _publicKeyMemo.runOnce(() async {
-        final ptr = await clonePtr();
-
         final result = await executeAsync(
           (port) => NekotonFlutter.instance().bindings.nt_ton_wallet_public_key(
                 port,
-                ptr,
+                pointerWrapper.ptr,
               ),
         );
 
@@ -148,12 +145,10 @@ class TonWallet extends ContractSubscription {
       });
 
   Future<WalletType> get walletType => _walletTypeMemo.runOnce(() async {
-        final ptr = await clonePtr();
-
         final result = await executeAsync(
           (port) => NekotonFlutter.instance().bindings.nt_ton_wallet_wallet_type(
                 port,
-                ptr,
+                pointerWrapper.ptr,
               ),
         );
 
@@ -164,12 +159,10 @@ class TonWallet extends ContractSubscription {
       });
 
   Future<ContractState> get contractState async {
-    final ptr = await clonePtr();
-
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_ton_wallet_contract_state(
             port,
-            ptr,
+            pointerWrapper.ptr,
           ),
     );
 
@@ -180,12 +173,10 @@ class TonWallet extends ContractSubscription {
   }
 
   Future<List<PendingTransaction>> get pendingTransactions async {
-    final ptr = await clonePtr();
-
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_ton_wallet_pending_transactions(
             port,
-            ptr,
+            pointerWrapper.ptr,
           ),
     );
 
@@ -198,12 +189,10 @@ class TonWallet extends ContractSubscription {
 
   @override
   Future<PollingMethod> get pollingMethod async {
-    final ptr = await clonePtr();
-
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_ton_wallet_polling_method(
             port,
-            ptr,
+            pointerWrapper.ptr,
           ),
     );
 
@@ -214,12 +203,10 @@ class TonWallet extends ContractSubscription {
   }
 
   Future<TonWalletDetails> get details => _detailsMemo.runOnce(() async {
-        final ptr = await clonePtr();
-
         final result = await executeAsync(
           (port) => NekotonFlutter.instance().bindings.nt_ton_wallet_details(
                 port,
-                ptr,
+                pointerWrapper.ptr,
               ),
         );
 
@@ -230,12 +217,10 @@ class TonWallet extends ContractSubscription {
       });
 
   Future<List<MultisigPendingTransaction>> get unconfirmedTransactions async {
-    final ptr = await clonePtr();
-
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_ton_wallet_unconfirmed_transactions(
             port,
-            ptr,
+            pointerWrapper.ptr,
           ),
     );
 
@@ -247,12 +232,10 @@ class TonWallet extends ContractSubscription {
   }
 
   Future<List<String>?> get custodians async {
-    final ptr = await clonePtr();
-
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_ton_wallet_custodians(
             port,
-            ptr,
+            pointerWrapper.ptr,
           ),
     );
 
@@ -263,13 +246,12 @@ class TonWallet extends ContractSubscription {
   }
 
   Future<UnsignedMessage> prepareDeploy(Expiration expiration) async {
-    final ptr = await clonePtr();
     final expirationStr = jsonEncode(expiration);
 
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_ton_wallet_prepare_deploy(
             port,
-            ptr,
+            pointerWrapper.ptr,
             expirationStr.toNativeUtf8().cast<Char>(),
           ),
     );
@@ -284,14 +266,13 @@ class TonWallet extends ContractSubscription {
     required List<String> custodians,
     required int reqConfirms,
   }) async {
-    final ptr = await clonePtr();
     final expirationStr = jsonEncode(expiration);
     final custodiansStr = jsonEncode(custodians);
 
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_ton_wallet_prepare_deploy_with_multiple_owners(
             port,
-            ptr,
+            pointerWrapper.ptr,
             expirationStr.toNativeUtf8().cast<Char>(),
             custodiansStr.toNativeUtf8().cast<Char>(),
             reqConfirms,
@@ -312,14 +293,13 @@ class TonWallet extends ContractSubscription {
     required bool bounce,
     required Expiration expiration,
   }) async {
-    final ptr = await clonePtr();
     final contractStateStr = jsonEncode(contractState);
     final expirationStr = jsonEncode(expiration);
 
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_ton_wallet_prepare_transfer(
             port,
-            ptr,
+            pointerWrapper.ptr,
             contractStateStr.toNativeUtf8().cast<Char>(),
             publicKey.toNativeUtf8().cast<Char>(),
             destination.toNativeUtf8().cast<Char>(),
@@ -341,14 +321,13 @@ class TonWallet extends ContractSubscription {
     required String transactionId,
     required Expiration expiration,
   }) async {
-    final ptr = await clonePtr();
     final contractStateStr = jsonEncode(contractState);
     final expirationStr = jsonEncode(expiration);
 
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_ton_wallet_prepare_confirm_transaction(
             port,
-            ptr,
+            pointerWrapper.ptr,
             contractStateStr.toNativeUtf8().cast<Char>(),
             publicKey.toNativeUtf8().cast<Char>(),
             transactionId.toNativeUtf8().cast<Char>(),
@@ -362,13 +341,12 @@ class TonWallet extends ContractSubscription {
   }
 
   Future<String> estimateFees(SignedMessage signedMessage) async {
-    final ptr = await clonePtr();
     final signedMessageStr = jsonEncode(signedMessage);
 
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_ton_wallet_estimate_fees(
             port,
-            ptr,
+            pointerWrapper.ptr,
             signedMessageStr.toNativeUtf8().cast<Char>(),
           ),
     );
@@ -379,7 +357,6 @@ class TonWallet extends ContractSubscription {
   }
 
   Future<PendingTransaction> send(SignedMessage signedMessage) async {
-    final ptr = await clonePtr();
     final signedMessageStr = jsonEncode(signedMessage);
 
     await prepareReliablePolling();
@@ -387,7 +364,7 @@ class TonWallet extends ContractSubscription {
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_ton_wallet_send(
             port,
-            ptr,
+            pointerWrapper.ptr,
             signedMessageStr.toNativeUtf8().cast<Char>(),
           ),
     );
@@ -397,35 +374,32 @@ class TonWallet extends ContractSubscription {
     final json = result as Map<String, dynamic>;
     final pendingTransaction = PendingTransaction.fromJson(json);
 
-    _pendingTransactionsSubject.add(await pendingTransactions);
+    if (!_pendingTransactionsSubject.isClosed) _pendingTransactionsSubject.add(await pendingTransactions);
 
     return pendingTransaction;
   }
 
   @override
   Future<void> refresh() async {
-    final ptr = await clonePtr();
-
     await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_ton_wallet_refresh(
             port,
-            ptr,
+            pointerWrapper.ptr,
           ),
     );
 
-    _pendingTransactionsSubject.add(await pendingTransactions);
+    if (!_pendingTransactionsSubject.isClosed) _pendingTransactionsSubject.add(await pendingTransactions);
 
-    _unconfirmedTransactionsSubject.add(await unconfirmedTransactions);
+    if (!_unconfirmedTransactionsSubject.isClosed) _unconfirmedTransactionsSubject.add(await unconfirmedTransactions);
   }
 
   Future<void> preloadTransactions(TransactionId from) async {
-    final ptr = await clonePtr();
     final fromStr = jsonEncode(from);
 
     await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_ton_wallet_preload_transactions(
             port,
-            ptr,
+            pointerWrapper.ptr,
             fromStr.toNativeUtf8().cast<Char>(),
           ),
     );
@@ -433,59 +407,37 @@ class TonWallet extends ContractSubscription {
 
   @override
   Future<void> handleBlock(String block) async {
-    final ptr = await clonePtr();
-
     await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_ton_wallet_handle_block(
             port,
-            ptr,
+            pointerWrapper.ptr,
             block.toNativeUtf8().cast<Char>(),
           ),
     );
 
-    _pendingTransactionsSubject.add(await pendingTransactions);
+    if (!_pendingTransactionsSubject.isClosed) _pendingTransactionsSubject.add(await pendingTransactions);
 
-    _unconfirmedTransactionsSubject.add(await unconfirmedTransactions);
+    if (!_unconfirmedTransactionsSubject.isClosed) _unconfirmedTransactionsSubject.add(await unconfirmedTransactions);
   }
 
-  @override
-  Future<Pointer<Void>> clonePtr() => _lock.synchronized(() {
-        if (_ptr == null) throw Exception('TonWallet use after free');
+  Future<void> dispose() async {
+    await _onMessageSentSubscription.cancel();
+    await _onMessageExpiredSubscription.cancel();
+    await _onTransactionsFoundSubscription.cancel();
 
-        final ptr = NekotonFlutter.instance().bindings.nt_ton_wallet_clone_ptr(
-              _ptr!,
-            );
+    _onMessageSentPort.close();
+    _onMessageExpiredPort.close();
+    _onStateChangedPort.close();
+    _onTransactionsFoundPort.close();
 
-        return ptr;
-      });
+    await _transactionsSubject.close();
+    await _pendingTransactionsSubject.close();
+    await _unconfirmedTransactionsSubject.close();
+    await _sentMessagesSubject.close();
+    await _expiredMessagesSubject.close();
 
-  @override
-  Future<void> freePtr() => _lock.synchronized(() async {
-        await _onMessageSentSubscription.cancel();
-        await _onMessageExpiredSubscription.cancel();
-        await _onTransactionsFoundSubscription.cancel();
-
-        _onMessageSentPort.close();
-        _onMessageExpiredPort.close();
-        _onStateChangedPort.close();
-        _onTransactionsFoundPort.close();
-
-        await _transactionsSubject.close();
-        await _pendingTransactionsSubject.close();
-        await _unconfirmedTransactionsSubject.close();
-        await _sentMessagesSubject.close();
-        await _expiredMessagesSubject.close();
-
-        await pausePolling();
-
-        if (_ptr == null) return;
-
-        NekotonFlutter.instance().bindings.nt_ton_wallet_free_ptr(
-              _ptr!,
-            );
-
-        _ptr = null;
-      });
+    await pausePolling();
+  }
 
   Future<void> _subscribe({
     required Transport transport,
@@ -496,7 +448,7 @@ class TonWallet extends ContractSubscription {
       _initialize(
         transport: transport,
         subscribe: () async {
-          final transportPtr = await transport.clonePtr();
+          final transportPtr = transport.pointerWrapper.ptr;
           final transportTypeStr = jsonEncode(transport.type.toString());
           final contractStr = jsonEncode(contract);
 
@@ -526,7 +478,7 @@ class TonWallet extends ContractSubscription {
       _initialize(
         transport: transport,
         subscribe: () async {
-          final transportPtr = await transport.clonePtr();
+          final transportPtr = transport.pointerWrapper.ptr;
           final transportTypeStr = jsonEncode(transport.type.toString());
 
           final result = await executeAsync(
@@ -553,7 +505,7 @@ class TonWallet extends ContractSubscription {
       _initialize(
         transport: transport,
         subscribe: () async {
-          final transportPtr = await transport.clonePtr();
+          final transportPtr = transport.pointerWrapper.ptr;
           final transportTypeStr = jsonEncode(transport.type.toString());
           final existingWalletStr = jsonEncode(existingWallet);
 
@@ -577,61 +529,74 @@ class TonWallet extends ContractSubscription {
   Future<void> _initialize({
     required Transport transport,
     required Future<int> Function() subscribe,
-  }) =>
-      _lock.synchronized(() async {
-        this.transport = transport;
+  }) async {
+    this.transport = transport;
 
-        _onMessageSentSubscription = _onMessageSentPort.cast<String>().map((e) {
-          final json = jsonDecode(e) as Map<String, dynamic>;
-          final payload = OnMessageSentPayload.fromJson(json);
-          return payload;
-        }).listen(
-          (event) => _sentMessagesSubject.add(
+    _onMessageSentSubscription = _onMessageSentPort.cast<String>().map((e) {
+      final json = jsonDecode(e) as Map<String, dynamic>;
+      final payload = OnMessageSentPayload.fromJson(json);
+      return payload;
+    }).listen(
+      (event) {
+        if (!_sentMessagesSubject.isClosed) {
+          _sentMessagesSubject.add(
             [
               ..._sentMessagesSubject.value,
               Tuple2(event.pendingTransaction, event.transaction),
             ]..sort((a, b) => a.item1.compareTo(b.item1)),
-          ),
-        );
+          );
+        }
+      },
+    );
 
-        _onMessageExpiredSubscription = _onMessageExpiredPort.cast<String>().map((e) {
-          final json = jsonDecode(e) as Map<String, dynamic>;
-          final payload = OnMessageExpiredPayload.fromJson(json);
-          return payload;
-        }).listen(
-          (event) => _expiredMessagesSubject.add(
+    _onMessageExpiredSubscription = _onMessageExpiredPort.cast<String>().map((e) {
+      final json = jsonDecode(e) as Map<String, dynamic>;
+      final payload = OnMessageExpiredPayload.fromJson(json);
+      return payload;
+    }).listen(
+      (event) {
+        if (!_expiredMessagesSubject.isClosed) {
+          _expiredMessagesSubject.add(
             [
               ..._expiredMessagesSubject.value,
               event.pendingTransaction,
             ]..sort((a, b) => a.compareTo(b)),
-          ),
-        );
+          );
+        }
+      },
+    );
 
-        stateChangesStream = _onStateChangedPort
-            .cast<String>()
-            .map((e) {
-              final json = jsonDecode(e) as Map<String, dynamic>;
-              final payload = OnStateChangedPayload.fromJson(json);
-              return payload;
-            })
-            .map((event) => event.newState)
-            .asBroadcastStream();
-
-        _onTransactionsFoundSubscription = _onTransactionsFoundPort.cast<String>().map((e) {
+    stateChangesStream = _onStateChangedPort
+        .cast<String>()
+        .map((e) {
           final json = jsonDecode(e) as Map<String, dynamic>;
-          final payload = OnTonWalletTransactionsFoundPayload.fromJson(json);
+          final payload = OnStateChangedPayload.fromJson(json);
           return payload;
-        }).listen(
-          (event) => _transactionsSubject.add(
+        })
+        .map((event) => event.newState)
+        .asBroadcastStream();
+
+    _onTransactionsFoundSubscription = _onTransactionsFoundPort.cast<String>().map((e) {
+      final json = jsonDecode(e) as Map<String, dynamic>;
+      final payload = OnTonWalletTransactionsFoundPayload.fromJson(json);
+      return payload;
+    }).listen(
+      (event) {
+        if (!_transactionsSubject.isClosed) {
+          _transactionsSubject.add(
             [
               ..._transactionsSubject.value,
               ...event.transactions,
             ]..sort((a, b) => a.transaction.compareTo(b.transaction)),
-          ),
-        );
+          );
+        }
+      },
+    );
 
-        _ptr = Pointer.fromAddress(await subscribe()).cast<Void>();
+    pointerWrapper = PointerWrapper(Pointer.fromAddress(await subscribe()).cast<Void>());
 
-        await startPolling();
-      });
+    _attach(pointerWrapper);
+
+    await startPolling();
+  }
 }

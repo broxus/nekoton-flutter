@@ -61,15 +61,7 @@ pub unsafe extern "C" fn nt_jrpc_connection_create(port: c_longlong) -> *mut c_c
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nt_jrpc_connection_clone_ptr(ptr: *mut c_void) -> *mut c_void {
-    Arc::into_raw(Arc::clone(&*(ptr as *mut Arc<JrpcConnectionImpl>))) as *mut c_void
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn nt_jrpc_connection_free_ptr(ptr: *mut c_void) {
+    println!("nt_jrpc_connection_free_ptr");
     Box::from_raw(ptr as *mut Arc<JrpcConnectionImpl>);
-}
-
-pub unsafe fn jrpc_connection_from_ptr(ptr: *mut c_void) -> Arc<JrpcConnectionImpl> {
-    Arc::from_raw(ptr as *mut JrpcConnectionImpl)
 }

@@ -56,3 +56,7 @@ ffigen:
   headers:
     entry-points:
       - "rust/target/bindings.h"
+  functions:
+    symbol-address:
+      include:
+        - ".*"

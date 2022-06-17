@@ -47,8 +47,6 @@ void nt_accounts_storage_reload(long long result_port, void *accounts_storage);
 
 char *nt_accounts_storage_verify_data(char *data);
 
-void *nt_accounts_storage_clone_ptr(void *ptr);
-
 void nt_accounts_storage_free_ptr(void *ptr);
 
 void nt_generic_contract_subscribe(long long result_port,
@@ -86,8 +84,6 @@ void nt_generic_contract_preload_transactions(long long result_port,
                                               char *from);
 
 void nt_generic_contract_handle_block(long long result_port, void *generic_contract, char *block);
-
-void *nt_generic_contract_clone_ptr(void *ptr);
 
 void nt_generic_contract_free_ptr(void *ptr);
 
@@ -145,8 +141,6 @@ void nt_keystore_reload(long long result_port, void *keystore);
 
 char *nt_keystore_verify_data(void *connection, char *signers, char *data);
 
-void *nt_keystore_clone_ptr(void *ptr);
-
 void nt_keystore_free_ptr(void *ptr);
 
 void nt_token_wallet_subscribe(long long result_port,
@@ -196,8 +190,6 @@ void nt_get_token_root_details_from_token_wallet(long long result_port,
                                                  void *transport,
                                                  char *transport_type,
                                                  char *token_wallet_address);
-
-void *nt_token_wallet_clone_ptr(void *ptr);
 
 void nt_token_wallet_free_ptr(void *ptr);
 
@@ -302,8 +294,6 @@ void nt_get_wallet_custodians(long long result_port,
                               char *transport_type,
                               char *address);
 
-void *nt_ton_wallet_clone_ptr(void *ptr);
-
 void nt_ton_wallet_free_ptr(void *ptr);
 
 void nt_unsigned_message_refresh_timeout(long long result_port, void *unsigned_message);
@@ -313,8 +303,6 @@ void nt_unsigned_message_expire_at(long long result_port, void *unsigned_message
 void nt_unsigned_message_hash(long long result_port, void *unsigned_message);
 
 void nt_unsigned_message_sign(long long result_port, void *unsigned_message, char *signature);
-
-void *nt_unsigned_message_clone_ptr(void *ptr);
 
 void nt_unsigned_message_free_ptr(void *ptr);
 
@@ -334,19 +322,13 @@ void nt_external_resolve_request_with_unit(void *tx, char *err);
 
 char *nt_gql_connection_create(unsigned int is_local, long long port);
 
-void *nt_gql_connection_clone_ptr(void *ptr);
-
 void nt_gql_connection_free_ptr(void *ptr);
 
 char *nt_jrpc_connection_create(long long port);
 
-void *nt_jrpc_connection_clone_ptr(void *ptr);
-
 void nt_jrpc_connection_free_ptr(void *ptr);
 
 char *nt_ledger_connection_create(long long get_public_key_port, long long sign_port);
-
-void *nt_ledger_connection_clone_ptr(void *ptr);
 
 void nt_ledger_connection_free_ptr(void *ptr);
 
@@ -355,8 +337,6 @@ char *nt_storage_create(long long get_port,
                         long long set_unchecked_port,
                         long long remove_port,
                         long long remove_unchecked_port);
-
-void *nt_storage_clone_ptr(void *ptr);
 
 void nt_storage_free_ptr(void *ptr);
 
@@ -466,12 +446,8 @@ void nt_gql_transport_wait_for_next_block_id(long long result_port,
                                              char *address,
                                              unsigned long long timeout);
 
-void *nt_gql_transport_clone_ptr(void *ptr);
-
 void nt_gql_transport_free_ptr(void *ptr);
 
 char *nt_jrpc_transport_create(void *jrpc_connection);
-
-void *nt_jrpc_transport_clone_ptr(void *ptr);
 
 void nt_jrpc_transport_free_ptr(void *ptr);

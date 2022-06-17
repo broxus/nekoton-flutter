@@ -109,15 +109,7 @@ pub unsafe extern "C" fn nt_ledger_connection_create(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nt_ledger_connection_clone_ptr(ptr: *mut c_void) -> *mut c_void {
-    Arc::into_raw(Arc::clone(&*(ptr as *mut Arc<LedgerConnectionImpl>))) as *mut c_void
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn nt_ledger_connection_free_ptr(ptr: *mut c_void) {
+    println!("nt_ledger_connection_free_ptr");
     Box::from_raw(ptr as *mut Arc<LedgerConnectionImpl>);
-}
-
-pub unsafe fn ledger_connection_from_ptr(ptr: *mut c_void) -> Arc<LedgerConnectionImpl> {
-    Arc::from_raw(ptr as *mut LedgerConnectionImpl)
 }

@@ -10,19 +10,19 @@ use nekoton::{core::accounts_storage::AccountsStorage, external::Storage};
 
 use crate::{
     core::accounts_storage::models::{AccountToAddHelper, AssetsListHelper},
-    external::storage::storage_from_ptr,
+    external::storage::StorageImpl,
     parse_address, runtime, HandleError, MatchResult, PostWithResult, ToStringFromPtr, RUNTIME,
 };
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_accounts_storage_create(result_port: c_longlong, storage: *mut c_void) {
-    let storage = storage_from_ptr(storage);
+    let storage = (&*(storage as *mut Arc<StorageImpl>)).clone();
 
     runtime!().spawn(async move {
         async fn internal_fn(storage: Arc<dyn Storage>) -> Result<serde_json::Value, String> {
             let accounts_storage = AccountsStorage::load(storage).await.handle_error()?;
 
-            let ptr = Box::into_raw(Box::new(Arc::new(accounts_storage)));
+            let ptr = Box::into_raw(Box::new(accounts_storage));
 
             serde_json::to_value(ptr as usize).handle_error()
         }
@@ -38,7 +38,7 @@ pub unsafe extern "C" fn nt_accounts_storage_entries(
     result_port: c_longlong,
     accounts_storage: *mut c_void,
 ) {
-    let accounts_storage = accounts_storage_from_ptr(accounts_storage);
+    let accounts_storage = &*(accounts_storage as *mut AccountsStorage);
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -57,7 +57,7 @@ pub unsafe extern "C" fn nt_accounts_storage_entries(
             serde_json::to_value(&entries).handle_error()
         }
 
-        let result = internal_fn(&accounts_storage).await.match_result();
+        let result = internal_fn(accounts_storage).await.match_result();
 
         Isolate::new(result_port).post_with_result(result).unwrap();
     });
@@ -69,7 +69,7 @@ pub unsafe extern "C" fn nt_accounts_storage_add_account(
     accounts_storage: *mut c_void,
     new_account: *mut c_char,
 ) {
-    let accounts_storage = accounts_storage_from_ptr(accounts_storage);
+    let accounts_storage = &*(accounts_storage as *mut AccountsStorage);
 
     let new_account = new_account.to_string_from_ptr();
 
@@ -90,7 +90,7 @@ pub unsafe extern "C" fn nt_accounts_storage_add_account(
             serde_json::to_value(&AssetsListHelper(entry)).handle_error()
         }
 
-        let result = internal_fn(&accounts_storage, new_account)
+        let result = internal_fn(accounts_storage, new_account)
             .await
             .match_result();
 
@@ -104,7 +104,7 @@ pub unsafe extern "C" fn nt_accounts_storage_add_accounts(
     accounts_storage: *mut c_void,
     new_accounts: *mut c_char,
 ) {
-    let accounts_storage = accounts_storage_from_ptr(accounts_storage);
+    let accounts_storage = &*(accounts_storage as *mut AccountsStorage);
 
     let new_accounts = new_accounts.to_string_from_ptr();
 
@@ -130,7 +130,7 @@ pub unsafe extern "C" fn nt_accounts_storage_add_accounts(
             serde_json::to_value(&entries).handle_error()
         }
 
-        let result = internal_fn(&accounts_storage, new_accounts)
+        let result = internal_fn(accounts_storage, new_accounts)
             .await
             .match_result();
 
@@ -145,7 +145,7 @@ pub unsafe extern "C" fn nt_accounts_storage_rename_account(
     account: *mut c_char,
     name: *mut c_char,
 ) {
-    let accounts_storage = accounts_storage_from_ptr(accounts_storage);
+    let accounts_storage = &*(accounts_storage as *mut AccountsStorage);
 
     let account = account.to_string_from_ptr();
     let name = name.to_string_from_ptr();
@@ -164,7 +164,7 @@ pub unsafe extern "C" fn nt_accounts_storage_rename_account(
             serde_json::to_value(&AssetsListHelper(entry)).handle_error()
         }
 
-        let result = internal_fn(&accounts_storage, account, name)
+        let result = internal_fn(accounts_storage, account, name)
             .await
             .match_result();
 
@@ -180,7 +180,7 @@ pub unsafe extern "C" fn nt_accounts_storage_add_token_wallet(
     network_group: *mut c_char,
     root_token_contract: *mut c_char,
 ) {
-    let accounts_storage = accounts_storage_from_ptr(accounts_storage);
+    let accounts_storage = &*(accounts_storage as *mut AccountsStorage);
 
     let account = account.to_string_from_ptr();
     let network_group = network_group.to_string_from_ptr();
@@ -204,7 +204,7 @@ pub unsafe extern "C" fn nt_accounts_storage_add_token_wallet(
         }
 
         let result = internal_fn(
-            &accounts_storage,
+            accounts_storage,
             account,
             network_group,
             root_token_contract,
@@ -224,7 +224,7 @@ pub unsafe extern "C" fn nt_accounts_storage_remove_token_wallet(
     network_group: *mut c_char,
     root_token_contract: *mut c_char,
 ) {
-    let accounts_storage = accounts_storage_from_ptr(accounts_storage);
+    let accounts_storage = &*(accounts_storage as *mut AccountsStorage);
 
     let account = account.to_string_from_ptr();
     let network_group = network_group.to_string_from_ptr();
@@ -248,7 +248,7 @@ pub unsafe extern "C" fn nt_accounts_storage_remove_token_wallet(
         }
 
         let result = internal_fn(
-            &accounts_storage,
+            accounts_storage,
             account,
             network_group,
             root_token_contract,
@@ -266,7 +266,7 @@ pub unsafe extern "C" fn nt_accounts_storage_remove_account(
     accounts_storage: *mut c_void,
     account: *mut c_char,
 ) {
-    let accounts_storage = accounts_storage_from_ptr(accounts_storage);
+    let accounts_storage = &*(accounts_storage as *mut AccountsStorage);
 
     let account = account.to_string_from_ptr();
 
@@ -284,7 +284,7 @@ pub unsafe extern "C" fn nt_accounts_storage_remove_account(
             serde_json::to_value(entry).handle_error()
         }
 
-        let result = internal_fn(&accounts_storage, account).await.match_result();
+        let result = internal_fn(accounts_storage, account).await.match_result();
 
         Isolate::new(result_port).post_with_result(result).unwrap();
     });
@@ -296,7 +296,7 @@ pub unsafe extern "C" fn nt_accounts_storage_remove_accounts(
     accounts_storage: *mut c_void,
     accounts: *mut c_char,
 ) {
-    let accounts_storage = accounts_storage_from_ptr(accounts_storage);
+    let accounts_storage = &*(accounts_storage as *mut AccountsStorage);
 
     let accounts = accounts.to_string_from_ptr();
 
@@ -318,9 +318,7 @@ pub unsafe extern "C" fn nt_accounts_storage_remove_accounts(
             serde_json::to_value(&entries).handle_error()
         }
 
-        let result = internal_fn(&accounts_storage, accounts)
-            .await
-            .match_result();
+        let result = internal_fn(accounts_storage, accounts).await.match_result();
 
         Isolate::new(result_port).post_with_result(result).unwrap();
     });
@@ -331,7 +329,7 @@ pub unsafe extern "C" fn nt_accounts_storage_clear(
     result_port: c_longlong,
     accounts_storage: *mut c_void,
 ) {
-    let accounts_storage = accounts_storage_from_ptr(accounts_storage);
+    let accounts_storage = &*(accounts_storage as *mut AccountsStorage);
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -342,7 +340,7 @@ pub unsafe extern "C" fn nt_accounts_storage_clear(
             Ok(serde_json::Value::Null)
         }
 
-        let result = internal_fn(&accounts_storage).await.match_result();
+        let result = internal_fn(accounts_storage).await.match_result();
 
         Isolate::new(result_port).post_with_result(result).unwrap();
     });
@@ -353,7 +351,7 @@ pub unsafe extern "C" fn nt_accounts_storage_reload(
     result_port: c_longlong,
     accounts_storage: *mut c_void,
 ) {
-    let accounts_storage = accounts_storage_from_ptr(accounts_storage);
+    let accounts_storage = &*(accounts_storage as *mut AccountsStorage);
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -364,7 +362,7 @@ pub unsafe extern "C" fn nt_accounts_storage_reload(
             Ok(serde_json::Value::Null)
         }
 
-        let result = internal_fn(&accounts_storage).await.match_result();
+        let result = internal_fn(accounts_storage).await.match_result();
 
         Isolate::new(result_port).post_with_result(result).unwrap();
     });
@@ -384,15 +382,7 @@ pub unsafe extern "C" fn nt_accounts_storage_verify_data(data: *mut c_char) -> *
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nt_accounts_storage_clone_ptr(ptr: *mut c_void) -> *mut c_void {
-    Arc::into_raw(Arc::clone(&*(ptr as *mut Arc<AccountsStorage>))) as *mut c_void
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn nt_accounts_storage_free_ptr(ptr: *mut c_void) {
-    Box::from_raw(ptr as *mut Arc<AccountsStorage>);
-}
-
-unsafe fn accounts_storage_from_ptr(ptr: *mut c_void) -> Arc<AccountsStorage> {
-    Arc::from_raw(ptr as *mut AccountsStorage)
+    println!("nt_accounts_storage_free_ptr");
+    Box::from_raw(ptr as *mut AccountsStorage);
 }

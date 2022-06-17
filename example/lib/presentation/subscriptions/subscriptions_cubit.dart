@@ -13,7 +13,7 @@ class SubscriptionsCubit extends Cubit<List<TonWallet>> {
   @override
   Future<void> close() async {
     for (final element in state) {
-      element.freePtr();
+      element.dispose();
     }
     super.close();
   }

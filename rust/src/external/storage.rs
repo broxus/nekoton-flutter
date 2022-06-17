@@ -169,15 +169,7 @@ pub unsafe extern "C" fn nt_storage_create(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nt_storage_clone_ptr(ptr: *mut c_void) -> *mut c_void {
-    Arc::into_raw(Arc::clone(&*(ptr as *mut Arc<StorageImpl>))) as *mut c_void
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn nt_storage_free_ptr(ptr: *mut c_void) {
+    println!("nt_storage_free_ptr");
     Box::from_raw(ptr as *mut Arc<StorageImpl>);
-}
-
-pub unsafe fn storage_from_ptr(ptr: *mut c_void) -> Arc<StorageImpl> {
-    Arc::from_raw(ptr as *mut StorageImpl)
 }

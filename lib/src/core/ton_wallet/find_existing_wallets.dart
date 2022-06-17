@@ -15,7 +15,7 @@ Future<List<ExistingWalletInfo>> findExistingWallets({
   required int workchainId,
   required List<WalletType> walletTypes,
 }) async {
-  final ptr = await transport.clonePtr();
+  final ptr = transport.pointerWrapper.ptr;
   final transportTypeStr = jsonEncode(transport.type.toString());
   final walletTypesStr = jsonEncode(walletTypes);
 

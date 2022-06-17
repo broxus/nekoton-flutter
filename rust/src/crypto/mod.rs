@@ -4,10 +4,7 @@ pub(crate) mod ledger_key;
 mod mnemonic;
 pub(crate) mod models;
 
-use std::{
-    os::raw::{c_char, c_longlong, c_void},
-    sync::Arc,
-};
+use std::os::raw::{c_char, c_longlong, c_void};
 
 use allo_isolate::Isolate;
 use ed25519_dalek::Verifier;
@@ -24,7 +21,7 @@ pub unsafe extern "C" fn nt_unsigned_message_refresh_timeout(
     result_port: c_longlong,
     unsigned_message: *mut c_void,
 ) {
-    let unsigned_message = unsigned_message_from_ptr(unsigned_message);
+    let unsigned_message = &*(unsigned_message as *mut RwLock<Box<dyn UnsignedMessage>>);
 
     runtime!().spawn(async move {
         fn internal_fn(
@@ -48,7 +45,7 @@ pub unsafe extern "C" fn nt_unsigned_message_expire_at(
     result_port: c_longlong,
     unsigned_message: *mut c_void,
 ) {
-    let unsigned_message = unsigned_message_from_ptr(unsigned_message);
+    let unsigned_message = &*(unsigned_message as *mut RwLock<Box<dyn UnsignedMessage>>);
 
     runtime!().spawn(async move {
         fn internal_fn(
@@ -72,7 +69,7 @@ pub unsafe extern "C" fn nt_unsigned_message_hash(
     result_port: c_longlong,
     unsigned_message: *mut c_void,
 ) {
-    let unsigned_message = unsigned_message_from_ptr(unsigned_message);
+    let unsigned_message = &*(unsigned_message as *mut RwLock<Box<dyn UnsignedMessage>>);
 
     runtime!().spawn(async move {
         fn internal_fn(
@@ -99,7 +96,7 @@ pub unsafe extern "C" fn nt_unsigned_message_sign(
     unsigned_message: *mut c_void,
     signature: *mut c_char,
 ) {
-    let unsigned_message = unsigned_message_from_ptr(unsigned_message);
+    let unsigned_message = &*(unsigned_message as *mut RwLock<Box<dyn UnsignedMessage>>);
 
     let signature = signature.to_string_from_ptr();
 
@@ -128,19 +125,9 @@ pub unsafe extern "C" fn nt_unsigned_message_sign(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nt_unsigned_message_clone_ptr(ptr: *mut c_void) -> *mut c_void {
-    Arc::into_raw(Arc::clone(
-        &*(ptr as *mut Arc<RwLock<Box<dyn UnsignedMessage>>>),
-    )) as *mut c_void
-}
-
-#[no_mangle]
 pub unsafe extern "C" fn nt_unsigned_message_free_ptr(ptr: *mut c_void) {
-    Box::from_raw(ptr as *mut Arc<RwLock<Box<dyn UnsignedMessage>>>);
-}
-
-unsafe fn unsigned_message_from_ptr(ptr: *mut c_void) -> Arc<RwLock<Box<dyn UnsignedMessage>>> {
-    Arc::from_raw(ptr as *mut RwLock<Box<dyn UnsignedMessage>>)
+    println!("nt_unsigned_message_free_ptr");
+    Box::from_raw(ptr as *mut RwLock<Box<dyn UnsignedMessage>>);
 }
 
 #[no_mangle]

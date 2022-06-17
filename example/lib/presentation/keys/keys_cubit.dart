@@ -19,7 +19,7 @@ class KeysCubit extends Cubit<List<KeyStoreEntry>> {
 
     if (entries.isNotEmpty) return;
 
-    const phraseLabs = 'shed train diesel surprise finish already comfort asset swarm ivory defy';
+    const phraseLabs = 'company conduct cave custom ill fox loop type holiday veteran clog oxygen';
     const phraseLegacy =
         'country glue knife buzz bus armor cement offer guide corn buddy update bird alcohol either neglect demand uncover table lock ketchup dinner ramp cream';
 
