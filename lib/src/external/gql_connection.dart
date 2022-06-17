@@ -28,12 +28,12 @@ class GqlConnection implements Pointed {
   final Future<String> Function(String endpoint) get;
   final String group;
   final type = TransportType.gql;
-  final GqlNetworkSettings gqlNetworkSettings;
-  late final _endpointCache = AsyncCache<String>(Duration(milliseconds: gqlNetworkSettings.latencyDetectionInterval));
+  final GqlNetworkSettings settings;
+  late final _endpointCache = AsyncCache<String>(Duration(milliseconds: settings.latencyDetectionInterval));
 
   GqlConnection({
     required this.group,
-    required this.gqlNetworkSettings,
+    required this.settings,
     required this.post,
     required this.get,
   }) {
@@ -45,7 +45,7 @@ class GqlConnection implements Pointed {
 
     final result = executeSync(
       () => NekotonFlutter.instance().bindings.nt_gql_connection_create(
-            gqlNetworkSettings.local ? 1 : 0,
+            settings.local ? 1 : 0,
             _postPort.sendPort.nativePort,
           ),
     );
@@ -88,8 +88,8 @@ class GqlConnection implements Pointed {
     try {
       String endpoint;
 
-      if (gqlNetworkSettings.endpoints.length == 1) {
-        endpoint = gqlNetworkSettings.endpoints.first;
+      if (settings.endpoints.length == 1) {
+        endpoint = settings.endpoints.first;
       } else {
         endpoint = await _endpointCache.fetch(_selectQueryingEndpoint);
       }
@@ -113,9 +113,9 @@ class GqlConnection implements Pointed {
   }
 
   Future<String> _selectQueryingEndpoint() async {
-    final maxLatency = gqlNetworkSettings.maxLatency;
-    final retryCount = gqlNetworkSettings.endpointSelectionRetryCount;
-    final endpointsCount = gqlNetworkSettings.endpoints.length;
+    final maxLatency = settings.maxLatency;
+    final retryCount = settings.endpointSelectionRetryCount;
+    final endpointsCount = settings.endpoints.length;
 
     for (var i = 0; i < retryCount; i++) {
       try {
@@ -123,7 +123,7 @@ class GqlConnection implements Pointed {
 
         var checkedEndpoints = 0;
 
-        for (final e in gqlNetworkSettings.endpoints) {
+        for (final e in settings.endpoints) {
           _checkLatency(e).whenComplete(() {
             checkedEndpoints++;
           }).then((v) {

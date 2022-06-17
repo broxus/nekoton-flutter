@@ -25,11 +25,11 @@ class JrpcConnection implements Pointed {
   }) post;
   final String group;
   final type = TransportType.jrpc;
-  final JrpcNetworkSettings jrpcNetworkSettings;
+  final JrpcNetworkSettings settings;
 
   JrpcConnection({
     required this.group,
-    required this.jrpcNetworkSettings,
+    required this.settings,
     required this.post,
   }) {
     _postSubscription = _postPort.cast<String>().map((e) {
@@ -81,7 +81,7 @@ class JrpcConnection implements Pointed {
 
     try {
       ok = await post(
-        endpoint: jrpcNetworkSettings.endpoint,
+        endpoint: settings.endpoint,
         headers: {
           'Content-Type': 'application/json',
         },

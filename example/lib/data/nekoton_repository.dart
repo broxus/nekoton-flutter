@@ -68,7 +68,7 @@ class NekotonRepository {
   Future<GqlConnection> get gqlConnection => _gqlConnectionMemoizer.runOnce(
         () => GqlConnection(
           group: 'mainnet',
-          gqlNetworkSettings: const GqlNetworkSettings(
+          settings: const GqlNetworkSettings(
             endpoints: [
               'https://eri01.main.everos.dev/graphql',
               'https://gra01.main.everos.dev/graphql',
@@ -104,7 +104,7 @@ class NekotonRepository {
   Future<JrpcConnection> get jrpcConnection => _jrpcConnectionMemoizer.runOnce(
         () => JrpcConnection(
           group: 'mainnet',
-          jrpcNetworkSettings: const JrpcNetworkSettings(endpoint: 'https://jrpc.everwallet.net/rpc'),
+          settings: const JrpcNetworkSettings(endpoint: 'https://jrpc.everwallet.net/rpc'),
           post: ({
             required String endpoint,
             required Map<String, String> headers,
