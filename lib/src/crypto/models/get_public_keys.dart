@@ -14,6 +14,6 @@ extension GetPublicKeysToSigner on GetPublicKeys {
     if (this is EncryptedKeyGetPublicKeys) return kEncryptedKeySignerName;
     if (this is DerivedKeyGetPublicKeys) return kDerivedKeySignerName;
     if (this is LedgerKeyGetPublicKeys) return kLedgerKeySignerName;
-    throw Exception();
+    throw Exception('Invalid signer');
   }
 }

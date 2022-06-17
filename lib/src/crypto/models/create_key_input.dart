@@ -14,6 +14,6 @@ extension CreateKeyInputToSigner on CreateKeyInput {
     if (this is EncryptedKeyCreateInput) return kEncryptedKeySignerName;
     if (this is DerivedKeyCreateInput) return kDerivedKeySignerName;
     if (this is LedgerKeyCreateInput) return kLedgerKeySignerName;
-    throw Exception();
+    throw Exception('Invalid signer');
   }
 }

@@ -14,6 +14,6 @@ extension SignInputToSigner on SignInput {
     if (this is EncryptedKeyPassword) return kEncryptedKeySignerName;
     if (this is DerivedKeySignParams) return kDerivedKeySignerName;
     if (this is LedgerSignInput) return kLedgerKeySignerName;
-    throw Exception();
+    throw Exception('Invalid signer');
   }
 }

@@ -14,6 +14,6 @@ extension UpdateKeyInputToSigner on UpdateKeyInput {
     if (this is EncryptedKeyUpdateParams) return kEncryptedKeySignerName;
     if (this is DerivedKeyUpdateParams) return kDerivedKeySignerName;
     if (this is LedgerUpdateKeyInput) return kLedgerKeySignerName;
-    throw Exception();
+    throw Exception('Invalid signer');
   }
 }

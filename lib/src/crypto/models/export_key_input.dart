@@ -11,6 +11,6 @@ extension ExportKeyInputToSigner on ExportKeyInput {
   String toSigner() {
     if (this is EncryptedKeyPassword) return kEncryptedKeySignerName;
     if (this is DerivedKeyExportParams) return kDerivedKeySignerName;
-    throw Exception();
+    throw Exception('Invalid signer');
   }
 }
