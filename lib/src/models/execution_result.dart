@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:nekoton_flutter/src/models/nekoton_exception.dart';
 
 part 'execution_result.freezed.dart';
 part 'execution_result.g.dart';
@@ -13,7 +14,7 @@ class ExecutionResult with _$ExecutionResult {
 
   dynamic handle() => when(
         ok: (data) => data,
-        err: (data) => throw Exception(data),
+        err: (data) => throw NekotonException(data),
       );
 
   factory ExecutionResult.fromJson(Map<String, dynamic> json) => _$ExecutionResultFromJson(json);

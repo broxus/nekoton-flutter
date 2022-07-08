@@ -47,13 +47,13 @@ class NekotonRepository {
         return Storage(
           get: (key) async => sharedPreferences.getString(key),
           set: ({
-            required String key,
-            required String value,
+            required key,
+            required value,
           }) async =>
               sharedPreferences.setString(key, value),
           setUnchecked: ({
-            required String key,
-            required String value,
+            required key,
+            required value,
           }) =>
               sharedPreferences.setString(key, value),
           remove: (key) async => sharedPreferences.remove(key),
@@ -63,6 +63,24 @@ class NekotonRepository {
 
   Future<GqlConnection> get gqlConnection => _gqlConnectionMemoizer.runOnce(
         () => GqlConnection(
+          post: ({
+            required endpoint,
+            required headers,
+            required data,
+          }) =>
+              http
+                  .post(
+                    Uri.parse(endpoint),
+                    headers: headers,
+                    body: data,
+                  )
+                  .then((value) => value.body),
+          get: (endpoint) => http
+              .get(
+                Uri.parse(endpoint),
+              )
+              .then((value) => value.body),
+          name: 'Mainnet (GQL)',
           group: 'mainnet',
           settings: const GqlNetworkSettings(
             endpoints: [
@@ -77,34 +95,15 @@ class NekotonRepository {
             endpointSelectionRetryCount: 5,
             local: false,
           ),
-          post: ({
-            required String endpoint,
-            required Map<String, String> headers,
-            required String data,
-          }) =>
-              http
-                  .post(
-                    Uri.parse(endpoint),
-                    headers: headers,
-                    body: data,
-                  )
-                  .then((value) => value.body),
-          get: (String endpoint) => http
-              .get(
-                Uri.parse(endpoint),
-              )
-              .then((value) => value.body),
         ),
       );
 
   Future<JrpcConnection> get jrpcConnection => _jrpcConnectionMemoizer.runOnce(
         () => JrpcConnection(
-          group: 'mainnet',
-          settings: const JrpcNetworkSettings(endpoint: 'https://jrpc.everwallet.net/rpc'),
           post: ({
-            required String endpoint,
-            required Map<String, String> headers,
-            required String data,
+            required endpoint,
+            required headers,
+            required data,
           }) =>
               http
                   .post(
@@ -113,6 +112,9 @@ class NekotonRepository {
                     body: data,
                   )
                   .then((value) => value.body),
+          name: 'Mainnet (ADNL)',
+          group: 'mainnet',
+          settings: const JrpcNetworkSettings(endpoint: 'https://jrpc.everwallet.net/rpc'),
         ),
       );
 
@@ -124,9 +126,9 @@ class NekotonRepository {
           return LedgerConnection(
             getPublicKey: (accountId) async => fakePublicKey,
             sign: ({
-              required int account,
-              required List<int> message,
-              LedgerSignatureContext? context,
+              required account,
+              required message,
+              context,
             }) async =>
                 fakeSignature,
           );
@@ -149,8 +151,8 @@ class NekotonRepository {
       _accountsStorageMemoizer.runOnce(() async => AccountsStorage.create(await storage));
 
   Future<GqlTransport> get gqlTransport =>
-      _gqlTransportMemoizer.runOnce(() async => GqlTransport.create(await gqlConnection));
+      _gqlTransportMemoizer.runOnce(() async => GqlTransport(await gqlConnection));
 
   Future<JrpcTransport> get jrpcTransport =>
-      _jrpcTransportMemoizer.runOnce(() async => JrpcTransport.create(await jrpcConnection));
+      _jrpcTransportMemoizer.runOnce(() async => JrpcTransport(await jrpcConnection));
 }

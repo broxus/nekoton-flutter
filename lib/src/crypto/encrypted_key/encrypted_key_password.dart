@@ -1,8 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-
-import '../models/export_key_input.dart';
-import '../models/sign_input.dart';
-import '../password_cache/password.dart';
+import 'package:nekoton_flutter/src/crypto/models/export_key_input.dart';
+import 'package:nekoton_flutter/src/crypto/models/sign_input.dart';
+import 'package:nekoton_flutter/src/crypto/password_cache/password.dart';
 
 part 'encrypted_key_password.freezed.dart';
 part 'encrypted_key_password.g.dart';
@@ -15,5 +14,6 @@ class EncryptedKeyPassword with _$EncryptedKeyPassword implements ExportKeyInput
     required Password password,
   }) = _EncryptedKeyPassword;
 
-  factory EncryptedKeyPassword.fromJson(Map<String, dynamic> json) => _$EncryptedKeyPasswordFromJson(json);
+  factory EncryptedKeyPassword.fromJson(Map<String, dynamic> json) =>
+      _$EncryptedKeyPasswordFromJson(json);
 }

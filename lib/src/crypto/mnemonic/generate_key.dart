@@ -2,11 +2,10 @@ import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
-
-import '../../bindings.dart';
-import '../../ffi_utils.dart';
-import 'models/generated_key.dart';
-import 'models/mnemonic_type.dart';
+import 'package:nekoton_flutter/src/bindings.dart';
+import 'package:nekoton_flutter/src/crypto/mnemonic/models/generated_key.dart';
+import 'package:nekoton_flutter/src/crypto/mnemonic/models/mnemonic_type.dart';
+import 'package:nekoton_flutter/src/ffi_utils.dart';
 
 GeneratedKey generateKey(MnemonicType mnemonicType) {
   final mnemonicTypeStr = jsonEncode(mnemonicType);

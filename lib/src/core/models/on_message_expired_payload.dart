@@ -1,6 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-
-import 'pending_transaction.dart';
+import 'package:nekoton_flutter/src/core/models/pending_transaction.dart';
 
 part 'on_message_expired_payload.freezed.dart';
 part 'on_message_expired_payload.g.dart';
@@ -11,5 +10,6 @@ class OnMessageExpiredPayload with _$OnMessageExpiredPayload {
     required PendingTransaction pendingTransaction,
   }) = _OnMessageExpiredPayload;
 
-  factory OnMessageExpiredPayload.fromJson(Map<String, dynamic> json) => _$OnMessageExpiredPayloadFromJson(json);
+  factory OnMessageExpiredPayload.fromJson(Map<String, dynamic> json) =>
+      _$OnMessageExpiredPayloadFromJson(json);
 }

@@ -1,6 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-
-import 'existing_contract.dart';
+import 'package:nekoton_flutter/src/core/models/existing_contract.dart';
 
 part 'raw_contract_state.freezed.dart';
 part 'raw_contract_state.g.dart';

@@ -1,7 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-
-import 'pending_transaction.dart';
-import 'transaction.dart';
+import 'package:nekoton_flutter/src/core/models/pending_transaction.dart';
+import 'package:nekoton_flutter/src/core/models/transaction.dart';
 
 part 'on_message_sent_payload.freezed.dart';
 part 'on_message_sent_payload.g.dart';
@@ -13,5 +12,6 @@ class OnMessageSentPayload with _$OnMessageSentPayload {
     Transaction? transaction,
   }) = _OnMessageSentPayload;
 
-  factory OnMessageSentPayload.fromJson(Map<String, dynamic> json) => _$OnMessageSentPayloadFromJson(json);
+  factory OnMessageSentPayload.fromJson(Map<String, dynamic> json) =>
+      _$OnMessageSentPayloadFromJson(json);
 }

@@ -1,5 +1,6 @@
 library nekoton_flutter;
 
+export 'src/constants.dart';
 export 'src/core/accounts_storage/accounts_storage.dart';
 export 'src/core/accounts_storage/constants.dart';
 export 'src/core/accounts_storage/models/account_to_add.dart';
@@ -68,6 +69,7 @@ export 'src/core/ton_wallet/models/transaction_additional_info.dart';
 export 'src/core/ton_wallet/models/wallet_interaction_info.dart';
 export 'src/core/ton_wallet/models/wallet_interaction_method.dart';
 export 'src/core/ton_wallet/ton_wallet.dart';
+export 'src/crypto/constants.dart';
 export 'src/crypto/derived_key/constants.dart';
 export 'src/crypto/derived_key/derived_key_create_input.dart';
 export 'src/crypto/derived_key/derived_key_create_input_derive.dart';
@@ -158,6 +160,7 @@ export 'src/helpers/repack_address.dart';
 export 'src/helpers/split_tvc.dart';
 export 'src/helpers/unpack_std_smc_addr.dart';
 export 'src/helpers/validate_address.dart';
+export 'src/models/nekoton_exception.dart';
 export 'src/transport/gql_transport.dart';
 export 'src/transport/jrpc_transport.dart';
 export 'src/transport/models/transport_type.dart';

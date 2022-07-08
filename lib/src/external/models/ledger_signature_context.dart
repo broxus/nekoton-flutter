@@ -12,5 +12,6 @@ class LedgerSignatureContext with _$LedgerSignatureContext {
     required String address,
   }) = _LedgerSignatureContext;
 
-  factory LedgerSignatureContext.fromJson(Map<String, dynamic> json) => _$LedgerSignatureContextFromJson(json);
+  factory LedgerSignatureContext.fromJson(Map<String, dynamic> json) =>
+      _$LedgerSignatureContextFromJson(json);
 }

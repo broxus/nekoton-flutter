@@ -6,9 +6,8 @@ use nekoton::core::{
 };
 use nekoton_abi::num_bigint::BigUint;
 
-use crate::{
-    core::{models::OnTransactionsFoundPayload, token_wallet::models::OnBalanceChangedPayload},
-    PostWithResult,
+use crate::core::{
+    models::OnTransactionsFoundPayload, token_wallet::models::OnBalanceChangedPayload,
 };
 
 pub struct TokenWalletSubscriptionHandlerImpl {
@@ -33,9 +32,7 @@ impl TokenWalletSubscriptionHandler for TokenWalletSubscriptionHandlerImpl {
         })
         .unwrap();
 
-        self.on_balance_changed_port
-            .post_with_result(payload)
-            .unwrap();
+        self.on_balance_changed_port.post(payload);
     }
 
     fn on_transactions_found(
@@ -49,8 +46,6 @@ impl TokenWalletSubscriptionHandler for TokenWalletSubscriptionHandlerImpl {
         })
         .unwrap();
 
-        self.on_transactions_found_port
-            .post_with_result(payload)
-            .unwrap();
+        self.on_transactions_found_port.post(payload);
     }
 }

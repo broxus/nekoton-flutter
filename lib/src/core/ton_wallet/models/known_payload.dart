@@ -1,7 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-
-import '../../token_wallet/models/token_outgoing_transfer.dart';
-import '../../token_wallet/models/token_swap_back.dart';
+import 'package:nekoton_flutter/src/core/token_wallet/models/token_outgoing_transfer.dart';
+import 'package:nekoton_flutter/src/core/token_wallet/models/token_swap_back.dart';
 
 part 'known_payload.freezed.dart';
 part 'known_payload.g.dart';
@@ -10,7 +9,8 @@ part 'known_payload.g.dart';
 class KnownPayload with _$KnownPayload {
   const factory KnownPayload.comment(String data) = _KnownPayloadComment;
 
-  const factory KnownPayload.tokenOutgoingTransfer(TokenOutgoingTransfer data) = _KnownPayloadTokenOutgoingTransfer;
+  const factory KnownPayload.tokenOutgoingTransfer(TokenOutgoingTransfer data) =
+      _KnownPayloadTokenOutgoingTransfer;
 
   const factory KnownPayload.tokenSwapBack(TokenSwapBack data) = _KnownPayloadTokenSwapBack;
 

@@ -1,9 +1,8 @@
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
-
-import '../../bindings.dart';
-import '../../ffi_utils.dart';
+import 'package:nekoton_flutter/src/bindings.dart';
+import 'package:nekoton_flutter/src/ffi_utils.dart';
 
 List<String> getHints(String input) {
   final result = executeSync(

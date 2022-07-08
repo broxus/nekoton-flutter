@@ -10,5 +10,6 @@ class StorageRemoveRequest with _$StorageRemoveRequest {
     required String key,
   }) = _StorageRemoveRequest;
 
-  factory StorageRemoveRequest.fromJson(Map<String, dynamic> json) => _$StorageRemoveRequestFromJson(json);
+  factory StorageRemoveRequest.fromJson(Map<String, dynamic> json) =>
+      _$StorageRemoveRequestFromJson(json);
 }

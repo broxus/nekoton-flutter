@@ -1,9 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-
-import '../../../crypto/derived_key/constants.dart';
-import '../../../crypto/encrypted_key/constants.dart';
-import '../../../crypto/ledger_key/constants.dart';
+import 'package:nekoton_flutter/src/crypto/derived_key/constants.dart';
+import 'package:nekoton_flutter/src/crypto/encrypted_key/constants.dart';
+import 'package:nekoton_flutter/src/crypto/ledger_key/constants.dart';
 
 part 'key_store_entry.freezed.dart';
 part 'key_store_entry.g.dart';

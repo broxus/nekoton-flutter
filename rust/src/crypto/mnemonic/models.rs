@@ -8,7 +8,7 @@ pub struct GeneratedKeyHelper(#[serde(with = "GeneratedKeyDef")] pub GeneratedKe
 #[derive(Serialize)]
 #[serde(remote = "GeneratedKey", rename_all = "camelCase")]
 pub struct GeneratedKeyDef {
-    pub words: Vec<String>,
+    pub words: Vec<&'static str>,
     #[serde(with = "MnemonicTypeDef")]
     pub account_type: MnemonicType,
 }

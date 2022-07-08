@@ -56,7 +56,8 @@ void nt_generic_contract_subscribe(long long result_port,
                                    long long on_transactions_found_port,
                                    void *transport,
                                    char *transport_type,
-                                   char *address);
+                                   char *address,
+                                   unsigned int preload_transactions);
 
 void nt_generic_contract_address(long long result_port, void *generic_contract);
 
@@ -81,7 +82,7 @@ void nt_generic_contract_refresh(long long result_port, void *generic_contract);
 
 void nt_generic_contract_preload_transactions(long long result_port,
                                               void *generic_contract,
-                                              char *from);
+                                              char *from_lt);
 
 void nt_generic_contract_handle_block(long long result_port, void *generic_contract, char *block);
 
@@ -172,7 +173,7 @@ void nt_token_wallet_prepare_transfer(long long result_port,
 
 void nt_token_wallet_refresh(long long result_port, void *token_wallet);
 
-void nt_token_wallet_preload_transactions(long long result_port, void *token_wallet, char *from);
+void nt_token_wallet_preload_transactions(long long result_port, void *token_wallet, char *from_lt);
 
 void nt_token_wallet_handle_block(long long result_port, void *token_wallet, char *block);
 
@@ -273,7 +274,7 @@ void nt_ton_wallet_send(long long result_port, void *ton_wallet, char *signed_me
 
 void nt_ton_wallet_refresh(long long result_port, void *ton_wallet);
 
-void nt_ton_wallet_preload_transactions(long long result_port, void *ton_wallet, char *from);
+void nt_ton_wallet_preload_transactions(long long result_port, void *ton_wallet, char *from_lt);
 
 void nt_ton_wallet_handle_block(long long result_port, void *ton_wallet, char *block);
 
@@ -424,7 +425,7 @@ void nt_transport_get_transactions(long long result_port,
                                    void *transport,
                                    char *transport_type,
                                    char *address,
-                                   char *continuation,
+                                   char *from_lt,
                                    unsigned char limit);
 
 void nt_transport_get_transaction(long long result_port,

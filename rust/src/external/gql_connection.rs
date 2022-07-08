@@ -5,13 +5,13 @@ use std::{
 };
 
 use allo_isolate::Isolate;
-use anyhow::Result;
+use anyhow::{bail, Result};
 use async_trait::async_trait;
 use nekoton::external::GqlConnection;
 use serde::Serialize;
-use tokio::sync::oneshot::channel;
+use tokio::sync::oneshot::{channel, Sender};
 
-use crate::{HandleError, MatchResult, PostWithResult};
+use crate::{HandleError, MatchResult};
 
 pub struct GqlConnectionImpl {
     is_local: bool,
@@ -41,9 +41,16 @@ impl GqlConnection for GqlConnectionImpl {
 
         let request = serde_json::to_string(&GqlConnectionPostRequest { tx, data })?;
 
-        self.port.post_with_result(request).unwrap();
+        match self.port.post(request) {
+            true => rx.await.unwrap(),
+            false => {
+                unsafe {
+                    Box::from_raw(tx as *mut Sender<Result<String>>);
+                }
 
-        rx.await.unwrap()
+                bail!("Message was not posted successfully")
+            },
+        }
     }
 }
 

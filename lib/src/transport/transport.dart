@@ -3,24 +3,23 @@ import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
-
-import '../bindings.dart';
-import '../core/models/accounts_list.dart';
-import '../core/models/full_contract_state.dart';
-import '../core/models/raw_contract_state.dart';
-import '../core/models/transaction.dart';
-import '../core/models/transaction_id.dart';
-import '../core/models/transactions_list.dart';
-import '../ffi_utils.dart';
-import '../models/pointer_wrapper.dart';
-import 'models/transport_type.dart';
+import 'package:nekoton_flutter/src/bindings.dart';
+import 'package:nekoton_flutter/src/core/models/accounts_list.dart';
+import 'package:nekoton_flutter/src/core/models/full_contract_state.dart';
+import 'package:nekoton_flutter/src/core/models/raw_contract_state.dart';
+import 'package:nekoton_flutter/src/core/models/transaction.dart';
+import 'package:nekoton_flutter/src/core/models/transactions_list.dart';
+import 'package:nekoton_flutter/src/ffi_utils.dart';
+import 'package:nekoton_flutter/src/transport/models/transport_type.dart';
 
 abstract class Transport {
-  abstract final PointerWrapper pointerWrapper;
+  Pointer<Void> get ptr;
 
-  TransportType get type;
+  String get name;
 
   String get group;
+
+  TransportType get type;
 
   Future<RawContractState> getContractState(String address) async {
     final transportTypeStr = jsonEncode(type.toString());
@@ -28,7 +27,7 @@ abstract class Transport {
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_transport_get_contract_state(
             port,
-            pointerWrapper.ptr,
+            ptr,
             transportTypeStr.toNativeUtf8().cast<Char>(),
             address.toNativeUtf8().cast<Char>(),
           ),
@@ -46,7 +45,7 @@ abstract class Transport {
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_transport_get_full_contract_state(
             port,
-            pointerWrapper.ptr,
+            ptr,
             transportTypeStr.toNativeUtf8().cast<Char>(),
             address.toNativeUtf8().cast<Char>(),
           ),
@@ -68,7 +67,7 @@ abstract class Transport {
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_transport_get_accounts_by_code_hash(
             port,
-            pointerWrapper.ptr,
+            ptr,
             transportTypeStr.toNativeUtf8().cast<Char>(),
             codeHash.toNativeUtf8().cast<Char>(),
             limit,
@@ -84,19 +83,18 @@ abstract class Transport {
 
   Future<TransactionsList> getTransactions({
     required String address,
-    TransactionId? continuation,
+    String? fromLt,
     required int limit,
   }) async {
     final transportTypeStr = jsonEncode(type.toString());
-    final continuationStr = continuation != null ? jsonEncode(continuation) : null;
 
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_transport_get_transactions(
             port,
-            pointerWrapper.ptr,
+            ptr,
             transportTypeStr.toNativeUtf8().cast<Char>(),
             address.toNativeUtf8().cast<Char>(),
-            continuationStr?.toNativeUtf8().cast<Char>() ?? nullptr,
+            fromLt?.toNativeUtf8().cast<Char>() ?? nullptr,
             limit,
           ),
     );
@@ -113,7 +111,7 @@ abstract class Transport {
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_transport_get_transaction(
             port,
-            pointerWrapper.ptr,
+            ptr,
             transportTypeStr.toNativeUtf8().cast<Char>(),
             hash.toNativeUtf8().cast<Char>(),
           ),
@@ -124,4 +122,6 @@ abstract class Transport {
 
     return transaction;
   }
+
+  Future<void> dispose();
 }

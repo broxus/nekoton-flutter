@@ -1,6 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-
-import '../password_cache/password.dart';
+import 'package:nekoton_flutter/src/crypto/password_cache/password.dart';
 
 part 'encrypted_key_update_params_change_password.freezed.dart';
 part 'encrypted_key_update_params_change_password.g.dart';

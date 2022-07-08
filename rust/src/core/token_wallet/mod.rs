@@ -18,7 +18,7 @@ use nekoton::{
     },
     transport::Transport,
 };
-use nekoton_abi::{create_boc_or_comment_payload, num_bigint::BigUint, TransactionId};
+use nekoton_abi::{create_boc_or_comment_payload, num_bigint::BigUint};
 use tokio::sync::RwLock;
 use ton_block::{Block, Deserializable};
 
@@ -294,21 +294,21 @@ pub unsafe extern "C" fn nt_token_wallet_refresh(
 pub unsafe extern "C" fn nt_token_wallet_preload_transactions(
     result_port: c_longlong,
     token_wallet: *mut c_void,
-    from: *mut c_char,
+    from_lt: *mut c_char,
 ) {
     let token_wallet = &*(token_wallet as *mut RwLock<TokenWallet>);
 
-    let from = from.to_string_from_ptr();
+    let from_lt = from_lt.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
             token_wallet: &mut TokenWallet,
-            from: String,
+            from_lt: String,
         ) -> Result<serde_json::Value, String> {
-            let from = serde_json::from_str::<TransactionId>(&from).handle_error()?;
+            let from_lt = from_lt.parse::<u64>().handle_error()?;
 
             token_wallet
-                .preload_transactions(from)
+                .preload_transactions(from_lt)
                 .await
                 .handle_error()?;
 
@@ -317,7 +317,7 @@ pub unsafe extern "C" fn nt_token_wallet_preload_transactions(
 
         let mut token_wallet = token_wallet.write().await;
 
-        let result = internal_fn(&mut token_wallet, from).await.match_result();
+        let result = internal_fn(&mut token_wallet, from_lt).await.match_result();
 
         Isolate::new(result_port).post_with_result(result).unwrap();
     });

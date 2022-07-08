@@ -5,12 +5,9 @@ use nekoton::core::{
     models::{ContractState, PendingTransaction, Transaction, TransactionsBatchInfo},
 };
 
-use crate::{
-    core::models::{
-        OnMessageExpiredPayload, OnMessageSentPayload, OnStateChangedPayload,
-        OnTransactionsFoundPayload,
-    },
-    PostWithResult,
+use crate::core::models::{
+    OnMessageExpiredPayload, OnMessageSentPayload, OnStateChangedPayload,
+    OnTransactionsFoundPayload,
 };
 
 pub struct GenericContractSubscriptionHandlerImpl {
@@ -49,7 +46,7 @@ impl GenericContractSubscriptionHandler for GenericContractSubscriptionHandlerIm
         })
         .unwrap();
 
-        self.on_message_sent_port.post_with_result(payload).unwrap();
+        self.on_message_sent_port.post(payload);
     }
 
     fn on_message_expired(&self, pending_transaction: PendingTransaction) {
@@ -58,17 +55,13 @@ impl GenericContractSubscriptionHandler for GenericContractSubscriptionHandlerIm
         })
         .unwrap();
 
-        self.on_message_expired_port
-            .post_with_result(payload)
-            .unwrap();
+        self.on_message_expired_port.post(payload);
     }
 
     fn on_state_changed(&self, new_state: ContractState) {
         let payload = serde_json::to_string(&OnStateChangedPayload { new_state }).unwrap();
 
-        self.on_state_changed_port
-            .post_with_result(payload)
-            .unwrap();
+        self.on_state_changed_port.post(payload);
     }
 
     fn on_transactions_found(
@@ -82,8 +75,6 @@ impl GenericContractSubscriptionHandler for GenericContractSubscriptionHandlerIm
         })
         .unwrap();
 
-        self.on_transactions_found_port
-            .post_with_result(payload)
-            .unwrap();
+        self.on_transactions_found_port.post(payload);
     }
 }

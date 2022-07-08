@@ -4,35 +4,38 @@ import 'dart:ffi';
 import 'dart:isolate';
 
 import 'package:ffi/ffi.dart';
+import 'package:nekoton_flutter/src/bindings.dart';
+import 'package:nekoton_flutter/src/external/models/ledger_connection_get_public_key_request.dart';
+import 'package:nekoton_flutter/src/external/models/ledger_connection_sign_request.dart';
+import 'package:nekoton_flutter/src/external/models/ledger_signature_context.dart';
+import 'package:nekoton_flutter/src/ffi_utils.dart';
 
-import '../bindings.dart';
-import '../ffi_utils.dart';
-import '../models/pointer_wrapper.dart';
-import 'models/ledger_connection_get_public_key_request.dart';
-import 'models/ledger_connection_sign_request.dart';
-import 'models/ledger_signature_context.dart';
+final _nativeFinalizer =
+    NativeFinalizer(NekotonFlutter.instance().bindings.addresses.nt_ledger_connection_free_ptr);
 
-final _nativeFinalizer = NativeFinalizer(NekotonFlutter.instance().bindings.addresses.nt_ledger_connection_free_ptr);
-
-void _attach(PointerWrapper pointerWrapper) => _nativeFinalizer.attach(pointerWrapper, pointerWrapper.ptr);
-
-class LedgerConnection {
-  late final PointerWrapper pointerWrapper;
+class LedgerConnection implements Finalizable {
+  late final Pointer<Void> _ptr;
   final _getPublicKeyPort = ReceivePort();
   final _signPort = ReceivePort();
-  late final StreamSubscription _getPublicKeySubscription;
-  late final StreamSubscription _signSubscription;
-  final Future<String> Function(int accountId) getPublicKey;
+  late final StreamSubscription<LedgerConnectionGetPublicKeyRequest> _getPublicKeySubscription;
+  late final StreamSubscription<LedgerConnectionSignRequest> _signSubscription;
+  final Future<String> Function(int accountId) _getPublicKey;
   final Future<String> Function({
     required int account,
     required List<int> message,
     LedgerSignatureContext? context,
-  }) sign;
+  }) _sign;
 
   LedgerConnection({
-    required this.getPublicKey,
-    required this.sign,
-  }) {
+    required Future<String> Function(int accountId) getPublicKey,
+    required Future<String> Function({
+      required int account,
+      required List<int> message,
+      LedgerSignatureContext? context,
+    })
+        sign,
+  })  : _getPublicKey = getPublicKey,
+        _sign = sign {
     _getPublicKeySubscription = _getPublicKeyPort.cast<String>().map((e) {
       final json = jsonDecode(e) as Map<String, dynamic>;
       final payload = LedgerConnectionGetPublicKeyRequest.fromJson(json);
@@ -52,10 +55,12 @@ class LedgerConnection {
           ),
     );
 
-    pointerWrapper = PointerWrapper(Pointer.fromAddress(result as int).cast<Void>());
+    _ptr = Pointer.fromAddress(result as int).cast<Void>();
 
-    _attach(pointerWrapper);
+    _nativeFinalizer.attach(this, _ptr);
   }
+
+  Pointer<Void> get ptr => _ptr;
 
   Future<void> dispose() async {
     await _getPublicKeySubscription.cancel();
@@ -72,7 +77,7 @@ class LedgerConnection {
     String? err;
 
     try {
-      ok = await getPublicKey(event.accountId);
+      ok = await _getPublicKey(event.accountId);
     } catch (error) {
       err = error.toString();
     }
@@ -91,7 +96,7 @@ class LedgerConnection {
     String? err;
 
     try {
-      ok = await sign(
+      ok = await _sign(
         account: event.account,
         message: event.message,
         context: event.context,

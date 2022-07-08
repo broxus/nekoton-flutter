@@ -1,8 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-
-import 'transaction.dart';
-import 'transaction_id.dart';
-import 'transactions_batch_info.dart';
+import 'package:nekoton_flutter/src/core/models/transaction.dart';
+import 'package:nekoton_flutter/src/core/models/transaction_id.dart';
+import 'package:nekoton_flutter/src/core/models/transactions_batch_info.dart';
 
 part 'transactions_list.freezed.dart';
 part 'transactions_list.g.dart';

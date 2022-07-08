@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nekoton_flutter/nekoton_flutter.dart';
-
-import '../../data/nekoton_repository.dart';
-import 'keys_cubit.dart';
+import 'package:nekoton_flutter_example/data/nekoton_repository.dart';
+import 'package:nekoton_flutter_example/presentation/keys/keys_cubit.dart';
 
 class KeysScreen extends StatefulWidget {
   const KeysScreen({Key? key}) : super(key: key);

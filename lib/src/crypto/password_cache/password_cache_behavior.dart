@@ -11,5 +11,6 @@ class PasswordCacheBehavior with _$PasswordCacheBehavior {
 
   const factory PasswordCacheBehavior.nop() = _PasswordCacheBehaviorNop;
 
-  factory PasswordCacheBehavior.fromJson(Map<String, dynamic> json) => _$PasswordCacheBehaviorFromJson(json);
+  factory PasswordCacheBehavior.fromJson(Map<String, dynamic> json) =>
+      _$PasswordCacheBehaviorFromJson(json);
 }

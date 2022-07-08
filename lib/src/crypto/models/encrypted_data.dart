@@ -1,6 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-
-import 'encryption_algorithm.dart';
+import 'package:nekoton_flutter/src/crypto/models/encryption_algorithm.dart';
 
 part 'encrypted_data.freezed.dart';
 part 'encrypted_data.g.dart';

@@ -13,5 +13,6 @@ class MultisigSendTransaction with _$MultisigSendTransaction {
     required String payload,
   }) = _MultisigSendTransaction;
 
-  factory MultisigSendTransaction.fromJson(Map<String, dynamic> json) => _$MultisigSendTransactionFromJson(json);
+  factory MultisigSendTransaction.fromJson(Map<String, dynamic> json) =>
+      _$MultisigSendTransactionFromJson(json);
 }

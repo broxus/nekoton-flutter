@@ -1,7 +1,7 @@
 mod handler;
 
 use std::{
-    os::raw::{c_char, c_longlong, c_void},
+    os::raw::{c_char, c_longlong, c_uint, c_void},
     sync::Arc,
 };
 
@@ -11,7 +11,6 @@ use nekoton::{
     crypto::SignedMessage,
     transport::Transport,
 };
-use nekoton_abi::TransactionId;
 use tokio::sync::RwLock;
 use ton_block::{Block, Deserializable};
 
@@ -31,9 +30,11 @@ pub unsafe extern "C" fn nt_generic_contract_subscribe(
     transport: *mut c_void,
     transport_type: *mut c_char,
     address: *mut c_char,
+    preload_transactions: c_uint,
 ) {
     let transport_type = transport_type.to_string_from_ptr();
     let address = address.to_string_from_ptr();
+    let preload_transactions = preload_transactions != 0;
 
     let transport = match_transport(transport, &transport_type);
 
@@ -45,6 +46,7 @@ pub unsafe extern "C" fn nt_generic_contract_subscribe(
             on_transactions_found_port: i64,
             transport: Arc<dyn Transport>,
             address: String,
+            preload_transactions: bool,
         ) -> Result<serde_json::Value, String> {
             let address = parse_address(&address)?;
 
@@ -55,10 +57,15 @@ pub unsafe extern "C" fn nt_generic_contract_subscribe(
                 on_transactions_found_port,
             ));
 
-            let generic_contract =
-                GenericContract::subscribe(clock!(), transport, address, handler)
-                    .await
-                    .handle_error()?;
+            let generic_contract = GenericContract::subscribe(
+                clock!(),
+                transport,
+                address,
+                handler,
+                preload_transactions,
+            )
+            .await
+            .handle_error()?;
 
             let ptr = Box::into_raw(Box::new(Arc::new(RwLock::new(generic_contract))));
 
@@ -72,6 +79,7 @@ pub unsafe extern "C" fn nt_generic_contract_subscribe(
             on_transactions_found_port,
             transport,
             address,
+            preload_transactions,
         )
         .await
         .match_result();
@@ -313,21 +321,21 @@ pub unsafe extern "C" fn nt_generic_contract_refresh(
 pub unsafe extern "C" fn nt_generic_contract_preload_transactions(
     result_port: c_longlong,
     generic_contract: *mut c_void,
-    from: *mut c_char,
+    from_lt: *mut c_char,
 ) {
     let generic_contract = &*(generic_contract as *mut RwLock<GenericContract>);
 
-    let from = from.to_string_from_ptr();
+    let from_lt = from_lt.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
             generic_contract: &mut GenericContract,
-            from: String,
+            from_lt: String,
         ) -> Result<serde_json::Value, String> {
-            let from = serde_json::from_str::<TransactionId>(&from).handle_error()?;
+            let from_lt = from_lt.parse::<u64>().handle_error()?;
 
             generic_contract
-                .preload_transactions(from)
+                .preload_transactions(from_lt)
                 .await
                 .handle_error()?;
 
@@ -336,7 +344,7 @@ pub unsafe extern "C" fn nt_generic_contract_preload_transactions(
 
         let mut generic_contract = generic_contract.write().await;
 
-        let result = internal_fn(&mut generic_contract, from)
+        let result = internal_fn(&mut generic_contract, from_lt)
             .await
             .match_result();
 

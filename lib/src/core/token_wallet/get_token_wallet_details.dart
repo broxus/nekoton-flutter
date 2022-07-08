@@ -2,19 +2,18 @@ import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
+import 'package:nekoton_flutter/src/bindings.dart';
+import 'package:nekoton_flutter/src/core/token_wallet/models/root_token_contract_details.dart';
+import 'package:nekoton_flutter/src/core/token_wallet/models/token_wallet_details.dart';
+import 'package:nekoton_flutter/src/ffi_utils.dart';
+import 'package:nekoton_flutter/src/transport/transport.dart';
 import 'package:tuple/tuple.dart';
-
-import '../../bindings.dart';
-import '../../ffi_utils.dart';
-import '../../transport/transport.dart';
-import 'models/root_token_contract_details.dart';
-import 'models/token_wallet_details.dart';
 
 Future<Tuple2<TokenWalletDetails, RootTokenContractDetails>> getTokenWalletDetails({
   required Transport transport,
   required String tokenWallet,
 }) async {
-  final ptr = transport.pointerWrapper.ptr;
+  final ptr = transport.ptr;
   final transportTypeStr = jsonEncode(transport.type.toString());
 
   final result = await executeAsync(

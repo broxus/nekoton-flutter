@@ -1,7 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-
-import '../../models/transaction.dart';
-import 'token_wallet_transaction.dart';
+import 'package:nekoton_flutter/src/core/models/transaction.dart';
+import 'package:nekoton_flutter/src/core/token_wallet/models/token_wallet_transaction.dart';
 
 part 'token_wallet_transaction_with_data.freezed.dart';
 part 'token_wallet_transaction_with_data.g.dart';
@@ -21,5 +20,6 @@ class TokenWalletTransactionWithData
   const TokenWalletTransactionWithData._();
 
   @override
-  int compareTo(TokenWalletTransactionWithData other) => -transaction.createdAt.compareTo(other.transaction.createdAt);
+  int compareTo(TokenWalletTransactionWithData other) =>
+      -transaction.createdAt.compareTo(other.transaction.createdAt);
 }

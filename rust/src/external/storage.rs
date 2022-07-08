@@ -4,13 +4,13 @@ use std::{
 };
 
 use allo_isolate::Isolate;
-use anyhow::Result;
+use anyhow::{bail, Result};
 use async_trait::async_trait;
 use nekoton::external::Storage;
 use serde::Serialize;
-use tokio::sync::oneshot::channel;
+use tokio::sync::oneshot::{channel, Sender};
 
-use crate::{HandleError, MatchResult, PostWithResult};
+use crate::{HandleError, MatchResult};
 
 pub struct StorageImpl {
     get_port: Isolate,
@@ -48,9 +48,16 @@ impl Storage for StorageImpl {
 
         let request = serde_json::to_string(&StorageGetRequest { tx, key })?;
 
-        self.get_port.post_with_result(request).unwrap();
+        match self.get_port.post(request) {
+            true => rx.await.unwrap(),
+            false => {
+                unsafe {
+                    Box::from_raw(tx as *mut Sender<Result<String>>);
+                }
 
-        rx.await.unwrap()
+                bail!("Message was not posted successfully")
+            },
+        }
     }
 
     async fn set(&self, key: &str, value: &str) -> Result<()> {
@@ -62,9 +69,16 @@ impl Storage for StorageImpl {
 
         let request = serde_json::to_string(&StorageSetRequest { tx, key, value })?;
 
-        self.set_port.post_with_result(request).unwrap();
+        match self.set_port.post(request) {
+            true => rx.await.unwrap(),
+            false => {
+                unsafe {
+                    Box::from_raw(tx as *mut Sender<Result<String>>);
+                }
 
-        rx.await.unwrap()
+                bail!("Message was not posted successfully")
+            },
+        }
     }
 
     fn set_unchecked(&self, key: &str, value: &str) {
@@ -73,7 +87,7 @@ impl Storage for StorageImpl {
 
         let request = serde_json::to_string(&StorageSetUncheckedRequest { key, value }).unwrap();
 
-        self.set_unchecked_port.post_with_result(request).unwrap();
+        self.set_unchecked_port.post(request);
     }
 
     async fn remove(&self, key: &str) -> Result<()> {
@@ -84,9 +98,16 @@ impl Storage for StorageImpl {
 
         let request = serde_json::to_string(&StorageRemoveRequest { tx, key })?;
 
-        self.remove_port.post_with_result(request).unwrap();
+        match self.remove_port.post(request) {
+            true => rx.await.unwrap(),
+            false => {
+                unsafe {
+                    Box::from_raw(tx as *mut Sender<Result<String>>);
+                }
 
-        rx.await.unwrap()
+                bail!("Message was not posted successfully")
+            },
+        }
     }
 
     fn remove_unchecked(&self, key: &str) {
@@ -94,9 +115,7 @@ impl Storage for StorageImpl {
 
         let request = serde_json::to_string(&StorageRemoveUncheckedRequest { key }).unwrap();
 
-        self.remove_unchecked_port
-            .post_with_result(request)
-            .unwrap();
+        self.remove_unchecked_port.post(request);
     }
 }
 

@@ -1,7 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:nekoton_flutter/nekoton_flutter.dart';
-
-import '../../data/nekoton_repository.dart';
+import 'package:nekoton_flutter_example/data/nekoton_repository.dart';
 
 class KeysCubit extends Cubit<List<KeyStoreEntry>> {
   final NekotonRepository _nekotonRepository;
@@ -13,7 +12,7 @@ class KeysCubit extends Cubit<List<KeyStoreEntry>> {
   Future<void> addKeys() async {
     final keystore = await _nekotonRepository.keystore;
 
-    final entries = await keystore.entries;
+    final entries = keystore.entries;
 
     emit(entries);
 
@@ -59,6 +58,6 @@ class KeysCubit extends Cubit<List<KeyStoreEntry>> {
       ),
     );
 
-    emit(await keystore.entries);
+    emit(keystore.entries);
   }
 }

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nekoton_flutter/nekoton_flutter.dart';
-
-import '../../data/nekoton_repository.dart';
-import 'subscriptions_cubit.dart';
+import 'package:nekoton_flutter_example/data/nekoton_repository.dart';
+import 'package:nekoton_flutter_example/presentation/subscriptions/subscriptions_cubit.dart';
 
 class SubscriptionsScreen extends StatefulWidget {
   const SubscriptionsScreen({Key? key}) : super(key: key);
@@ -28,8 +27,8 @@ class SubscriptionsScreenState extends State<SubscriptionsScreen> {
                 children: state
                     .map(
                       (element) => ListTile(
-                        title: asyncText(
-                          element.address.then((v) => '${element.transport.type.toString()} $v'),
+                        title: Text(
+                          '${element.transport.type.toString()} ${element.address}',
                         ),
                         subtitle: asyncText(element.contractState.then((v) => v.balance)),
                       ),

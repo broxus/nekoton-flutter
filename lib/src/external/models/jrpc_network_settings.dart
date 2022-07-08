@@ -9,5 +9,6 @@ class JrpcNetworkSettings with _$JrpcNetworkSettings {
     required String endpoint,
   }) = _JrpcNetworkSettings;
 
-  factory JrpcNetworkSettings.fromJson(Map<String, dynamic> json) => _$JrpcNetworkSettingsFromJson(json);
+  factory JrpcNetworkSettings.fromJson(Map<String, dynamic> json) =>
+      _$JrpcNetworkSettingsFromJson(json);
 }

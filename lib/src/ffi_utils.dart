@@ -4,9 +4,8 @@ import 'dart:ffi';
 import 'dart:isolate';
 
 import 'package:ffi/ffi.dart';
-
-import 'bindings.dart';
-import 'models/execution_result.dart';
+import 'package:nekoton_flutter/src/bindings.dart';
+import 'package:nekoton_flutter/src/models/execution_result.dart';
 
 dynamic executeSync(Pointer<Char> Function() function) {
   final ptr = function();

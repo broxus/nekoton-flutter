@@ -11,5 +11,6 @@ class StorageSetRequest with _$StorageSetRequest {
     required String value,
   }) = _StorageSetRequest;
 
-  factory StorageSetRequest.fromJson(Map<String, dynamic> json) => _$StorageSetRequestFromJson(json);
+  factory StorageSetRequest.fromJson(Map<String, dynamic> json) =>
+      _$StorageSetRequestFromJson(json);
 }

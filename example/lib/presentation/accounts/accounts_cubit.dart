@@ -1,7 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:nekoton_flutter/nekoton_flutter.dart';
-
-import '../../data/nekoton_repository.dart';
+import 'package:nekoton_flutter_example/data/nekoton_repository.dart';
 
 class AccountsCubit extends Cubit<List<AssetsList>> {
   final NekotonRepository _nekotonRepository;
@@ -13,7 +12,7 @@ class AccountsCubit extends Cubit<List<AssetsList>> {
   Future<void> addAccounts() async {
     final accountsStorage = await _nekotonRepository.accountsStorage;
 
-    final entries = await accountsStorage.entries;
+    final entries = accountsStorage.entries;
 
     emit(entries);
 
@@ -46,6 +45,6 @@ class AccountsCubit extends Cubit<List<AssetsList>> {
       ),
     );
 
-    emit(await accountsStorage.entries);
+    emit(accountsStorage.entries);
   }
 }

@@ -2,10 +2,9 @@ import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
-
-import '../../bindings.dart';
-import '../../ffi_utils.dart';
-import 'models/tokens_object.dart';
+import 'package:nekoton_flutter/src/bindings.dart';
+import 'package:nekoton_flutter/src/ffi_utils.dart';
+import 'package:nekoton_flutter/src/helpers/abi/models/tokens_object.dart';
 
 String encodeInternalInput({
   required String contractAbi,

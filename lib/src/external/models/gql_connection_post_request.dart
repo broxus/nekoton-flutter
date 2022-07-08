@@ -10,5 +10,6 @@ class GqlConnectionPostRequest with _$GqlConnectionPostRequest {
     required String data,
   }) = _GqlConnectionPostRequest;
 
-  factory GqlConnectionPostRequest.fromJson(Map<String, dynamic> json) => _$GqlConnectionPostRequestFromJson(json);
+  factory GqlConnectionPostRequest.fromJson(Map<String, dynamic> json) =>
+      _$GqlConnectionPostRequestFromJson(json);
 }

@@ -50,7 +50,7 @@ public class NekotonFlutterPlugin: NSObject, FlutterPlugin {
 
     nt_accounts_storage_free_ptr(nil);
 
-    nt_generic_contract_subscribe(0, 0, 0, 0, 0, nil, nil, nil);
+    nt_generic_contract_subscribe(0, 0, 0, 0, 0, nil, nil, nil, 0);
 
     nt_generic_contract_address(0, nil);
 

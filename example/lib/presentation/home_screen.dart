@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
-import '../data/nekoton_repository.dart';
-import 'accounts/accounts_screen.dart';
-import 'keys/keys_screen.dart';
-import 'subscriptions/subscriptions_screen.dart';
+import 'package:nekoton_flutter_example/data/nekoton_repository.dart';
+import 'package:nekoton_flutter_example/presentation/accounts/accounts_screen.dart';
+import 'package:nekoton_flutter_example/presentation/keys/keys_screen.dart';
+import 'package:nekoton_flutter_example/presentation/subscriptions/subscriptions_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);

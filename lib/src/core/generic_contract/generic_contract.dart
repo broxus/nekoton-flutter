@@ -3,80 +3,80 @@ import 'dart:convert';
 import 'dart:ffi';
 import 'dart:isolate';
 
-import 'package:async/async.dart';
 import 'package:ffi/ffi.dart';
-import 'package:rxdart/rxdart.dart';
+import 'package:nekoton_flutter/src/bindings.dart';
+import 'package:nekoton_flutter/src/core/contract_subscription/contract_subscription.dart';
+import 'package:nekoton_flutter/src/core/generic_contract/models/transaction_execution_options.dart';
+import 'package:nekoton_flutter/src/core/models/contract_state.dart';
+import 'package:nekoton_flutter/src/core/models/on_message_expired_payload.dart';
+import 'package:nekoton_flutter/src/core/models/on_message_sent_payload.dart';
+import 'package:nekoton_flutter/src/core/models/on_state_changed_payload.dart';
+import 'package:nekoton_flutter/src/core/models/on_transactions_found_payload.dart';
+import 'package:nekoton_flutter/src/core/models/pending_transaction.dart';
+import 'package:nekoton_flutter/src/core/models/polling_method.dart';
+import 'package:nekoton_flutter/src/core/models/transaction.dart';
+import 'package:nekoton_flutter/src/core/utils.dart';
+import 'package:nekoton_flutter/src/crypto/models/signed_message.dart';
+import 'package:nekoton_flutter/src/ffi_utils.dart';
+import 'package:nekoton_flutter/src/transport/transport.dart';
 
-import '../../bindings.dart';
-import '../../crypto/models/signed_message.dart';
-import '../../ffi_utils.dart';
-import '../../models/pointer_wrapper.dart';
-import '../../transport/transport.dart';
-import '../contract_subscription/contract_subscription.dart';
-import '../models/contract_state.dart';
-import '../models/on_message_expired_payload.dart';
-import '../models/on_message_sent_payload.dart';
-import '../models/on_state_changed_payload.dart';
-import '../models/on_transactions_found_payload.dart';
-import '../models/pending_transaction.dart';
-import '../models/polling_method.dart';
-import '../models/transaction.dart';
-import '../models/transaction_id.dart';
-import 'models/transaction_execution_options.dart';
+final _nativeFinalizer =
+    NativeFinalizer(NekotonFlutter.instance().bindings.addresses.nt_generic_contract_free_ptr);
 
-final _nativeFinalizer = NativeFinalizer(NekotonFlutter.instance().bindings.addresses.nt_generic_contract_free_ptr);
-
-void _attach(PointerWrapper pointerWrapper) => _nativeFinalizer.attach(pointerWrapper, pointerWrapper.ptr);
-
-class GenericContract extends ContractSubscription {
-  late final PointerWrapper pointerWrapper;
+class GenericContract extends ContractSubscription implements Finalizable {
+  late final Pointer<Void> _ptr;
+  final Transport _transport;
   final _onMessageSentPort = ReceivePort();
   final _onMessageExpiredPort = ReceivePort();
   final _onStateChangedPort = ReceivePort();
   final _onTransactionsFoundPort = ReceivePort();
-  final _pendingTransactionsSubject = BehaviorSubject<List<PendingTransaction>>.seeded([]);
   late final Stream<OnMessageSentPayload> onMessageSentStream;
   late final Stream<OnMessageExpiredPayload> onMessageExpiredStream;
   late final Stream<OnStateChangedPayload> onStateChangedStream;
   late final Stream<OnTransactionsFoundPayload> onTransactionsFoundStream;
-  late final Stream<List<PendingTransaction>> pendingTransactionsStream;
-  @override
-  late final Transport transport;
-  final _addressMemo = AsyncMemoizer<String>();
+  late final String _address;
 
-  GenericContract._();
+  GenericContract._(this._transport);
 
   static Future<GenericContract> subscribe({
     required Transport transport,
     required String address,
+    required bool preloadTransactions,
   }) async {
-    final instance = GenericContract._();
+    final instance = GenericContract._(transport);
     await instance._initialize(
-      transport: transport,
       address: address,
+      preloadTransactions: preloadTransactions,
     );
     return instance;
   }
 
+  Pointer<Void> get ptr => _ptr;
+
   @override
-  Future<String> get address => _addressMemo.runOnce(() async {
-        final result = await executeAsync(
-          (port) => NekotonFlutter.instance().bindings.nt_generic_contract_address(
-                port,
-                pointerWrapper.ptr,
-              ),
-        );
+  Transport get transport => _transport;
 
-        final address = result as String;
+  @override
+  String get address => _address;
 
-        return address;
-      });
+  Future<String> get __address async {
+    final result = await executeAsync(
+      (port) => NekotonFlutter.instance().bindings.nt_generic_contract_address(
+            port,
+            ptr,
+          ),
+    );
+
+    final address = result as String;
+
+    return address;
+  }
 
   Future<ContractState> get contractState async {
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_generic_contract_contract_state(
             port,
-            pointerWrapper.ptr,
+            ptr,
           ),
     );
 
@@ -90,7 +90,7 @@ class GenericContract extends ContractSubscription {
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_generic_contract_pending_transactions(
             port,
-            pointerWrapper.ptr,
+            ptr,
           ),
     );
 
@@ -106,7 +106,7 @@ class GenericContract extends ContractSubscription {
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_generic_contract_polling_method(
             port,
-            pointerWrapper.ptr,
+            ptr,
           ),
     );
 
@@ -122,7 +122,7 @@ class GenericContract extends ContractSubscription {
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_generic_contract_estimate_fees(
             port,
-            pointerWrapper.ptr,
+            ptr,
             signedMessageStr.toNativeUtf8().cast<Char>(),
           ),
     );
@@ -132,27 +132,30 @@ class GenericContract extends ContractSubscription {
     return fees;
   }
 
-  Future<PendingTransaction> send(SignedMessage signedMessage) async {
-    final signedMessageStr = jsonEncode(signedMessage);
+  Future<Transaction?> send(SignedMessage signedMessage) async {
+    final pendingTransaction = await sendWithReliablePolling(() async {
+      final signedMessageStr = jsonEncode(signedMessage);
 
-    await prepareReliablePolling();
+      final result = await executeAsync(
+        (port) => NekotonFlutter.instance().bindings.nt_generic_contract_send(
+              port,
+              ptr,
+              signedMessageStr.toNativeUtf8().cast<Char>(),
+            ),
+      );
 
-    final result = await executeAsync(
-      (port) => NekotonFlutter.instance().bindings.nt_generic_contract_send(
-            port,
-            pointerWrapper.ptr,
-            signedMessageStr.toNativeUtf8().cast<Char>(),
-          ),
-    );
+      final json = result as Map<String, dynamic>;
+      final pendingTransaction = PendingTransaction.fromJson(json);
 
-    skipRefreshTimer();
+      return pendingTransaction;
+    });
 
-    final json = result as Map<String, dynamic>;
-    final pendingTransaction = PendingTransaction.fromJson(json);
+    final transaction = await onMessageSentStream
+        .firstWhere((e) => e.pendingTransaction == pendingTransaction)
+        .then((v) => v.transaction)
+        .timeout(pendingTransaction.expireAt.toTimeout());
 
-    if (!_pendingTransactionsSubject.isClosed) _pendingTransactionsSubject.add(await pendingTransactions);
-
-    return pendingTransaction;
+    return transaction;
   }
 
   Future<Transaction> executeTransactionLocally({
@@ -165,7 +168,7 @@ class GenericContract extends ContractSubscription {
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_generic_contract_execute_transaction_locally(
             port,
-            pointerWrapper.ptr,
+            ptr,
             signedMessageStr.toNativeUtf8().cast<Char>(),
             optionsStr.toNativeUtf8().cast<Char>(),
           ),
@@ -178,57 +181,41 @@ class GenericContract extends ContractSubscription {
   }
 
   @override
-  Future<void> refresh() async {
-    await executeAsync(
-      (port) => NekotonFlutter.instance().bindings.nt_generic_contract_refresh(
-            port,
-            pointerWrapper.ptr,
-          ),
-    );
+  Future<void> refresh() => executeAsync(
+        (port) => NekotonFlutter.instance().bindings.nt_generic_contract_refresh(
+              port,
+              ptr,
+            ),
+      );
 
-    if (!_pendingTransactionsSubject.isClosed) _pendingTransactionsSubject.add(await pendingTransactions);
-  }
-
-  Future<void> preloadTransactions(TransactionId from) async {
-    final fromStr = jsonEncode(from);
-
-    await executeAsync(
-      (port) => NekotonFlutter.instance().bindings.nt_generic_contract_preload_transactions(
-            port,
-            pointerWrapper.ptr,
-            fromStr.toNativeUtf8().cast<Char>(),
-          ),
-    );
-  }
+  Future<void> preloadTransactions(String fromLt) => executeAsync(
+        (port) => NekotonFlutter.instance().bindings.nt_generic_contract_preload_transactions(
+              port,
+              ptr,
+              fromLt.toNativeUtf8().cast<Char>(),
+            ),
+      );
 
   @override
-  Future<void> handleBlock(String block) async {
-    await executeAsync(
-      (port) => NekotonFlutter.instance().bindings.nt_generic_contract_handle_block(
-            port,
-            pointerWrapper.ptr,
-            block.toNativeUtf8().cast<Char>(),
-          ),
-    );
-
-    if (!_pendingTransactionsSubject.isClosed) _pendingTransactionsSubject.add(await pendingTransactions);
-  }
+  Future<void> handleBlock(String block) => executeAsync(
+        (port) => NekotonFlutter.instance().bindings.nt_generic_contract_handle_block(
+              port,
+              ptr,
+              block.toNativeUtf8().cast<Char>(),
+            ),
+      );
 
   Future<void> dispose() async {
     _onMessageSentPort.close();
     _onMessageExpiredPort.close();
     _onStateChangedPort.close();
     _onTransactionsFoundPort.close();
-
-    await pausePolling();
   }
 
   Future<void> _initialize({
-    required Transport transport,
     required String address,
+    required bool preloadTransactions,
   }) async {
-    this.transport = transport;
-
     onMessageSentStream = _onMessageSentPort.cast<String>().map((e) {
       final json = jsonDecode(e) as Map<String, dynamic>;
       final payload = OnMessageSentPayload.fromJson(json);
@@ -253,10 +240,8 @@ class GenericContract extends ContractSubscription {
       return payload;
     }).asBroadcastStream();
 
-    pendingTransactionsStream = _pendingTransactionsSubject;
-
-    final transportPtr = transport.pointerWrapper.ptr;
-    final transportTypeStr = jsonEncode(transport.type.toString());
+    final transportPtr = _transport.ptr;
+    final transportTypeStr = jsonEncode(_transport.type.toString());
 
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_generic_contract_subscribe(
@@ -268,13 +253,14 @@ class GenericContract extends ContractSubscription {
             transportPtr,
             transportTypeStr.toNativeUtf8().cast<Char>(),
             address.toNativeUtf8().cast<Char>(),
+            preloadTransactions ? 1 : 0,
           ),
     );
 
-    pointerWrapper = PointerWrapper(Pointer.fromAddress(result as int).cast<Void>());
+    _ptr = Pointer.fromAddress(result as int).cast<Void>();
 
-    _attach(pointerWrapper);
+    _nativeFinalizer.attach(this, _ptr);
 
-    await startPolling();
+    _address = await __address;
   }
 }

@@ -10,5 +10,6 @@ class JrpcConnectionPostRequest with _$JrpcConnectionPostRequest {
     required String data,
   }) = _JrpcConnectionPostRequest;
 
-  factory JrpcConnectionPostRequest.fromJson(Map<String, dynamic> json) => _$JrpcConnectionPostRequestFromJson(json);
+  factory JrpcConnectionPostRequest.fromJson(Map<String, dynamic> json) =>
+      _$JrpcConnectionPostRequestFromJson(json);
 }

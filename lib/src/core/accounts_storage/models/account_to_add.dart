@@ -1,6 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-
-import 'wallet_type.dart';
+import 'package:nekoton_flutter/src/core/accounts_storage/models/wallet_type.dart';
 
 part 'account_to_add.freezed.dart';
 part 'account_to_add.g.dart';

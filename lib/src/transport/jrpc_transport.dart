@@ -1,40 +1,20 @@
-import 'dart:async';
 import 'dart:ffi';
 
-import '../bindings.dart';
-import '../external/jrpc_connection.dart';
-import '../ffi_utils.dart';
-import '../models/pointer_wrapper.dart';
-import 'models/transport_type.dart';
-import 'transport.dart';
+import 'package:nekoton_flutter/src/bindings.dart';
+import 'package:nekoton_flutter/src/external/jrpc_connection.dart';
+import 'package:nekoton_flutter/src/ffi_utils.dart';
+import 'package:nekoton_flutter/src/transport/models/transport_type.dart';
+import 'package:nekoton_flutter/src/transport/transport.dart';
 
-final _nativeFinalizer = NativeFinalizer(NekotonFlutter.instance().bindings.addresses.nt_jrpc_transport_free_ptr);
+final _nativeFinalizer =
+    NativeFinalizer(NekotonFlutter.instance().bindings.addresses.nt_jrpc_transport_free_ptr);
 
-void _attach(PointerWrapper pointerWrapper) => _nativeFinalizer.attach(pointerWrapper, pointerWrapper.ptr);
+class JrpcTransport extends Transport implements Finalizable {
+  late final Pointer<Void> _ptr;
+  final JrpcConnection _jrpcConnection;
 
-class JrpcTransport extends Transport {
-  @override
-  late final PointerWrapper pointerWrapper;
-  late final JrpcConnection _jrpcConnection;
-
-  JrpcTransport._();
-
-  static Future<JrpcTransport> create(JrpcConnection jrpcConnection) async {
-    final instance = JrpcTransport._();
-    await instance._initialize(jrpcConnection);
-    return instance;
-  }
-
-  @override
-  TransportType get type => _jrpcConnection.type;
-
-  @override
-  String get group => _jrpcConnection.group;
-
-  Future<void> _initialize(JrpcConnection jrpcConnection) async {
-    _jrpcConnection = jrpcConnection;
-
-    final jrpcConnectionPtr = _jrpcConnection.pointerWrapper.ptr;
+  JrpcTransport(this._jrpcConnection) {
+    final jrpcConnectionPtr = _jrpcConnection.ptr;
 
     final result = executeSync(
       () => NekotonFlutter.instance().bindings.nt_jrpc_transport_create(
@@ -42,8 +22,23 @@ class JrpcTransport extends Transport {
           ),
     );
 
-    pointerWrapper = PointerWrapper(Pointer.fromAddress(result as int).cast<Void>());
+    _ptr = Pointer.fromAddress(result as int).cast<Void>();
 
-    _attach(pointerWrapper);
+    _nativeFinalizer.attach(this, _ptr);
   }
+
+  @override
+  Pointer<Void> get ptr => _ptr;
+
+  @override
+  String get name => _jrpcConnection.name;
+
+  @override
+  String get group => _jrpcConnection.group;
+
+  @override
+  TransportType get type => _jrpcConnection.type;
+
+  @override
+  Future<void> dispose() => _jrpcConnection.dispose();
 }

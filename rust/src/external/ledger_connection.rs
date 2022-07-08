@@ -4,13 +4,13 @@ use std::{
 };
 
 use allo_isolate::Isolate;
-use anyhow::Result;
+use anyhow::{bail, Result};
 use async_trait::async_trait;
 use nekoton::external::{LedgerConnection, LedgerSignatureContext};
 use serde::Serialize;
-use tokio::sync::oneshot::channel;
+use tokio::sync::oneshot::{channel, Sender};
 
-use crate::{HandleError, MatchResult, PostWithResult};
+use crate::{HandleError, MatchResult};
 
 pub struct LedgerConnectionImpl {
     get_public_key_port: Isolate,
@@ -39,13 +39,21 @@ impl LedgerConnection for LedgerConnectionImpl {
         let request =
             serde_json::to_string(&LedgerConnectionGetPublicKeyRequest { tx, account_id })?;
 
-        self.get_public_key_port.post_with_result(request).unwrap();
+        match self.get_public_key_port.post(request) {
+            true => rx
+                .await
+                .unwrap()
+                .map(|e| -> [u8; ed25519_dalek::PUBLIC_KEY_LENGTH] {
+                    hex::decode(&e).unwrap().as_slice().try_into().unwrap()
+                }),
+            false => {
+                unsafe {
+                    Box::from_raw(tx as *mut Sender<Result<String>>);
+                }
 
-        rx.await
-            .unwrap()
-            .map(|e| -> [u8; ed25519_dalek::PUBLIC_KEY_LENGTH] {
-                hex::decode(&e).unwrap().as_slice().try_into().unwrap()
-            })
+                bail!("Message was not posted successfully")
+            },
+        }
     }
 
     async fn sign(
@@ -67,13 +75,21 @@ impl LedgerConnection for LedgerConnectionImpl {
             context,
         })?;
 
-        self.sign_port.post_with_result(request).unwrap();
+        match self.sign_port.post(request) {
+            true => rx
+                .await
+                .unwrap()
+                .map(|e| -> [u8; ed25519_dalek::SIGNATURE_LENGTH] {
+                    hex::decode(&e).unwrap().as_slice().try_into().unwrap()
+                }),
+            false => {
+                unsafe {
+                    Box::from_raw(tx as *mut Sender<Result<String>>);
+                }
 
-        rx.await
-            .unwrap()
-            .map(|e| -> [u8; ed25519_dalek::SIGNATURE_LENGTH] {
-                hex::decode(&e).unwrap().as_slice().try_into().unwrap()
-            })
+                bail!("Message was not posted successfully")
+            },
+        }
     }
 }
 

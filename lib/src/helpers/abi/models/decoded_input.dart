@@ -1,6 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-
-import 'tokens_object.dart';
+import 'package:nekoton_flutter/src/helpers/abi/models/tokens_object.dart';
 
 part 'decoded_input.freezed.dart';
 part 'decoded_input.g.dart';

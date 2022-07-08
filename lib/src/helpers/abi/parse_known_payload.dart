@@ -1,10 +1,9 @@
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
-
-import '../../bindings.dart';
-import '../../core/ton_wallet/models/known_payload.dart';
-import '../../ffi_utils.dart';
+import 'package:nekoton_flutter/src/bindings.dart';
+import 'package:nekoton_flutter/src/core/ton_wallet/models/known_payload.dart';
+import 'package:nekoton_flutter/src/ffi_utils.dart';
 
 KnownPayload? parseKnownPayload(String payload) {
   final result = executeSync(

@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nekoton_flutter/nekoton_flutter.dart';
-
-import '../../data/nekoton_repository.dart';
-import 'accounts_cubit.dart';
+import 'package:nekoton_flutter_example/data/nekoton_repository.dart';
+import 'package:nekoton_flutter_example/presentation/accounts/accounts_cubit.dart';
 
 class AccountsScreen extends StatefulWidget {
   const AccountsScreen({Key? key}) : super(key: key);

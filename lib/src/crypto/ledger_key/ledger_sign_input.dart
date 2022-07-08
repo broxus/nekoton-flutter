@@ -1,7 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-
-import '../../external/models/ledger_signature_context.dart';
-import '../models/sign_input.dart';
+import 'package:nekoton_flutter/src/crypto/models/sign_input.dart';
+import 'package:nekoton_flutter/src/external/models/ledger_signature_context.dart';
 
 part 'ledger_sign_input.freezed.dart';
 part 'ledger_sign_input.g.dart';

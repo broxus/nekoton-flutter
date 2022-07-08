@@ -1,6 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-
-import 'tokens_object.dart';
+import 'package:nekoton_flutter/src/helpers/abi/models/tokens_object.dart';
 
 part 'decoded_transaction_event.freezed.dart';
 part 'decoded_transaction_event.g.dart';
@@ -12,5 +11,6 @@ class DecodedTransactionEvent with _$DecodedTransactionEvent {
     required TokensObject data,
   }) = _DecodedTransactionEvent;
 
-  factory DecodedTransactionEvent.fromJson(Map<String, dynamic> json) => _$DecodedTransactionEventFromJson(json);
+  factory DecodedTransactionEvent.fromJson(Map<String, dynamic> json) =>
+      _$DecodedTransactionEventFromJson(json);
 }

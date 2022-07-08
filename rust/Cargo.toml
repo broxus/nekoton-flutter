@@ -22,10 +22,10 @@ nekoton = { git = "https://github.com/broxus/nekoton.git", features = [
 ] }
 nekoton-abi = { git = "https://github.com/broxus/nekoton.git" }
 nekoton-utils = { git = "https://github.com/broxus/nekoton.git" }
-secstr = { version = "0.4.0", features = [ "serde" ] }
+secstr = { version = "0.5.0", features = [ "serde" ] }
 serde = { version = "1.0.136", features = [ "derive" ] }
 serde_json = "1.0.79"
-sha2 = "0.9"
+sha2 = "0.9.9"
 thiserror = "1.0.30"
 tokio = { version = "1.17.0", features = [ "rt-multi-thread", "sync" ] }
 ton_abi = { git = "https://github.com/broxus/ton-labs-abi" }

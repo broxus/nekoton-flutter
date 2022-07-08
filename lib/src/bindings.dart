@@ -1,14 +1,15 @@
 import 'dart:ffi';
 import 'dart:io';
 
-import 'bindings.ffigen.dart';
+import 'package:nekoton_flutter/src/bindings.ffigen.dart';
 
 class NekotonFlutter {
   static NekotonFlutter? _instance;
   final Bindings _bindings;
 
   NekotonFlutter._()
-      : _bindings = Bindings(_dlOpenPlatformSpecific())..nt_store_dart_post_cobject(NativeApi.postCObject.cast<Void>());
+      : _bindings = Bindings(_dlOpenPlatformSpecific())
+          ..nt_store_dart_post_cobject(NativeApi.postCObject.cast<Void>());
 
   factory NekotonFlutter.instance() => _instance ??= NekotonFlutter._();
 
@@ -26,7 +27,7 @@ class NekotonFlutter {
     } else if (Platform.isWindows) {
       return DynamicLibrary.open('libnekoton_flutter.dll');
     } else {
-      throw Exception('Invalid platform');
+      throw UnsupportedError('Invalid platform');
     }
   }
 }

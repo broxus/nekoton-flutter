@@ -10,5 +10,6 @@ class TokenIncomingTransfer with _$TokenIncomingTransfer {
     required String senderAddress,
   }) = _TokenIncomingTransfer;
 
-  factory TokenIncomingTransfer.fromJson(Map<String, dynamic> json) => _$TokenIncomingTransferFromJson(json);
+  factory TokenIncomingTransfer.fromJson(Map<String, dynamic> json) =>
+      _$TokenIncomingTransferFromJson(json);
 }

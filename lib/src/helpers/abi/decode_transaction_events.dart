@@ -2,11 +2,10 @@ import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
-
-import '../../bindings.dart';
-import '../../core/models/transaction.dart';
-import '../../ffi_utils.dart';
-import 'models/decoded_transaction_event.dart';
+import 'package:nekoton_flutter/src/bindings.dart';
+import 'package:nekoton_flutter/src/core/models/transaction.dart';
+import 'package:nekoton_flutter/src/ffi_utils.dart';
+import 'package:nekoton_flutter/src/helpers/abi/models/decoded_transaction_event.dart';
 
 List<DecodedTransactionEvent> decodeTransactionEvents({
   required Transaction transaction,

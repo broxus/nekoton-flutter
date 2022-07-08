@@ -9,16 +9,16 @@ use std::{
 use allo_isolate::Isolate;
 use nekoton::{
     core::{
-        models::Expiration,
+        models::{Expiration, MessageFlags},
         ton_wallet::{
             extract_wallet_init_data, find_existing_wallets, get_wallet_custodians,
-            ExistingWalletInfo, TonWallet, TransferAction,
+            ExistingWalletInfo, Gift, TonWallet, TransferAction,
         },
     },
     crypto::SignedMessage,
     transport::Transport,
 };
-use nekoton_abi::{create_boc_or_comment_payload, TransactionId};
+use nekoton_abi::create_boc_or_comment_payload;
 use tokio::sync::RwLock;
 use ton_block::{Block, Deserializable};
 
@@ -581,16 +581,17 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_transfer(
 
             let expiration = serde_json::from_str::<Expiration>(&expiration).handle_error()?;
 
+            let gift = Gift {
+                flags: MessageFlags::default().into(),
+                bounce,
+                destination,
+                amount,
+                body,
+                state_init: None,
+            };
+
             let action = ton_wallet
-                .prepare_transfer(
-                    &current_state,
-                    &public_key,
-                    destination,
-                    amount,
-                    bounce,
-                    body,
-                    expiration,
-                )
+                .prepare_transfer(&current_state, &public_key, gift, expiration)
                 .handle_error()?;
 
             let unsigned_message = match action {
@@ -788,27 +789,30 @@ pub unsafe extern "C" fn nt_ton_wallet_refresh(result_port: c_longlong, ton_wall
 pub unsafe extern "C" fn nt_ton_wallet_preload_transactions(
     result_port: c_longlong,
     ton_wallet: *mut c_void,
-    from: *mut c_char,
+    from_lt: *mut c_char,
 ) {
     let ton_wallet = &*(ton_wallet as *mut RwLock<TonWallet>);
 
-    let from = from.to_string_from_ptr();
+    let from_lt = from_lt.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
             ton_wallet: &mut TonWallet,
-            from: String,
+            from_lt: String,
         ) -> Result<serde_json::Value, String> {
-            let from = serde_json::from_str::<TransactionId>(&from).handle_error()?;
+            let from_lt = from_lt.parse::<u64>().handle_error()?;
 
-            ton_wallet.preload_transactions(from).await.handle_error()?;
+            ton_wallet
+                .preload_transactions(from_lt)
+                .await
+                .handle_error()?;
 
             Ok(serde_json::Value::Null)
         }
 
         let mut ton_wallet = ton_wallet.write().await;
 
-        let result = internal_fn(&mut ton_wallet, from).await.match_result();
+        let result = internal_fn(&mut ton_wallet, from_lt).await.match_result();
 
         Isolate::new(result_port).post_with_result(result).unwrap();
     });

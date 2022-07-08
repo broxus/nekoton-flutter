@@ -1,38 +1,34 @@
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
+import 'package:nekoton_flutter/src/bindings.dart';
+import 'package:nekoton_flutter/src/crypto/models/signed_message.dart';
+import 'package:nekoton_flutter/src/ffi_utils.dart';
 
-import '../bindings.dart';
-import '../ffi_utils.dart';
-import '../models/pointer_wrapper.dart';
-import 'models/signed_message.dart';
+final _nativeFinalizer =
+    NativeFinalizer(NekotonFlutter.instance().bindings.addresses.nt_unsigned_message_free_ptr);
 
-final _nativeFinalizer = NativeFinalizer(NekotonFlutter.instance().bindings.addresses.nt_unsigned_message_free_ptr);
+class UnsignedMessage implements Finalizable {
+  final Pointer<Void> _ptr;
 
-void _attach(PointerWrapper pointerWrapper) => _nativeFinalizer.attach(pointerWrapper, pointerWrapper.ptr);
-
-class UnsignedMessage {
-  late final PointerWrapper pointerWrapper;
-
-  UnsignedMessage(Pointer<Void> pointer) {
-    pointerWrapper = PointerWrapper(pointer);
-    _attach(pointerWrapper);
+  UnsignedMessage(Pointer<Void> pointer) : _ptr = pointer {
+    _nativeFinalizer.attach(this, _ptr);
   }
 
-  Future<void> refreshTimeout() async {
-    await executeAsync(
-      (port) => NekotonFlutter.instance().bindings.nt_unsigned_message_refresh_timeout(
-            port,
-            pointerWrapper.ptr,
-          ),
-    );
-  }
+  Pointer<Void> get ptr => _ptr;
+
+  Future<void> refreshTimeout() => executeAsync(
+        (port) => NekotonFlutter.instance().bindings.nt_unsigned_message_refresh_timeout(
+              port,
+              ptr,
+            ),
+      );
 
   Future<int> get expireAt async {
     final expireAt = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_unsigned_message_expire_at(
             port,
-            pointerWrapper.ptr,
+            ptr,
           ),
     );
 
@@ -43,7 +39,7 @@ class UnsignedMessage {
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_unsigned_message_hash(
             port,
-            pointerWrapper.ptr,
+            ptr,
           ),
     );
 
@@ -56,7 +52,7 @@ class UnsignedMessage {
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_unsigned_message_sign(
             port,
-            pointerWrapper.ptr,
+            ptr,
             signature.toNativeUtf8().cast<Char>(),
           ),
     );

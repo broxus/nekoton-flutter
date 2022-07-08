@@ -1,7 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-
-import 'known_payload.dart';
-import 'wallet_interaction_method.dart';
+import 'package:nekoton_flutter/src/core/ton_wallet/models/known_payload.dart';
+import 'package:nekoton_flutter/src/core/ton_wallet/models/wallet_interaction_method.dart';
 
 part 'wallet_interaction_info.freezed.dart';
 part 'wallet_interaction_info.g.dart';
@@ -14,5 +13,6 @@ class WalletInteractionInfo with _$WalletInteractionInfo {
     required WalletInteractionMethod method,
   }) = _WalletInteractionInfo;
 
-  factory WalletInteractionInfo.fromJson(Map<String, dynamic> json) => _$WalletInteractionInfoFromJson(json);
+  factory WalletInteractionInfo.fromJson(Map<String, dynamic> json) =>
+      _$WalletInteractionInfoFromJson(json);
 }

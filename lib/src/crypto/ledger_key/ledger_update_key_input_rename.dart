@@ -11,5 +11,6 @@ class LedgerUpdateKeyInputRename with _$LedgerUpdateKeyInputRename {
     required String name,
   }) = _LedgerUpdateKeyInputRenameRename;
 
-  factory LedgerUpdateKeyInputRename.fromJson(Map<String, dynamic> json) => _$LedgerUpdateKeyInputRenameFromJson(json);
+  factory LedgerUpdateKeyInputRename.fromJson(Map<String, dynamic> json) =>
+      _$LedgerUpdateKeyInputRenameFromJson(json);
 }

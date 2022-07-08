@@ -1,6 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-
-import 'mnemonic_type.dart';
+import 'package:nekoton_flutter/src/crypto/mnemonic/models/mnemonic_type.dart';
 
 part 'generated_key.freezed.dart';
 part 'generated_key.g.dart';

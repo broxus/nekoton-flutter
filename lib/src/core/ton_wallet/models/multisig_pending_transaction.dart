@@ -20,5 +20,6 @@ class MultisigPendingTransaction with _$MultisigPendingTransaction {
     required bool bounce,
   }) = _MultisigPendingTransaction;
 
-  factory MultisigPendingTransaction.fromJson(Map<String, dynamic> json) => _$MultisigPendingTransactionFromJson(json);
+  factory MultisigPendingTransaction.fromJson(Map<String, dynamic> json) =>
+      _$MultisigPendingTransactionFromJson(json);
 }

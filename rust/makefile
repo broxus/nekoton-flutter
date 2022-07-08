@@ -79,6 +79,7 @@ macos: target/x86_64-apple-darwin/release/libnekoton_flutter.dylib \
 target/x86_64-apple-darwin/release/libnekoton_flutter.dylib: $(SOURCES)
 	@if [ $$(uname) == "Darwin" ] ; then \
 		cargo lipo --release --targets x86_64-apple-darwin ; \
+		install_name_tool -id @rpath/../Frameworks/libnekoton_flutter_x86_64.dylib $@ ; \
 		cp $@ ../macos/libnekoton_flutter_x86_64.dylib ; \
 		else echo "Skipping macOS compilation on $$(uname)" ; \
 	fi
@@ -87,6 +88,7 @@ target/x86_64-apple-darwin/release/libnekoton_flutter.dylib: $(SOURCES)
 target/aarch64-apple-darwin/release/libnekoton_flutter.dylib: $(SOURCES)
 	@if [ $$(uname) == "Darwin" ] ; then \
 		cargo lipo --release --targets aarch64-apple-darwin ; \
+		install_name_tool -id @rpath/../Frameworks/libnekoton_flutter_aarch64.dylib $@ ; \
 		cp $@ ../macos/libnekoton_flutter_aarch64.dylib ; \
 		else echo "Skipping macOS compilation on $$(uname)" ; \
 	fi

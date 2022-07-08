@@ -11,5 +11,6 @@ class TokenWalletDetails with _$TokenWalletDetails {
     required String balance,
   }) = _TokenWalletDetails;
 
-  factory TokenWalletDetails.fromJson(Map<String, dynamic> json) => _$TokenWalletDetailsFromJson(json);
+  factory TokenWalletDetails.fromJson(Map<String, dynamic> json) =>
+      _$TokenWalletDetailsFromJson(json);
 }

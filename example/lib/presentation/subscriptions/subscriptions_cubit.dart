@@ -1,7 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:nekoton_flutter/nekoton_flutter.dart';
-
-import '../../data/nekoton_repository.dart';
+import 'package:nekoton_flutter_example/data/nekoton_repository.dart';
 
 class SubscriptionsCubit extends Cubit<List<TonWallet>> {
   final NekotonRepository _nekotonRepository;

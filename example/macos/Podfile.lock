@@ -20,7 +20,7 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   FlutterMacOS: 57701585bf7de1b3fc2bb61f6378d73bbdea8424
-  nekoton_flutter: 0db3f9b9035f5c094770482d3a2c4ee2e270fcea
+  nekoton_flutter: d88f2f6bee3f3dabae4dbbcf40190bee79dc6e0a
   shared_preferences_macos: a64dc611287ed6cbe28fd1297898db1336975727
 
 PODFILE CHECKSUM: 6eac6b3292e5142cfc23bdeb71848a40ec51c14c

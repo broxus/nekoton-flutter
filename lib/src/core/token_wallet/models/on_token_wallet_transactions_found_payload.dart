@@ -1,7 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-
-import '../../models/transactions_batch_info.dart';
-import 'token_wallet_transaction_with_data.dart';
+import 'package:nekoton_flutter/src/core/models/transactions_batch_info.dart';
+import 'package:nekoton_flutter/src/core/token_wallet/models/token_wallet_transaction_with_data.dart';
 
 part 'on_token_wallet_transactions_found_payload.freezed.dart';
 part 'on_token_wallet_transactions_found_payload.g.dart';

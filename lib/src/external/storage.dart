@@ -4,52 +4,61 @@ import 'dart:ffi';
 import 'dart:isolate';
 
 import 'package:ffi/ffi.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:nekoton_flutter/src/bindings.dart';
+import 'package:nekoton_flutter/src/external/models/storage_get_request.dart';
+import 'package:nekoton_flutter/src/external/models/storage_remove_request.dart';
+import 'package:nekoton_flutter/src/external/models/storage_remove_unchecked_request.dart';
+import 'package:nekoton_flutter/src/external/models/storage_set_request.dart';
+import 'package:nekoton_flutter/src/external/models/storage_set_unchecked_request.dart';
+import 'package:nekoton_flutter/src/ffi_utils.dart';
 
-import '../bindings.dart';
-import '../ffi_utils.dart';
-import '../models/pointer_wrapper.dart';
-import 'models/storage_get_request.dart';
-import 'models/storage_remove_request.dart';
-import 'models/storage_remove_unchecked_request.dart';
-import 'models/storage_set_request.dart';
-import 'models/storage_set_unchecked_request.dart';
+final _nativeFinalizer =
+    NativeFinalizer(NekotonFlutter.instance().bindings.addresses.nt_storage_free_ptr);
 
-final _nativeFinalizer = NativeFinalizer(NekotonFlutter.instance().bindings.addresses.nt_storage_free_ptr);
-
-void _attach(PointerWrapper pointerWrapper) => _nativeFinalizer.attach(pointerWrapper, pointerWrapper.ptr);
-
-class Storage {
-  late final PointerWrapper pointerWrapper;
+class Storage implements Finalizable {
+  late final Pointer<Void> _ptr;
   final _getPort = ReceivePort();
   final _setPort = ReceivePort();
   final _setUncheckedPort = ReceivePort();
   final _removePort = ReceivePort();
   final _removeUncheckedPort = ReceivePort();
-  late final StreamSubscription _getSubscription;
-  late final StreamSubscription _setSubscription;
-  late final StreamSubscription _setUncheckedSubscription;
-  late final StreamSubscription _removeSubscription;
-  late final StreamSubscription _removeUncheckedSubscription;
-  final Future<String?> Function(String key) get;
+  late final StreamSubscription<StorageGetRequest> _getSubscription;
+  late final StreamSubscription<StorageSetRequest> _setSubscription;
+  late final StreamSubscription<StorageSetUncheckedRequest> _setUncheckedSubscription;
+  late final StreamSubscription<StorageRemoveRequest> _removeSubscription;
+  late final StreamSubscription<StorageRemoveUncheckedRequest> _removeUncheckedSubscription;
+  final Future<String?> Function(String key) _get;
   final Future<void> Function({
     required String key,
     required String value,
-  }) set;
+  }) _set;
   final void Function({
     required String key,
     required String value,
-  }) setUnchecked;
-  final Future<void> Function(String key) remove;
-  final void Function(String key) removeUnchecked;
+  }) _setUnchecked;
+  final Future<void> Function(String key) _remove;
+  final void Function(String key) _removeUnchecked;
 
   Storage({
-    required this.get,
-    required this.set,
-    required this.setUnchecked,
-    required this.remove,
-    required this.removeUnchecked,
-  }) {
+    required Future<String?> Function(String key) get,
+    required Future<void> Function({
+      required String key,
+      required String value,
+    })
+        set,
+    required void Function({
+      required String key,
+      required String value,
+    })
+        setUnchecked,
+    required Future<void> Function(String key) remove,
+    required void Function(String key) removeUnchecked,
+  })  : _get = get,
+        _set = set,
+        _setUnchecked = setUnchecked,
+        _remove = remove,
+        _removeUnchecked = removeUnchecked {
     _getSubscription = _getPort.cast<String>().map((e) {
       final json = jsonDecode(e) as Map<String, dynamic>;
       final payload = StorageGetRequest.fromJson(json);
@@ -90,10 +99,12 @@ class Storage {
           ),
     );
 
-    pointerWrapper = PointerWrapper(Pointer.fromAddress(result as int).cast<Void>());
+    _ptr = Pointer.fromAddress(result as int).cast<Void>();
 
-    _attach(pointerWrapper);
+    _nativeFinalizer.attach(this, _ptr);
   }
+
+  Pointer<Void> get ptr => _ptr;
 
   Future<void> dispose() async {
     await _getSubscription.cancel();
@@ -116,7 +127,7 @@ class Storage {
     String? err;
 
     try {
-      ok = await get(event.key);
+      ok = await _get(event.key);
     } catch (error) {
       err = error.toString();
     }
@@ -134,7 +145,7 @@ class Storage {
     String? err;
 
     try {
-      await set(
+      await _set(
         key: event.key,
         value: event.value,
       );
@@ -150,7 +161,7 @@ class Storage {
 
   Future<void> _setUncheckedRequestHandler(StorageSetUncheckedRequest event) async {
     try {
-      setUnchecked(
+      _setUnchecked(
         key: event.key,
         value: event.value,
       );
@@ -166,7 +177,7 @@ class Storage {
     String? err;
 
     try {
-      await remove(event.key);
+      await _remove(event.key);
     } catch (error) {
       err = error.toString();
     }
@@ -179,7 +190,7 @@ class Storage {
 
   Future<void> _removeUncheckedRequestHandler(StorageRemoveUncheckedRequest event) async {
     try {
-      removeUnchecked(event.key);
+      _removeUnchecked(event.key);
     } catch (err, st) {
       debugPrint(err.toString());
       debugPrint(st.toString());

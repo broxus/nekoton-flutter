@@ -10,5 +10,6 @@ class StorageSetUncheckedRequest with _$StorageSetUncheckedRequest {
     required String value,
   }) = _StorageSetUncheckedRequest;
 
-  factory StorageSetUncheckedRequest.fromJson(Map<String, dynamic> json) => _$StorageSetUncheckedRequestFromJson(json);
+  factory StorageSetUncheckedRequest.fromJson(Map<String, dynamic> json) =>
+      _$StorageSetUncheckedRequestFromJson(json);
 }

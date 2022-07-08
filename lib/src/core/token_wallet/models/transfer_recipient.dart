@@ -9,5 +9,6 @@ class TransferRecipient with _$TransferRecipient {
 
   const factory TransferRecipient.tokenWallet(String data) = _TransferRecipientTokenWallet;
 
-  factory TransferRecipient.fromJson(Map<String, dynamic> json) => _$TransferRecipientFromJson(json);
+  factory TransferRecipient.fromJson(Map<String, dynamic> json) =>
+      _$TransferRecipientFromJson(json);
 }

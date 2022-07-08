@@ -171,12 +171,12 @@ pub unsafe extern "C" fn nt_transport_get_transactions(
     transport: *mut c_void,
     transport_type: *mut c_char,
     address: *mut c_char,
-    continuation: *mut c_char,
+    from_lt: *mut c_char,
     limit: c_uchar,
 ) {
     let transport_type = transport_type.to_string_from_ptr();
     let address = address.to_string_from_ptr();
-    let continuation = continuation.to_optional_string_from_ptr();
+    let from_lt = from_lt.to_optional_string_from_ptr();
 
     let transport = match_transport(transport, &transport_type);
 
@@ -184,25 +184,19 @@ pub unsafe extern "C" fn nt_transport_get_transactions(
         async fn internal_fn(
             transport: Arc<dyn Transport>,
             address: String,
-            continuation: Option<String>,
+            from_lt: Option<String>,
             limit: u8,
         ) -> Result<serde_json::Value, String> {
             let address = parse_address(&address)?;
 
-            let continuation = continuation
-                .map(|e| serde_json::from_str::<TransactionId>(&e))
+            let from_lt = from_lt
+                .map(|e| e.parse::<u64>())
                 .transpose()
-                .handle_error()?;
-
-            let before_lt = continuation.map(|e| e.lt);
-
-            let from = TransactionId {
-                lt: before_lt.unwrap_or(u64::MAX),
-                hash: Default::default(),
-            };
+                .handle_error()?
+                .unwrap_or(u64::MAX);
 
             let raw_transactions = transport
-                .get_transactions(address, from, limit)
+                .get_transactions(&address, from_lt, limit)
                 .await
                 .handle_error()?;
 
@@ -237,7 +231,7 @@ pub unsafe extern "C" fn nt_transport_get_transactions(
             serde_json::to_value(&transactions_list).handle_error()
         }
 
-        let result = internal_fn(transport, address, continuation, limit)
+        let result = internal_fn(transport, address, from_lt, limit)
             .await
             .match_result();
 

@@ -1,6 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-
-import 'password_explicit.dart';
+import 'package:nekoton_flutter/src/crypto/password_cache/password_explicit.dart';
 
 part 'password.freezed.dart';
 part 'password.g.dart';

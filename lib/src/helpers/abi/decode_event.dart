@@ -2,11 +2,10 @@ import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
-
-import '../../bindings.dart';
-import '../../ffi_utils.dart';
-import 'models/decoded_event.dart';
-import 'models/method_name.dart';
+import 'package:nekoton_flutter/src/bindings.dart';
+import 'package:nekoton_flutter/src/ffi_utils.dart';
+import 'package:nekoton_flutter/src/helpers/abi/models/decoded_event.dart';
+import 'package:nekoton_flutter/src/helpers/abi/models/method_name.dart';
 
 DecodedEvent? decodeEvent({
   required String messageBody,

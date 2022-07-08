@@ -1,7 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-
-import '../../accounts_storage/models/wallet_type.dart';
-import '../../models/contract_state.dart';
+import 'package:nekoton_flutter/src/core/accounts_storage/models/wallet_type.dart';
+import 'package:nekoton_flutter/src/core/models/contract_state.dart';
 
 part 'existing_wallet_info.freezed.dart';
 part 'existing_wallet_info.g.dart';
@@ -15,5 +14,6 @@ class ExistingWalletInfo with _$ExistingWalletInfo {
     required ContractState contractState,
   }) = _ExistingWalletInfo;
 
-  factory ExistingWalletInfo.fromJson(Map<String, dynamic> json) => _$ExistingWalletInfoFromJson(json);
+  factory ExistingWalletInfo.fromJson(Map<String, dynamic> json) =>
+      _$ExistingWalletInfoFromJson(json);
 }

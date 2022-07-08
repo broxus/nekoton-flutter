@@ -1,6 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-
-import 'signature_parts.dart';
+import 'package:nekoton_flutter/src/crypto/models/signature_parts.dart';
 
 part 'signed_data_raw.freezed.dart';
 part 'signed_data_raw.g.dart';
