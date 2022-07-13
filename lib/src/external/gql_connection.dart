@@ -10,6 +10,7 @@ import 'package:nekoton_flutter/src/bindings.dart';
 import 'package:nekoton_flutter/src/external/models/gql_connection_post_request.dart';
 import 'package:nekoton_flutter/src/external/models/gql_network_settings.dart';
 import 'package:nekoton_flutter/src/ffi_utils.dart';
+import 'package:nekoton_flutter/src/models/nekoton_exception.dart';
 import 'package:nekoton_flutter/src/transport/models/transport_type.dart';
 
 final _nativeFinalizer =
@@ -143,7 +144,7 @@ class GqlConnection implements Finalizable {
       }
     }
 
-    throw Exception('No available endpoints found');
+    throw NekotonException('No available endpoints found');
   }
 
   Future<int> _checkLatency(String endpoint) async {
