@@ -29,7 +29,8 @@ use crate::{
         models::{SignatureParts, SignedData, SignedDataRaw},
     },
     external::{ledger_connection::LedgerConnectionImpl, storage::StorageImpl},
-    parse_public_key, runtime, HandleError, MatchResult, PostWithResult, ToStringFromPtr, RUNTIME,
+    parse_public_key, runtime, HandleError, MatchResult, PostWithResult, ToPtrAddress,
+    ToStringFromPtr, RUNTIME,
 };
 
 #[no_mangle]
@@ -62,14 +63,16 @@ pub unsafe extern "C" fn nt_keystore_create(
 
             let ptr = Box::into_raw(Box::new(keystore));
 
-            serde_json::to_value(ptr as usize).handle_error()
+            serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
 
         let result = internal_fn(storage, connection, signers)
             .await
             .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -86,7 +89,9 @@ pub unsafe extern "C" fn nt_keystore_entries(result_port: c_longlong, keystore: 
 
         let result = internal_fn(keystore).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -144,7 +149,9 @@ pub unsafe extern "C" fn nt_keystore_add_key(
 
         let result = internal_fn(keystore, signer, input).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -206,7 +213,9 @@ pub unsafe extern "C" fn nt_keystore_add_keys(
 
         let result = internal_fn(keystore, signer, input).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -260,7 +269,9 @@ pub unsafe extern "C" fn nt_keystore_update_key(
 
         let result = internal_fn(keystore, signer, input).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -308,7 +319,9 @@ pub unsafe extern "C" fn nt_keystore_export_key(
 
         let result = internal_fn(keystore, signer, input).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -376,7 +389,9 @@ pub unsafe extern "C" fn nt_keystore_get_public_keys(
 
         let result = internal_fn(keystore, signer, input).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -450,7 +465,9 @@ pub unsafe extern "C" fn nt_keystore_encrypt(
             .await
             .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -511,7 +528,9 @@ pub unsafe extern "C" fn nt_keystore_decrypt(
             .await
             .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -549,7 +568,9 @@ pub unsafe extern "C" fn nt_keystore_sign(
             .await
             .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -596,7 +617,9 @@ pub unsafe extern "C" fn nt_keystore_sign_data(
             .await
             .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -641,7 +664,9 @@ pub unsafe extern "C" fn nt_keystore_sign_data_raw(
             .await
             .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -669,7 +694,9 @@ pub unsafe extern "C" fn nt_keystore_remove_key(
 
         let result = internal_fn(keystore, public_key).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -701,7 +728,9 @@ pub unsafe extern "C" fn nt_keystore_remove_keys(
 
         let result = internal_fn(keystore, public_keys).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -745,7 +774,9 @@ pub unsafe extern "C" fn nt_keystore_clear(result_port: c_longlong, keystore: *m
 
         let result = internal_fn(keystore).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -762,7 +793,9 @@ pub unsafe extern "C" fn nt_keystore_reload(result_port: c_longlong, keystore: *
 
         let result = internal_fn(keystore).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 

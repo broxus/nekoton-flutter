@@ -230,10 +230,10 @@ class TokenWallet extends ContractSubscription implements Finalizable {
     }).asBroadcastStream();
 
     _onTransactionsFoundSubscription = _onTransactionsFoundStream.listen(
-      (event) => _transactionsSubject.tryAdd(
+      (e) => _transactionsSubject.tryAdd(
         [
           ..._transactionsSubject.value,
-          ...event.transactions,
+          ...e.transactions,
         ]..sort((a, b) => a.transaction.compareTo(b.transaction)),
       ),
     );
@@ -253,7 +253,7 @@ class TokenWallet extends ContractSubscription implements Finalizable {
           ),
     );
 
-    _ptr = Pointer.fromAddress(result as int).cast<Void>();
+    _ptr = toPtrFromAddress(result as String);
 
     _nativeFinalizer.attach(this, _ptr);
 

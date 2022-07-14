@@ -99,7 +99,7 @@ class Storage implements Finalizable {
           ),
     );
 
-    _ptr = Pointer.fromAddress(result as int).cast<Void>();
+    _ptr = toPtrFromAddress(result as String);
 
     _nativeFinalizer.attach(this, _ptr);
   }
@@ -121,7 +121,7 @@ class Storage implements Finalizable {
   }
 
   Future<void> _getRequestHandler(StorageGetRequest event) async {
-    final tx = Pointer.fromAddress(event.tx).cast<Void>();
+    final tx = toPtrFromAddress(event.tx);
 
     String? ok;
     String? err;
@@ -140,7 +140,7 @@ class Storage implements Finalizable {
   }
 
   Future<void> _setRequestHandler(StorageSetRequest event) async {
-    final tx = Pointer.fromAddress(event.tx).cast<Void>();
+    final tx = toPtrFromAddress(event.tx);
 
     String? err;
 
@@ -172,7 +172,7 @@ class Storage implements Finalizable {
   }
 
   Future<void> _removeRequestHandler(StorageRemoveRequest event) async {
-    final tx = Pointer.fromAddress(event.tx).cast<Void>();
+    final tx = toPtrFromAddress(event.tx);
 
     String? err;
 

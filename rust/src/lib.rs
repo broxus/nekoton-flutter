@@ -64,6 +64,11 @@ pub unsafe extern "C" fn nt_store_dart_post_cobject(ptr: *mut c_void) {
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn nt_cstring_to_void_ptr(ptr: *mut c_char) -> *mut c_void {
+    ptr.to_string_from_ptr().to_ptr_from_address::<c_void>()
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn nt_free_cstring(ptr: *mut c_char) {
     ptr.to_string_from_ptr();
 }
@@ -132,6 +137,26 @@ fn parse_public_key(public_key: &str) -> Result<ed25519_dalek::PublicKey, String
 
 fn parse_address(address: &str) -> Result<MsgAddressInt, String> {
     MsgAddressInt::from_str(address).handle_error()
+}
+
+pub trait ToPtrAddress {
+    fn to_ptr_address(self) -> String;
+}
+
+impl<T> ToPtrAddress for *mut T {
+    fn to_ptr_address(self) -> String {
+        (self as usize).to_string()
+    }
+}
+
+pub trait ToPtrFromAddress {
+    fn to_ptr_from_address<T>(self) -> *mut T;
+}
+
+impl ToPtrFromAddress for String {
+    fn to_ptr_from_address<T>(self) -> *mut T {
+        self.parse::<usize>().unwrap() as *mut T
+    }
 }
 
 pub trait ToCStringPtr {

@@ -2,6 +2,8 @@
 
 void nt_store_dart_post_cobject(void *ptr);
 
+void *nt_cstring_to_void_ptr(char *ptr);
+
 void nt_free_cstring(char *ptr);
 
 void nt_accounts_storage_create(long long result_port, void *storage);

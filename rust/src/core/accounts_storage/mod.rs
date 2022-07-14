@@ -11,7 +11,8 @@ use nekoton::{core::accounts_storage::AccountsStorage, external::Storage};
 use crate::{
     core::accounts_storage::models::{AccountToAddHelper, AssetsListHelper},
     external::storage::StorageImpl,
-    parse_address, runtime, HandleError, MatchResult, PostWithResult, ToStringFromPtr, RUNTIME,
+    parse_address, runtime, HandleError, MatchResult, PostWithResult, ToPtrAddress,
+    ToStringFromPtr, RUNTIME,
 };
 
 #[no_mangle]
@@ -24,12 +25,14 @@ pub unsafe extern "C" fn nt_accounts_storage_create(result_port: c_longlong, sto
 
             let ptr = Box::into_raw(Box::new(accounts_storage));
 
-            serde_json::to_value(ptr as usize).handle_error()
+            serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
 
         let result = internal_fn(storage).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -59,7 +62,9 @@ pub unsafe extern "C" fn nt_accounts_storage_entries(
 
         let result = internal_fn(accounts_storage).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -94,7 +99,9 @@ pub unsafe extern "C" fn nt_accounts_storage_add_account(
             .await
             .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -134,7 +141,9 @@ pub unsafe extern "C" fn nt_accounts_storage_add_accounts(
             .await
             .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -168,7 +177,9 @@ pub unsafe extern "C" fn nt_accounts_storage_rename_account(
             .await
             .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -212,7 +223,9 @@ pub unsafe extern "C" fn nt_accounts_storage_add_token_wallet(
         .await
         .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -256,7 +269,9 @@ pub unsafe extern "C" fn nt_accounts_storage_remove_token_wallet(
         .await
         .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -286,7 +301,9 @@ pub unsafe extern "C" fn nt_accounts_storage_remove_account(
 
         let result = internal_fn(accounts_storage, account).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -320,7 +337,9 @@ pub unsafe extern "C" fn nt_accounts_storage_remove_accounts(
 
         let result = internal_fn(accounts_storage, accounts).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -342,7 +361,9 @@ pub unsafe extern "C" fn nt_accounts_storage_clear(
 
         let result = internal_fn(accounts_storage).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -364,7 +385,9 @@ pub unsafe extern "C" fn nt_accounts_storage_reload(
 
         let result = internal_fn(accounts_storage).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 

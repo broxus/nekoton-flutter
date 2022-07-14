@@ -16,8 +16,8 @@ use ton_block::{Block, Deserializable};
 
 use crate::{
     clock, core::generic_contract::handler::GenericContractSubscriptionHandlerImpl, parse_address,
-    runtime, transport::match_transport, HandleError, MatchResult, PostWithResult, ToStringFromPtr,
-    CLOCK, RUNTIME,
+    runtime, transport::match_transport, HandleError, MatchResult, PostWithResult, ToPtrAddress,
+    ToStringFromPtr, CLOCK, RUNTIME,
 };
 
 #[no_mangle]
@@ -69,7 +69,7 @@ pub unsafe extern "C" fn nt_generic_contract_subscribe(
 
             let ptr = Box::into_raw(Box::new(Arc::new(RwLock::new(generic_contract))));
 
-            serde_json::to_value(ptr as usize).handle_error()
+            serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
 
         let result = internal_fn(
@@ -84,7 +84,9 @@ pub unsafe extern "C" fn nt_generic_contract_subscribe(
         .await
         .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -106,7 +108,9 @@ pub unsafe extern "C" fn nt_generic_contract_address(
 
         let result = internal_fn(&generic_contract).match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -128,7 +132,9 @@ pub unsafe extern "C" fn nt_generic_contract_contract_state(
 
         let result = internal_fn(&generic_contract).match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -150,7 +156,9 @@ pub unsafe extern "C" fn nt_generic_contract_pending_transactions(
 
         let result = internal_fn(&generic_contract).match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -172,7 +180,9 @@ pub unsafe extern "C" fn nt_generic_contract_polling_method(
 
         let result = internal_fn(&generic_contract).match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -210,7 +220,9 @@ pub unsafe extern "C" fn nt_generic_contract_estimate_fees(
             .await
             .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -246,7 +258,9 @@ pub unsafe extern "C" fn nt_generic_contract_send(
             .await
             .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -289,7 +303,9 @@ pub unsafe extern "C" fn nt_generic_contract_execute_transaction_locally(
             .await
             .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -313,7 +329,9 @@ pub unsafe extern "C" fn nt_generic_contract_refresh(
 
         let result = internal_fn(&mut generic_contract).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -348,7 +366,9 @@ pub unsafe extern "C" fn nt_generic_contract_preload_transactions(
             .await
             .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -380,7 +400,9 @@ pub unsafe extern "C" fn nt_generic_contract_handle_block(
             .await
             .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 

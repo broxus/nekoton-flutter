@@ -6,7 +6,7 @@ part 'storage_set_request.g.dart';
 @freezed
 class StorageSetRequest with _$StorageSetRequest {
   const factory StorageSetRequest({
-    required int tx,
+    required String tx,
     required String key,
     required String value,
   }) = _StorageSetRequest;

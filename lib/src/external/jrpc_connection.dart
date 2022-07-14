@@ -53,7 +53,7 @@ class JrpcConnection implements Finalizable {
           ),
     );
 
-    _ptr = Pointer.fromAddress(result as int).cast<Void>();
+    _ptr = toPtrFromAddress(result as String);
 
     _nativeFinalizer.attach(this, _ptr);
   }
@@ -73,7 +73,7 @@ class JrpcConnection implements Finalizable {
   }
 
   Future<void> _postRequestHandler(JrpcConnectionPostRequest event) async {
-    final tx = Pointer.fromAddress(event.tx).cast<Void>();
+    final tx = toPtrFromAddress(event.tx);
 
     String? ok;
     String? err;

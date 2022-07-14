@@ -30,8 +30,8 @@ use crate::{
     },
     parse_address, parse_public_key, runtime,
     transport::{match_transport, models::RawContractStateHelper},
-    HandleError, MatchResult, PostWithResult, ToOptionalStringFromPtr, ToStringFromPtr, CLOCK,
-    RUNTIME,
+    HandleError, MatchResult, PostWithResult, ToOptionalStringFromPtr, ToPtrAddress,
+    ToStringFromPtr, CLOCK, RUNTIME,
 };
 
 #[no_mangle]
@@ -90,7 +90,7 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe(
 
             let ptr = Box::into_raw(Box::new(RwLock::new(ton_wallet)));
 
-            serde_json::to_value(ptr as usize).handle_error()
+            serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
 
         let result = internal_fn(
@@ -106,7 +106,9 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe(
         .await
         .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -150,7 +152,7 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe_by_address(
 
             let ptr = Box::into_raw(Box::new(RwLock::new(ton_wallet)));
 
-            serde_json::to_value(ptr as usize).handle_error()
+            serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
 
         let result = internal_fn(
@@ -164,7 +166,9 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe_by_address(
         .await
         .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -212,7 +216,7 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe_by_existing(
 
             let ptr = Box::into_raw(Box::new(RwLock::new(ton_wallet)));
 
-            serde_json::to_value(ptr as usize).handle_error()
+            serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
 
         let result = internal_fn(
@@ -226,7 +230,9 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe_by_existing(
         .await
         .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -245,7 +251,9 @@ pub unsafe extern "C" fn nt_ton_wallet_workchain(result_port: c_longlong, ton_wa
 
         let result = internal_fn(&ton_wallet).match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -264,7 +272,9 @@ pub unsafe extern "C" fn nt_ton_wallet_address(result_port: c_longlong, ton_wall
 
         let result = internal_fn(&ton_wallet).match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -288,7 +298,9 @@ pub unsafe extern "C" fn nt_ton_wallet_public_key(
 
         let result = internal_fn(&ton_wallet).match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -310,7 +322,9 @@ pub unsafe extern "C" fn nt_ton_wallet_wallet_type(
 
         let result = internal_fn(&ton_wallet).match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -332,7 +346,9 @@ pub unsafe extern "C" fn nt_ton_wallet_contract_state(
 
         let result = internal_fn(&ton_wallet).match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -354,7 +370,9 @@ pub unsafe extern "C" fn nt_ton_wallet_pending_transactions(
 
         let result = internal_fn(&ton_wallet).match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -376,7 +394,9 @@ pub unsafe extern "C" fn nt_ton_wallet_polling_method(
 
         let result = internal_fn(&ton_wallet).match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -395,7 +415,9 @@ pub unsafe extern "C" fn nt_ton_wallet_details(result_port: c_longlong, ton_wall
 
         let result = internal_fn(&ton_wallet).match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -417,7 +439,9 @@ pub unsafe extern "C" fn nt_ton_wallet_unconfirmed_transactions(
 
         let result = internal_fn(&ton_wallet).match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -442,7 +466,9 @@ pub unsafe extern "C" fn nt_ton_wallet_custodians(
 
         let result = internal_fn(&ton_wallet).match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -467,14 +493,16 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_deploy(
 
             let ptr = Box::into_raw(Box::new(RwLock::new(unsigned_message)));
 
-            serde_json::to_value(ptr as usize).handle_error()
+            serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
 
         let ton_wallet = ton_wallet.read().await;
 
         let result = internal_fn(&ton_wallet, expiration).match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -512,14 +540,16 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_deploy_with_multiple_owners(
 
             let ptr = Box::into_raw(Box::new(RwLock::new(unsigned_message)));
 
-            serde_json::to_value(ptr as usize).handle_error()
+            serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
 
         let ton_wallet = ton_wallet.read().await;
 
         let result = internal_fn(&ton_wallet, expiration, custodians, req_confirms).match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -601,7 +631,7 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_transfer(
 
             let ptr = Box::into_raw(Box::new(RwLock::new(unsigned_message)));
 
-            serde_json::to_value(ptr as usize).handle_error()
+            serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
 
         let mut ton_wallet = ton_wallet.write().await;
@@ -618,7 +648,9 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_transfer(
         )
         .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -674,7 +706,7 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_confirm_transaction(
 
             let ptr = Box::into_raw(Box::new(RwLock::new(unsigned_message)));
 
-            serde_json::to_value(ptr as usize).handle_error()
+            serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
 
         let ton_wallet = ton_wallet.read().await;
@@ -688,7 +720,9 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_confirm_transaction(
         )
         .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -726,7 +760,9 @@ pub unsafe extern "C" fn nt_ton_wallet_estimate_fees(
             .await
             .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -762,7 +798,9 @@ pub unsafe extern "C" fn nt_ton_wallet_send(
             .await
             .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -781,7 +819,9 @@ pub unsafe extern "C" fn nt_ton_wallet_refresh(result_port: c_longlong, ton_wall
 
         let result = internal_fn(&mut ton_wallet).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -814,7 +854,9 @@ pub unsafe extern "C" fn nt_ton_wallet_preload_transactions(
 
         let result = internal_fn(&mut ton_wallet, from_lt).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -844,7 +886,9 @@ pub unsafe extern "C" fn nt_ton_wallet_handle_block(
 
         let result = internal_fn(&mut ton_wallet, block).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -893,7 +937,9 @@ pub unsafe extern "C" fn nt_find_existing_wallets(
             .await
             .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -943,7 +989,9 @@ pub unsafe extern "C" fn nt_get_existing_wallet_info(
 
         let result = internal_fn(transport, address).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -997,7 +1045,9 @@ pub unsafe extern "C" fn nt_get_wallet_custodians(
 
         let result = internal_fn(transport, address).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 

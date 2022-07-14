@@ -22,7 +22,8 @@ use crate::{
     transport::models::{
         AccountsList, FullContractState, RawContractStateHelper, TransactionsList, TransportType,
     },
-    HandleError, MatchResult, PostWithResult, ToOptionalStringFromPtr, ToStringFromPtr, RUNTIME,
+    HandleError, MatchResult, PostWithResult, ToOptionalStringFromPtr, ToPtrAddress,
+    ToStringFromPtr, RUNTIME,
 };
 
 #[no_mangle]
@@ -54,7 +55,9 @@ pub unsafe extern "C" fn nt_transport_get_contract_state(
 
         let result = internal_fn(transport, address).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -115,7 +118,9 @@ pub unsafe extern "C" fn nt_transport_get_full_contract_state(
 
         let result = internal_fn(transport, address).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -161,7 +166,9 @@ pub unsafe extern "C" fn nt_transport_get_accounts_by_code_hash(
             .await
             .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -235,7 +242,9 @@ pub unsafe extern "C" fn nt_transport_get_transactions(
             .await
             .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -271,7 +280,9 @@ pub unsafe extern "C" fn nt_transport_get_transaction(
 
         let result = internal_fn(transport, hash).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 

@@ -12,8 +12,8 @@ use nekoton::crypto::UnsignedMessage;
 use tokio::sync::RwLock;
 
 use crate::{
-    clock, parse_public_key, runtime, HandleError, MatchResult, PostWithResult, ToStringFromPtr,
-    CLOCK, RUNTIME,
+    clock, parse_public_key, runtime, HandleError, MatchResult, PostWithResult, ToPtrAddress,
+    ToStringFromPtr, CLOCK, RUNTIME,
 };
 
 #[no_mangle]
@@ -36,7 +36,9 @@ pub unsafe extern "C" fn nt_unsigned_message_refresh_timeout(
 
         let result = internal_fn(&mut unsigned_message).match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -60,7 +62,9 @@ pub unsafe extern "C" fn nt_unsigned_message_expire_at(
 
         let result = internal_fn(&unsigned_message).match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -86,7 +90,9 @@ pub unsafe extern "C" fn nt_unsigned_message_hash(
 
         let result = internal_fn(&unsigned_message).match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -120,7 +126,9 @@ pub unsafe extern "C" fn nt_unsigned_message_sign(
 
         let result = internal_fn(&unsigned_message, signature).match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 

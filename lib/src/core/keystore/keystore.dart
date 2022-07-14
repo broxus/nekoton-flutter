@@ -424,7 +424,7 @@ class Keystore implements Finalizable {
               ),
         );
 
-        _ptr = Pointer.fromAddress(result as int).cast<Void>();
+        _ptr = toPtrFromAddress(result as String);
 
         _nativeFinalizer.attach(this, _ptr);
       });

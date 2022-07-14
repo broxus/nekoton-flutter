@@ -62,7 +62,7 @@ class GqlConnection implements Finalizable {
           ),
     );
 
-    _ptr = Pointer.fromAddress(result as int).cast<Void>();
+    _ptr = toPtrFromAddress(result as String);
 
     _nativeFinalizer.attach(this, _ptr);
   }
@@ -82,7 +82,7 @@ class GqlConnection implements Finalizable {
   }
 
   Future<void> _postRequestHandler(GqlConnectionPostRequest event) async {
-    final tx = Pointer.fromAddress(event.tx).cast<Void>();
+    final tx = toPtrFromAddress(event.tx);
 
     String? ok;
     String? err;

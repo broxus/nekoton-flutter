@@ -31,7 +31,7 @@ use crate::{
         parse_account_stuff,
     },
     parse_address, parse_public_key, HandleError, MatchResult, ToOptionalStringFromPtr,
-    ToStringFromPtr, CLOCK,
+    ToPtrAddress, ToStringFromPtr, CLOCK,
 };
 
 #[no_mangle]
@@ -329,7 +329,7 @@ pub unsafe extern "C" fn nt_create_external_message(
 
         let ptr = Box::into_raw(Box::new(Arc::new(unsigned_message)));
 
-        serde_json::to_value(ptr as usize).handle_error()
+        serde_json::to_value(ptr.to_ptr_address()).handle_error()
     }
 
     internal_fn(

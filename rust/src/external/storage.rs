@@ -10,7 +10,7 @@ use nekoton::external::Storage;
 use serde::Serialize;
 use tokio::sync::oneshot::{channel, Sender};
 
-use crate::{HandleError, MatchResult};
+use crate::{HandleError, MatchResult, ToPtrAddress, ToPtrFromAddress};
 
 pub struct StorageImpl {
     get_port: Isolate,
@@ -43,16 +43,19 @@ impl Storage for StorageImpl {
     async fn get(&self, key: &str) -> Result<Option<String>> {
         let (tx, rx) = channel::<Result<Option<String>>>();
 
-        let tx = Box::into_raw(Box::new(tx)) as usize;
+        let tx = Box::into_raw(Box::new(tx)).to_ptr_address();
         let key = key.to_owned();
 
-        let request = serde_json::to_string(&StorageGetRequest { tx, key })?;
+        let request = serde_json::to_string(&StorageGetRequest {
+            tx: tx.clone(),
+            key,
+        })?;
 
         match self.get_port.post(request) {
             true => rx.await.unwrap(),
             false => {
                 unsafe {
-                    Box::from_raw(tx as *mut Sender<Result<String>>);
+                    Box::from_raw(tx.to_ptr_from_address::<Sender<Result<Option<String>>>>());
                 }
 
                 bail!("Message was not posted successfully")
@@ -63,17 +66,21 @@ impl Storage for StorageImpl {
     async fn set(&self, key: &str, value: &str) -> Result<()> {
         let (tx, rx) = channel::<Result<()>>();
 
-        let tx = Box::into_raw(Box::new(tx)) as usize;
+        let tx = Box::into_raw(Box::new(tx)).to_ptr_address();
         let key = key.to_owned();
         let value = value.to_owned();
 
-        let request = serde_json::to_string(&StorageSetRequest { tx, key, value })?;
+        let request = serde_json::to_string(&StorageSetRequest {
+            tx: tx.clone(),
+            key,
+            value,
+        })?;
 
         match self.set_port.post(request) {
             true => rx.await.unwrap(),
             false => {
                 unsafe {
-                    Box::from_raw(tx as *mut Sender<Result<String>>);
+                    Box::from_raw(tx.to_ptr_from_address::<Sender<Result<()>>>());
                 }
 
                 bail!("Message was not posted successfully")
@@ -93,16 +100,19 @@ impl Storage for StorageImpl {
     async fn remove(&self, key: &str) -> Result<()> {
         let (tx, rx) = channel::<Result<()>>();
 
-        let tx = Box::into_raw(Box::new(tx)) as usize;
+        let tx = Box::into_raw(Box::new(tx)).to_ptr_address();
         let key = key.to_owned();
 
-        let request = serde_json::to_string(&StorageRemoveRequest { tx, key })?;
+        let request = serde_json::to_string(&StorageRemoveRequest {
+            tx: tx.clone(),
+            key,
+        })?;
 
         match self.remove_port.post(request) {
             true => rx.await.unwrap(),
             false => {
                 unsafe {
-                    Box::from_raw(tx as *mut Sender<Result<String>>);
+                    Box::from_raw(tx.to_ptr_from_address::<Sender<Result<()>>>());
                 }
 
                 bail!("Message was not posted successfully")
@@ -121,13 +131,13 @@ impl Storage for StorageImpl {
 
 #[derive(Serialize)]
 pub struct StorageGetRequest {
-    pub tx: usize,
+    pub tx: String,
     pub key: String,
 }
 
 #[derive(Serialize)]
 pub struct StorageSetRequest {
-    pub tx: usize,
+    pub tx: String,
     pub key: String,
     pub value: String,
 }
@@ -140,7 +150,7 @@ pub struct StorageSetUncheckedRequest {
 
 #[derive(Serialize)]
 pub struct StorageRemoveRequest {
-    pub tx: usize,
+    pub tx: String,
     pub key: String,
 }
 
@@ -174,7 +184,7 @@ pub unsafe extern "C" fn nt_storage_create(
 
         let ptr = Box::into_raw(Box::new(Arc::new(storage)));
 
-        serde_json::to_value(ptr as usize).handle_error()
+        serde_json::to_value(ptr.to_ptr_address()).handle_error()
     }
 
     internal_fn(

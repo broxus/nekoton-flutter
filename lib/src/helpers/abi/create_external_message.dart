@@ -30,7 +30,7 @@ UnsignedMessage createExternalMessage({
         ),
   );
 
-  final unsignedMessage = UnsignedMessage(Pointer.fromAddress(result as int).cast<Void>());
+  final unsignedMessage = UnsignedMessage(toPtrFromAddress(result as String));
 
   return unsignedMessage;
 }

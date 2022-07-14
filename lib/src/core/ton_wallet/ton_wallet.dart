@@ -280,7 +280,7 @@ class TonWallet extends ContractSubscription implements Finalizable {
           ),
     );
 
-    final unsignedMessage = UnsignedMessage(Pointer.fromAddress(result as int).cast<Void>());
+    final unsignedMessage = UnsignedMessage(toPtrFromAddress(result as String));
 
     return unsignedMessage;
   }
@@ -304,7 +304,7 @@ class TonWallet extends ContractSubscription implements Finalizable {
               ),
     );
 
-    final unsignedMessage = UnsignedMessage(Pointer.fromAddress(result as int).cast<Void>());
+    final unsignedMessage = UnsignedMessage(toPtrFromAddress(result as String));
 
     return unsignedMessage;
   }
@@ -335,7 +335,7 @@ class TonWallet extends ContractSubscription implements Finalizable {
           ),
     );
 
-    final unsignedMessage = UnsignedMessage(Pointer.fromAddress(result as int).cast<Void>());
+    final unsignedMessage = UnsignedMessage(toPtrFromAddress(result as String));
 
     return unsignedMessage;
   }
@@ -360,7 +360,7 @@ class TonWallet extends ContractSubscription implements Finalizable {
           ),
     );
 
-    final unsignedMessage = UnsignedMessage(Pointer.fromAddress(result as int).cast<Void>());
+    final unsignedMessage = UnsignedMessage(toPtrFromAddress(result as String));
 
     return unsignedMessage;
   }
@@ -487,7 +487,7 @@ class TonWallet extends ContractSubscription implements Finalizable {
                 ),
           );
 
-          return result as int;
+          return result;
         },
       );
 
@@ -509,7 +509,7 @@ class TonWallet extends ContractSubscription implements Finalizable {
                 ),
           );
 
-          return result as int;
+          return result;
         },
       );
 
@@ -532,11 +532,11 @@ class TonWallet extends ContractSubscription implements Finalizable {
                 ),
           );
 
-          return result as int;
+          return result;
         },
       );
 
-  Future<void> _initialize(Future<int> Function() subscribe) async {
+  Future<void> _initialize(Future<dynamic> Function() subscribe) async {
     _onMessageSentStream = _onMessageSentPort.cast<String>().map((e) {
       final json = jsonDecode(e) as Map<String, dynamic>;
       final payload = OnMessageSentPayload.fromJson(json);
@@ -562,24 +562,24 @@ class TonWallet extends ContractSubscription implements Finalizable {
     }).asBroadcastStream();
 
     _onMessageExpiredSubscription = _onMessageExpiredStream.listen(
-      (event) => _expiredTransactionsSubject.tryAdd(
+      (e) => _expiredTransactionsSubject.tryAdd(
         [
           ..._expiredTransactionsSubject.value,
-          event.pendingTransaction,
+          e.pendingTransaction,
         ]..sort((a, b) => a.compareTo(b)),
       ),
     );
 
     _onTransactionsFoundSubscription = _onTransactionsFoundStream.listen(
-      (event) => _transactionsSubject.tryAdd(
+      (e) => _transactionsSubject.tryAdd(
         [
           ..._transactionsSubject.value,
-          ...event.transactions,
+          ...e.transactions,
         ]..sort((a, b) => a.transaction.compareTo(b.transaction)),
       ),
     );
 
-    _ptr = Pointer.fromAddress(await subscribe()).cast<Void>();
+    _ptr = toPtrFromAddress(await subscribe() as String);
 
     _nativeFinalizer.attach(this, _ptr);
 

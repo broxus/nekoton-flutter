@@ -11,7 +11,7 @@ use ton_block::Serializable;
 
 use crate::{
     external::gql_connection::GqlConnectionImpl, parse_address, runtime, HandleError, MatchResult,
-    PostWithResult, ToStringFromPtr, RUNTIME,
+    PostWithResult, ToPtrAddress, ToStringFromPtr, RUNTIME,
 };
 
 #[no_mangle]
@@ -23,7 +23,7 @@ pub unsafe extern "C" fn nt_gql_transport_create(gql_connection: *mut c_void) ->
 
         let ptr = Box::into_raw(Box::new(Arc::new(gql_transport)));
 
-        serde_json::to_value(ptr as usize).handle_error()
+        serde_json::to_value(ptr.to_ptr_address()).handle_error()
     }
 
     internal_fn(gql_connection).match_result()
@@ -57,7 +57,9 @@ pub unsafe extern "C" fn nt_gql_transport_get_latest_block_id(
 
         let result = internal_fn(gql_transport, address).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -91,7 +93,9 @@ pub unsafe extern "C" fn nt_gql_transport_get_block(
 
         let result = internal_fn(gql_transport, id).await.match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -131,7 +135,9 @@ pub unsafe extern "C" fn nt_gql_transport_wait_for_next_block_id(
             .await
             .match_result();
 
-        Isolate::new(result_port).post_with_result(result).unwrap();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 

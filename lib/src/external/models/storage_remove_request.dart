@@ -6,7 +6,7 @@ part 'storage_remove_request.g.dart';
 @freezed
 class StorageRemoveRequest with _$StorageRemoveRequest {
   const factory StorageRemoveRequest({
-    required int tx,
+    required String tx,
     required String key,
   }) = _StorageRemoveRequest;
 

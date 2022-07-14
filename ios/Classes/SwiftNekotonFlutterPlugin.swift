@@ -17,6 +17,8 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
     nt_store_dart_post_cobject(nil);
 
+    nt_cstring_to_void_ptr(nil);
+
     nt_free_cstring(nil);
 
     nt_accounts_storage_create(0, nil);

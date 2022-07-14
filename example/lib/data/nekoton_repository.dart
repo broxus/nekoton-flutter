@@ -74,12 +74,12 @@ class NekotonRepository {
                     headers: headers,
                     body: data,
                   )
-                  .then((value) => value.body),
+                  .then((v) => v.body),
           get: (endpoint) => http
               .get(
                 Uri.parse(endpoint),
               )
-              .then((value) => value.body),
+              .then((v) => v.body),
           name: 'Mainnet (GQL)',
           group: 'mainnet',
           settings: const GqlNetworkSettings(
@@ -111,7 +111,7 @@ class NekotonRepository {
                     headers: headers,
                     body: data,
                   )
-                  .then((value) => value.body),
+                  .then((v) => v.body),
           name: 'Mainnet (ADNL)',
           group: 'mainnet',
           settings: const JrpcNetworkSettings(endpoint: 'https://jrpc.everwallet.net/rpc'),

@@ -6,7 +6,7 @@ part 'jrpc_connection_post_request.g.dart';
 @freezed
 class JrpcConnectionPostRequest with _$JrpcConnectionPostRequest {
   const factory JrpcConnectionPostRequest({
-    required int tx,
+    required String tx,
     required String data,
   }) = _JrpcConnectionPostRequest;
 

@@ -5,7 +5,9 @@ use std::{
 
 use nekoton::transport::jrpc::JrpcTransport;
 
-use crate::{external::jrpc_connection::JrpcConnectionImpl, HandleError, MatchResult};
+use crate::{
+    external::jrpc_connection::JrpcConnectionImpl, HandleError, MatchResult, ToPtrAddress,
+};
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_jrpc_transport_create(jrpc_connection: *mut c_void) -> *mut c_char {
@@ -16,7 +18,7 @@ pub unsafe extern "C" fn nt_jrpc_transport_create(jrpc_connection: *mut c_void) 
 
         let ptr = Box::into_raw(Box::new(Arc::new(jrpc_transport)));
 
-        serde_json::to_value(ptr as usize).handle_error()
+        serde_json::to_value(ptr.to_ptr_address()).handle_error()
     }
 
     internal_fn(jrpc_connection).match_result()

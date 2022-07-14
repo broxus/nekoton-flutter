@@ -7,7 +7,7 @@ part 'ledger_connection_sign_request.g.dart';
 @freezed
 class LedgerConnectionSignRequest with _$LedgerConnectionSignRequest {
   const factory LedgerConnectionSignRequest({
-    required int tx,
+    required String tx,
     required int account,
     required List<int> message,
     LedgerSignatureContext? context,

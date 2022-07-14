@@ -10,7 +10,7 @@ use nekoton::external::{LedgerConnection, LedgerSignatureContext};
 use serde::Serialize;
 use tokio::sync::oneshot::{channel, Sender};
 
-use crate::{HandleError, MatchResult};
+use crate::{HandleError, MatchResult, ToPtrAddress, ToPtrFromAddress};
 
 pub struct LedgerConnectionImpl {
     get_public_key_port: Isolate,
@@ -34,10 +34,12 @@ impl LedgerConnection for LedgerConnectionImpl {
     ) -> Result<[u8; ed25519_dalek::PUBLIC_KEY_LENGTH]> {
         let (tx, rx) = channel::<Result<String>>();
 
-        let tx = Box::into_raw(Box::new(tx)) as usize;
+        let tx = Box::into_raw(Box::new(tx)).to_ptr_address();
 
-        let request =
-            serde_json::to_string(&LedgerConnectionGetPublicKeyRequest { tx, account_id })?;
+        let request = serde_json::to_string(&LedgerConnectionGetPublicKeyRequest {
+            tx: tx.clone(),
+            account_id,
+        })?;
 
         match self.get_public_key_port.post(request) {
             true => rx
@@ -48,7 +50,7 @@ impl LedgerConnection for LedgerConnectionImpl {
                 }),
             false => {
                 unsafe {
-                    Box::from_raw(tx as *mut Sender<Result<String>>);
+                    Box::from_raw(tx.to_ptr_from_address::<Sender<Result<String>>>());
                 }
 
                 bail!("Message was not posted successfully")
@@ -64,12 +66,12 @@ impl LedgerConnection for LedgerConnectionImpl {
     ) -> Result<[u8; ed25519_dalek::SIGNATURE_LENGTH]> {
         let (tx, rx) = channel::<Result<String>>();
 
-        let tx = Box::into_raw(Box::new(tx)) as usize;
+        let tx = Box::into_raw(Box::new(tx)).to_ptr_address();
         let message = message.to_owned();
         let context = context.to_owned();
 
         let request = serde_json::to_string(&LedgerConnectionSignRequest {
-            tx,
+            tx: tx.clone(),
             account,
             message,
             context,
@@ -84,7 +86,7 @@ impl LedgerConnection for LedgerConnectionImpl {
                 }),
             false => {
                 unsafe {
-                    Box::from_raw(tx as *mut Sender<Result<String>>);
+                    Box::from_raw(tx.to_ptr_from_address::<Sender<Result<String>>>());
                 }
 
                 bail!("Message was not posted successfully")
@@ -96,13 +98,13 @@ impl LedgerConnection for LedgerConnectionImpl {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LedgerConnectionGetPublicKeyRequest {
-    pub tx: usize,
+    pub tx: String,
     pub account_id: u16,
 }
 
 #[derive(Serialize)]
 pub struct LedgerConnectionSignRequest {
-    pub tx: usize,
+    pub tx: String,
     pub account: u16,
     pub message: Vec<u8>,
     pub context: Option<LedgerSignatureContext>,
@@ -118,7 +120,7 @@ pub unsafe extern "C" fn nt_ledger_connection_create(
 
         let ptr = Box::into_raw(Box::new(Arc::new(ledger_connection)));
 
-        serde_json::to_value(ptr as usize).handle_error()
+        serde_json::to_value(ptr.to_ptr_address()).handle_error()
     }
 
     internal_fn(get_public_key_port, sign_port).match_result()

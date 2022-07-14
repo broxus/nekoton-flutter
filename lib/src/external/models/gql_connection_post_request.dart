@@ -6,7 +6,7 @@ part 'gql_connection_post_request.g.dart';
 @freezed
 class GqlConnectionPostRequest with _$GqlConnectionPostRequest {
   const factory GqlConnectionPostRequest({
-    required int tx,
+    required String tx,
     required String data,
   }) = _GqlConnectionPostRequest;
 

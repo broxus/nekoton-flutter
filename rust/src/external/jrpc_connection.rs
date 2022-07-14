@@ -11,7 +11,7 @@ use nekoton::external::JrpcConnection;
 use serde::Serialize;
 use tokio::sync::oneshot::{channel, Sender};
 
-use crate::{HandleError, MatchResult};
+use crate::{HandleError, MatchResult, ToPtrAddress, ToPtrFromAddress};
 
 pub struct JrpcConnectionImpl {
     port: Isolate,
@@ -30,16 +30,19 @@ impl JrpcConnection for JrpcConnectionImpl {
     async fn post(&self, data: &str) -> Result<String> {
         let (tx, rx) = channel::<Result<String>>();
 
-        let tx = Box::into_raw(Box::new(tx)) as usize;
+        let tx = Box::into_raw(Box::new(tx)).to_ptr_address();
         let data = data.to_owned();
 
-        let request = serde_json::to_string(&JrpcConnectionPostRequest { tx, data })?;
+        let request = serde_json::to_string(&JrpcConnectionPostRequest {
+            tx: tx.clone(),
+            data,
+        })?;
 
         match self.port.post(request) {
             true => rx.await.unwrap(),
             false => {
                 unsafe {
-                    Box::from_raw(tx as *mut Sender<Result<String>>);
+                    Box::from_raw(tx.to_ptr_from_address::<Sender<Result<String>>>());
                 }
 
                 bail!("Message was not posted successfully")
@@ -50,7 +53,7 @@ impl JrpcConnection for JrpcConnectionImpl {
 
 #[derive(Serialize)]
 pub struct JrpcConnectionPostRequest {
-    pub tx: usize,
+    pub tx: String,
     pub data: String,
 }
 
@@ -61,7 +64,7 @@ pub unsafe extern "C" fn nt_jrpc_connection_create(port: c_longlong) -> *mut c_c
 
         let ptr = Box::into_raw(Box::new(Arc::new(jrpc_connection)));
 
-        serde_json::to_value(ptr as usize).handle_error()
+        serde_json::to_value(ptr.to_ptr_address()).handle_error()
     }
 
     internal_fn(port).match_result()
