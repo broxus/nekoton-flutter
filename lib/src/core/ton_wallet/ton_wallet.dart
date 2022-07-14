@@ -57,6 +57,7 @@ class TonWallet extends ContractSubscription implements Finalizable {
   late final String _publicKey;
   late final WalletType _walletType;
   late final TonWalletDetails _details;
+  RawContractState? _cachedContractState;
 
   TonWallet._(this._transport);
 
@@ -310,7 +311,6 @@ class TonWallet extends ContractSubscription implements Finalizable {
   }
 
   Future<UnsignedMessage> prepareTransfer({
-    required RawContractState contractState,
     required String publicKey,
     required String destination,
     required String amount,
@@ -318,6 +318,8 @@ class TonWallet extends ContractSubscription implements Finalizable {
     required bool bounce,
     required Expiration expiration,
   }) async {
+    final contractState = _cachedContractState ??= await _transport.getContractState(address);
+
     final contractStateStr = jsonEncode(contractState);
     final expirationStr = jsonEncode(expiration);
 
@@ -341,11 +343,12 @@ class TonWallet extends ContractSubscription implements Finalizable {
   }
 
   Future<UnsignedMessage> prepareConfirmTransaction({
-    required RawContractState contractState,
     required String publicKey,
     required String transactionId,
     required Expiration expiration,
   }) async {
+    final contractState = _cachedContractState ??= await _transport.getContractState(address);
+
     final contractStateStr = jsonEncode(contractState);
     final expirationStr = jsonEncode(expiration);
 
@@ -418,6 +421,8 @@ class TonWallet extends ContractSubscription implements Finalizable {
           ),
     );
 
+    _cachedContractState = null;
+
     _pendingTransactionsSubject.tryAdd(await _pendingTransactions);
 
     _unconfirmedTransactionsSubject.tryAdd(await _unconfirmedTransactions);
@@ -440,6 +445,8 @@ class TonWallet extends ContractSubscription implements Finalizable {
             block.toNativeUtf8().cast<Char>(),
           ),
     );
+
+    _cachedContractState = null;
 
     _pendingTransactionsSubject.tryAdd(await _pendingTransactions);
 
