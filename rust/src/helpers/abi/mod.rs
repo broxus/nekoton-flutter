@@ -175,7 +175,7 @@ pub unsafe extern "C" fn nt_encode_internal_input(
         let input = nekoton_abi::parse_abi_tokens(&method.inputs, input).handle_error()?;
 
         let body = method
-            .encode_input(&Default::default(), &input, true, None)
+            .encode_input(&Default::default(), &input, true, None, None)
             .and_then(|e| e.into_cell())
             .handle_error()?;
 
@@ -242,7 +242,7 @@ pub unsafe extern "C" fn nt_create_external_message_without_signature(
         header.insert("pubkey".to_string(), ton_abi::TokenValue::PublicKey(None));
 
         let body = method
-            .encode_input(&header, &input, false, None)
+            .encode_input(&header, &input, false, None, None)
             .handle_error()?;
 
         let mut message =

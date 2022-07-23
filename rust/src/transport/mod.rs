@@ -215,7 +215,7 @@ pub unsafe extern "C" fn nt_transport_get_transactions(
             };
 
             let raw_transactions = transport
-                .get_transactions(address, from, limit)
+                .get_transactions(&address, from.lt, limit)
                 .await
                 .handle_error()?;
 

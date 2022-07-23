@@ -57,7 +57,7 @@ pub unsafe extern "C" fn nt_generic_contract_subscribe(
             ));
 
             let generic_contract =
-                GenericContract::subscribe(CLOCK.clone(), transport, address, handler)
+                GenericContract::subscribe(CLOCK.clone(), transport, address, handler, false)
                     .await
                     .handle_error()?;
 
@@ -350,7 +350,7 @@ pub unsafe extern "C" fn nt_generic_contract_preload_transactions(
             let from = serde_json::from_str::<TransactionId>(&from).handle_error()?;
 
             generic_contract
-                .preload_transactions(from)
+                .preload_transactions(from.lt)
                 .await
                 .handle_error()?;
 

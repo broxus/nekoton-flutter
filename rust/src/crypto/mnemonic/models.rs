@@ -6,7 +6,7 @@ use crate::models::{ToNekoton, ToSerializable};
 
 #[derive(Serialize)]
 pub struct GeneratedKey {
-    pub words: Vec<String>,
+    pub words: Vec<&'static str>,
     pub account_type: MnemonicType,
 }
 

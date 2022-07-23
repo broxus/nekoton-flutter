@@ -7,7 +7,10 @@ use std::{
 };
 
 use nekoton::{
-    core::ton_wallet::{self, TonWallet, TransferAction},
+    core::{
+        models::MessageFlags,
+        ton_wallet::{self, Gift, TonWallet, TransferAction},
+    },
     transport::Transport,
 };
 use nekoton_abi::{create_boc_or_comment_payload, TransactionId};
@@ -612,10 +615,14 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_transfer(
                 .prepare_transfer(
                     &current_state,
                     &public_key,
-                    destination,
-                    amount,
-                    bounce,
-                    body,
+                    Gift {
+                        flags: MessageFlags::default().into(),
+                        state_init: None,
+                        destination,
+                        amount,
+                        bounce,
+                        body,
+                    },
                     expiration,
                 )
                 .handle_error()?;
@@ -834,7 +841,10 @@ pub unsafe extern "C" fn nt_ton_wallet_preload_transactions(
         async fn internal_fn(ton_wallet: &mut TonWallet, from: String) -> Result<u64, String> {
             let from = serde_json::from_str::<TransactionId>(&from).handle_error()?;
 
-            ton_wallet.preload_transactions(from).await.handle_error()?;
+            ton_wallet
+                .preload_transactions(from.lt)
+                .await
+                .handle_error()?;
 
             Ok(u64::default())
         }

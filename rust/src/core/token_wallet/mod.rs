@@ -324,7 +324,7 @@ pub unsafe extern "C" fn nt_token_wallet_preload_transactions(
             let from = serde_json::from_str::<TransactionId>(&from).handle_error()?;
 
             token_wallet
-                .preload_transactions(from)
+                .preload_transactions(from.lt)
                 .await
                 .handle_error()?;
 
