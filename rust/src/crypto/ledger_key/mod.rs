@@ -1,1 +1,1 @@
-pub(crate) const LEDGER_KEY_SIGNER_NAME: &str = "LedgerKeySigner";
+pub const LEDGER_KEY_SIGNER_NAME: &str = "LedgerKeySigner";

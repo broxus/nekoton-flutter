@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
@@ -10,21 +11,33 @@ final _nativeFinalizer =
 
 class UnsignedMessage implements Finalizable {
   final Pointer<Void> _ptr;
+  late int _expireAt;
+  late String _hash;
 
-  UnsignedMessage(Pointer<Void> pointer) : _ptr = pointer {
-    _nativeFinalizer.attach(this, _ptr);
+  UnsignedMessage._(this._ptr);
+
+  static Future<UnsignedMessage> create(Pointer<Void> pointer) async {
+    final instance = UnsignedMessage._(pointer);
+    await instance._initialize();
+    return instance;
   }
 
   Pointer<Void> get ptr => _ptr;
 
-  Future<void> refreshTimeout() => executeAsync(
-        (port) => NekotonFlutter.instance().bindings.nt_unsigned_message_refresh_timeout(
-              port,
-              ptr,
-            ),
-      );
+  Future<void> refreshTimeout() async {
+    await executeAsync(
+      (port) => NekotonFlutter.instance().bindings.nt_unsigned_message_refresh_timeout(
+            port,
+            ptr,
+          ),
+    );
 
-  Future<int> get expireAt async {
+    await _updateData();
+  }
+
+  int get expireAt => _expireAt;
+
+  Future<int> get __expireAt async {
     final expireAt = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_unsigned_message_expire_at(
             port,
@@ -35,7 +48,9 @@ class UnsignedMessage implements Finalizable {
     return expireAt as int;
   }
 
-  Future<String> get hash async {
+  String get hash => _hash;
+
+  Future<String> get __hash async {
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_unsigned_message_hash(
             port,
@@ -61,5 +76,16 @@ class UnsignedMessage implements Finalizable {
     final signedMessage = SignedMessage.fromJson(json);
 
     return signedMessage;
+  }
+
+  Future<void> _updateData() async {
+    _expireAt = await __expireAt;
+    _hash = await __hash;
+  }
+
+  Future<void> _initialize() async {
+    _nativeFinalizer.attach(this, _ptr);
+
+    await _updateData();
   }
 }

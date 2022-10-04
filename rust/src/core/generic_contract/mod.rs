@@ -125,7 +125,7 @@ pub unsafe extern "C" fn nt_generic_contract_contract_state(
         fn internal_fn(generic_contract: &GenericContract) -> Result<serde_json::Value, String> {
             let contract_state = generic_contract.contract_state();
 
-            serde_json::to_value(&contract_state).handle_error()
+            serde_json::to_value(contract_state).handle_error()
         }
 
         let generic_contract = generic_contract.read().await;
@@ -173,7 +173,7 @@ pub unsafe extern "C" fn nt_generic_contract_polling_method(
         fn internal_fn(generic_contract: &GenericContract) -> Result<serde_json::Value, String> {
             let polling_method = generic_contract.polling_method();
 
-            serde_json::to_value(&polling_method).handle_error()
+            serde_json::to_value(polling_method).handle_error()
         }
 
         let generic_contract = generic_contract.read().await;
@@ -249,7 +249,7 @@ pub unsafe extern "C" fn nt_generic_contract_send(
                 .await
                 .handle_error()?;
 
-            serde_json::to_value(&pending_transaction).handle_error()
+            serde_json::to_value(pending_transaction).handle_error()
         }
 
         let mut generic_contract = generic_contract.write().await;
@@ -294,7 +294,7 @@ pub unsafe extern "C" fn nt_generic_contract_execute_transaction_locally(
                 .await
                 .handle_error()?;
 
-            serde_json::to_value(&transaction).handle_error()
+            serde_json::to_value(transaction).handle_error()
         }
 
         let mut generic_contract = generic_contract.write().await;

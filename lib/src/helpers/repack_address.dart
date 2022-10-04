@@ -11,5 +11,7 @@ String repackAddress(String address) {
         ),
   );
 
-  return result as String;
+  final repacked = result as String;
+
+  return repacked;
 }

@@ -1,4 +1,7 @@
-extension ExpireAtToTimeout on int {
-  Duration toTimeout() =>
-      DateTime.now().difference(DateTime.fromMillisecondsSinceEpoch(this * 1000));
+import 'package:rxdart/rxdart.dart';
+
+extension SubjectTryAdd<T> on Subject<T> {
+  void tryAdd(T event) {
+    if (!isClosed) add(event);
+  }
 }

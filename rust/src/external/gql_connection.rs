@@ -8,10 +8,9 @@ use allo_isolate::Isolate;
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use nekoton::external::GqlConnection;
-use serde::Serialize;
 use tokio::sync::oneshot::{channel, Sender};
 
-use crate::{HandleError, MatchResult, ToPtrAddress, ToPtrFromAddress};
+use crate::{HandleError, MatchResult, ToPtrAddress, ToPtrFromAddress, ISOLATE_MESSAGE_POST_ERROR};
 
 pub struct GqlConnectionImpl {
     is_local: bool,
@@ -39,10 +38,7 @@ impl GqlConnection for GqlConnectionImpl {
         let tx = Box::into_raw(Box::new(tx)).to_ptr_address();
         let data = data.to_owned();
 
-        let request = serde_json::to_string(&GqlConnectionPostRequest {
-            tx: tx.clone(),
-            data,
-        })?;
+        let request = serde_json::to_string(&(tx.clone(), data))?;
 
         match self.port.post(request) {
             true => rx.await.unwrap(),
@@ -51,16 +47,10 @@ impl GqlConnection for GqlConnectionImpl {
                     Box::from_raw(tx.to_ptr_from_address::<Sender<Result<String>>>());
                 }
 
-                bail!("Message was not posted successfully")
+                bail!(ISOLATE_MESSAGE_POST_ERROR)
             },
         }
     }
-}
-
-#[derive(Serialize)]
-pub struct GqlConnectionPostRequest {
-    pub tx: String,
-    pub data: String,
 }
 
 #[no_mangle]

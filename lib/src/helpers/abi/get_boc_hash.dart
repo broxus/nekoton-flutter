@@ -11,5 +11,7 @@ String getBocHash(String boc) {
         ),
   );
 
-  return result as String;
+  final hash = result as String;
+
+  return hash;
 }

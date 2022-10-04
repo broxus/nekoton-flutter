@@ -8,11 +8,6 @@ use nekoton::core::{
     ton_wallet::TonWalletSubscriptionHandler,
 };
 
-use crate::core::models::{
-    OnMessageExpiredPayload, OnMessageSentPayload, OnStateChangedPayload,
-    OnTransactionsFoundPayload,
-};
-
 pub struct TonWalletSubscriptionHandlerImpl {
     on_message_sent_port: Isolate,
     on_message_expired_port: Isolate,
@@ -43,26 +38,19 @@ impl TonWalletSubscriptionHandler for TonWalletSubscriptionHandlerImpl {
         pending_transaction: PendingTransaction,
         transaction: Option<Transaction>,
     ) {
-        let payload = serde_json::to_string(&OnMessageSentPayload {
-            pending_transaction,
-            transaction,
-        })
-        .unwrap();
+        let payload = serde_json::to_string(&(pending_transaction, transaction)).unwrap();
 
         self.on_message_sent_port.post(payload);
     }
 
     fn on_message_expired(&self, pending_transaction: PendingTransaction) {
-        let payload = serde_json::to_string(&OnMessageExpiredPayload {
-            pending_transaction,
-        })
-        .unwrap();
+        let payload = serde_json::to_string(&pending_transaction).unwrap();
 
         self.on_message_expired_port.post(payload);
     }
 
     fn on_state_changed(&self, new_state: ContractState) {
-        let payload = serde_json::to_string(&OnStateChangedPayload { new_state }).unwrap();
+        let payload = serde_json::to_string(&new_state).unwrap();
 
         self.on_state_changed_port.post(payload);
     }
@@ -72,11 +60,7 @@ impl TonWalletSubscriptionHandler for TonWalletSubscriptionHandlerImpl {
         transactions: Vec<TransactionWithData<TransactionAdditionalInfo>>,
         batch_info: TransactionsBatchInfo,
     ) {
-        let payload = serde_json::to_string(&OnTransactionsFoundPayload {
-            transactions,
-            batch_info,
-        })
-        .unwrap();
+        let payload = serde_json::to_string(&(transactions, batch_info)).unwrap();
 
         self.on_transactions_found_port.post(payload);
     }

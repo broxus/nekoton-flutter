@@ -12,7 +12,7 @@ KnownPayload? parseKnownPayload(String payload) {
         ),
   );
 
-  final json = result != null ? result as Map<String, dynamic> : null;
+  final json = result as Map<String, dynamic>?;
   final knownPayload = json != null ? KnownPayload.fromJson(json) : null;
 
   return knownPayload;

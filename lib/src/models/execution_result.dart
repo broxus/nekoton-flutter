@@ -4,11 +4,11 @@ import 'package:nekoton_flutter/src/models/nekoton_exception.dart';
 part 'execution_result.freezed.dart';
 part 'execution_result.g.dart';
 
-@Freezed(unionKey: 'type', unionValueCase: FreezedUnionCase.snake)
+@Freezed(unionKey: 'type')
 class ExecutionResult with _$ExecutionResult {
-  const factory ExecutionResult.ok(dynamic data) = _ExecutionResultOk;
+  const factory ExecutionResult.ok(dynamic data) = _Ok;
 
-  const factory ExecutionResult.err(String data) = _ExecutionResultErr;
+  const factory ExecutionResult.err(String data) = _Err;
 
   const ExecutionResult._();
 

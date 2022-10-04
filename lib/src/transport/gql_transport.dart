@@ -36,6 +36,9 @@ class GqlTransport extends Transport implements Finalizable {
   String get name => _gqlConnection.name;
 
   @override
+  int get networkId => _gqlConnection.networkId;
+
+  @override
   String get group => _gqlConnection.group;
 
   @override

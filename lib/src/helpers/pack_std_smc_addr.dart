@@ -17,5 +17,7 @@ String packStdSmcAddr({
         ),
   );
 
-  return result as String;
+  final packed = result as String;
+
+  return packed;
 }

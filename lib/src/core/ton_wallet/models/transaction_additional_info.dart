@@ -9,22 +9,22 @@ part 'transaction_additional_info.g.dart';
 
 @Freezed(unionKey: 'type', unionValueCase: FreezedUnionCase.snake)
 class TransactionAdditionalInfo with _$TransactionAdditionalInfo {
-  const factory TransactionAdditionalInfo.comment(String data) = _TransactionAdditionalInfoComment;
+  const factory TransactionAdditionalInfo.comment(String data) = _Comment;
 
   const factory TransactionAdditionalInfo.dePoolOnRoundComplete(
     DePoolOnRoundCompleteNotification data,
-  ) = _TransactionAdditionalInfoDePoolOnRoundComplete;
+  ) = _DePoolOnRoundComplete;
 
   const factory TransactionAdditionalInfo.dePoolReceiveAnswer(
     DePoolReceiveAnswerNotification data,
-  ) = _TransactionAdditionalInfoDePoolReceiveAnswer;
+  ) = _DePoolReceiveAnswer;
 
   const factory TransactionAdditionalInfo.tokenWalletDeployed(
     TokenWalletDeployedNotification data,
-  ) = _TransactionAdditionalInfoTokenWalletDeployed;
+  ) = _TokenWalletDeployed;
 
   const factory TransactionAdditionalInfo.walletInteraction(WalletInteractionInfo data) =
-      _TransactionAdditionalInfoWalletInteraction;
+      _WalletInteraction;
 
   factory TransactionAdditionalInfo.fromJson(Map<String, dynamic> json) =>
       _$TransactionAdditionalInfoFromJson(json);

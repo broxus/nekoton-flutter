@@ -1,5 +1,4 @@
 mod handler;
-pub(crate) mod models;
 
 use std::{
     os::raw::{c_char, c_longlong, c_uint, c_void},
@@ -143,7 +142,7 @@ pub unsafe extern "C" fn nt_token_wallet_symbol(
         fn internal_fn(token_wallet: &TokenWallet) -> Result<serde_json::Value, String> {
             let symbol = token_wallet.symbol();
 
-            serde_json::to_value(&symbol).handle_error()
+            serde_json::to_value(symbol).handle_error()
         }
 
         let token_wallet = token_wallet.read().await;
@@ -167,7 +166,7 @@ pub unsafe extern "C" fn nt_token_wallet_version(
         fn internal_fn(token_wallet: &TokenWallet) -> Result<serde_json::Value, String> {
             let version = token_wallet.version();
 
-            serde_json::to_value(&version).handle_error()
+            serde_json::to_value(version).handle_error()
         }
 
         let token_wallet = token_wallet.read().await;
@@ -215,7 +214,7 @@ pub unsafe extern "C" fn nt_token_wallet_contract_state(
         fn internal_fn(token_wallet: &TokenWallet) -> Result<serde_json::Value, String> {
             let contract_state = token_wallet.contract_state();
 
-            serde_json::to_value(&contract_state).handle_error()
+            serde_json::to_value(contract_state).handle_error()
         }
 
         let token_wallet = token_wallet.read().await;
@@ -269,7 +268,7 @@ pub unsafe extern "C" fn nt_token_wallet_prepare_transfer(
                 .prepare_transfer(destination, tokens, notify_receiver, payload)
                 .handle_error()?;
 
-            serde_json::to_value(&internal_message).handle_error()
+            serde_json::to_value(internal_message).handle_error()
         }
 
         let token_wallet = token_wallet.read().await;
@@ -399,7 +398,7 @@ pub unsafe extern "C" fn nt_get_token_root_details(
                     .await
                     .handle_error()?;
 
-            serde_json::to_value(&token_root_details).handle_error()
+            serde_json::to_value(token_root_details).handle_error()
         }
 
         let result = internal_fn(transport, root_token_contract)
@@ -436,7 +435,7 @@ pub unsafe extern "C" fn nt_get_token_wallet_details(
                     .await
                     .handle_error()?;
 
-            serde_json::to_value(&details).handle_error()
+            serde_json::to_value(details).handle_error()
         }
 
         let result = internal_fn(transport, token_wallet).await.match_result();
@@ -476,7 +475,7 @@ pub unsafe extern "C" fn nt_get_token_root_details_from_token_wallet(
 
             let details = (details.0.to_string(), details.1);
 
-            serde_json::to_value(&details).handle_error()
+            serde_json::to_value(details).handle_error()
         }
 
         let result = internal_fn(transport, token_wallet_address)

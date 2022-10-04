@@ -8,12 +8,11 @@ part 'encrypted_key_update_params.g.dart';
 
 @Freezed(unionKey: 'type', unionValueCase: FreezedUnionCase.snake)
 class EncryptedKeyUpdateParams with _$EncryptedKeyUpdateParams implements UpdateKeyInput {
-  const factory EncryptedKeyUpdateParams.rename(EncryptedKeyUpdateParamsRename data) =
-      _EncryptedKeyUpdateParamsRename;
+  const factory EncryptedKeyUpdateParams.rename(EncryptedKeyUpdateParamsRename data) = _Rename;
 
   const factory EncryptedKeyUpdateParams.changePassword(
     EncryptedKeyUpdateParamsChangePassword data,
-  ) = _EncryptedKeyUpdateParamsChangePassword;
+  ) = _ChangePassword;
 
   factory EncryptedKeyUpdateParams.fromJson(Map<String, dynamic> json) =>
       _$EncryptedKeyUpdateParamsFromJson(json);

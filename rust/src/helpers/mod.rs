@@ -1,13 +1,11 @@
 mod abi;
-mod models;
 
 use std::os::raw::{c_char, c_uint};
 
+use nekoton_abi::{get_code_salt, set_code_salt};
 use ton_block::{Deserializable, MaybeDeserialize, Serializable};
 
-use crate::{
-    helpers::models::SplittedTvc, parse_address, HandleError, MatchResult, ToStringFromPtr,
-};
+use crate::{parse_address, HandleError, MatchResult, ToStringFromPtr};
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_pack_std_smc_addr(
@@ -119,6 +117,27 @@ pub unsafe extern "C" fn nt_code_to_tvc(code: *mut c_char) -> *mut c_char {
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn nt_merge_tvc(code: *mut c_char, data: *mut c_char) -> *mut c_char {
+    let code = code.to_string_from_ptr();
+    let data = data.to_string_from_ptr();
+
+    fn internal_fn(code: String, data: String) -> Result<serde_json::Value, String> {
+        let state_init = ton_block::StateInit {
+            code: Some(parse_cell(&code)?),
+            data: Some(parse_cell(&data)?),
+            ..Default::default()
+        };
+
+        let cell = state_init.serialize().handle_error()?;
+        let bytes = ton_types::serialize_toc(&cell).handle_error()?;
+
+        serde_json::to_value(base64::encode(&bytes)).handle_error()
+    }
+
+    internal_fn(code, data).match_result()
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn nt_split_tvc(tvc: *mut c_char) -> *mut c_char {
     let tvc = tvc.to_string_from_ptr();
 
@@ -143,12 +162,45 @@ pub unsafe extern "C" fn nt_split_tvc(tvc: *mut c_char) -> *mut c_char {
             None => None,
         };
 
-        let tvc = SplittedTvc { data, code };
-
-        serde_json::to_value(&tvc).handle_error()
+        serde_json::to_value((data, code)).handle_error()
     }
 
     internal_fn(tvc).match_result()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nt_set_code_salt(code: *mut c_char, salt: *mut c_char) -> *mut c_char {
+    let code = code.to_string_from_ptr();
+    let salt = salt.to_string_from_ptr();
+
+    fn internal_fn(code: String, salt: String) -> Result<serde_json::Value, String> {
+        let code = set_code_salt(parse_cell(&code)?, parse_cell(&salt)?)
+            .and_then(|cell| ton_types::serialize_toc(&cell))
+            .map(base64::encode)
+            .handle_error();
+
+        serde_json::to_value(code).handle_error()
+    }
+
+    internal_fn(code, salt).match_result()
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nt_get_code_salt(code: *mut c_char) -> *mut c_char {
+    let code = code.to_string_from_ptr();
+
+    fn internal_fn(code: String) -> Result<serde_json::Value, String> {
+        let salt = match get_code_salt(parse_cell(&code)?).handle_error()? {
+            Some(salt) => Some(base64::encode(
+                ton_types::serialize_toc(&salt).handle_error()?,
+            )),
+            None => None,
+        };
+
+        serde_json::to_value(salt).handle_error()
+    }
+
+    internal_fn(code).match_result()
 }
 
 fn parse_account_stuff(boc: &str) -> Result<ton_block::AccountStuff, String> {
@@ -172,4 +224,14 @@ fn parse_account_stuff(boc: &str) -> Result<ton_block::AccountStuff, String> {
             })
         })
         .handle_error()
+}
+
+pub fn parse_cell(boc: &str) -> Result<ton_types::Cell, String> {
+    let boc = boc.trim();
+    if boc.is_empty() {
+        Ok(ton_types::Cell::default())
+    } else {
+        let body = base64::decode(boc).handle_error()?;
+        ton_types::deserialize_tree_of_cells(&mut body.as_slice()).handle_error()
+    }
 }

@@ -57,7 +57,7 @@ pub unsafe extern "C" fn nt_accounts_storage_entries(
                 .map(AssetsListHelper)
                 .collect::<Vec<_>>();
 
-            serde_json::to_value(&entries).handle_error()
+            serde_json::to_value(entries).handle_error()
         }
 
         let result = internal_fn(accounts_storage).await.match_result();
@@ -92,7 +92,7 @@ pub unsafe extern "C" fn nt_accounts_storage_add_account(
                 .await
                 .handle_error()?;
 
-            serde_json::to_value(&AssetsListHelper(entry)).handle_error()
+            serde_json::to_value(AssetsListHelper(entry)).handle_error()
         }
 
         let result = internal_fn(accounts_storage, new_account)
@@ -134,7 +134,7 @@ pub unsafe extern "C" fn nt_accounts_storage_add_accounts(
                 .map(AssetsListHelper)
                 .collect::<Vec<_>>();
 
-            serde_json::to_value(&entries).handle_error()
+            serde_json::to_value(entries).handle_error()
         }
 
         let result = internal_fn(accounts_storage, new_accounts)
@@ -170,7 +170,7 @@ pub unsafe extern "C" fn nt_accounts_storage_rename_account(
                 .await
                 .handle_error()?;
 
-            serde_json::to_value(&AssetsListHelper(entry)).handle_error()
+            serde_json::to_value(AssetsListHelper(entry)).handle_error()
         }
 
         let result = internal_fn(accounts_storage, account, name)
@@ -211,7 +211,7 @@ pub unsafe extern "C" fn nt_accounts_storage_add_token_wallet(
                 .await
                 .handle_error()?;
 
-            serde_json::to_value(&AssetsListHelper(entry)).handle_error()
+            serde_json::to_value(AssetsListHelper(entry)).handle_error()
         }
 
         let result = internal_fn(
@@ -257,7 +257,7 @@ pub unsafe extern "C" fn nt_accounts_storage_remove_token_wallet(
                 .await
                 .handle_error()?;
 
-            serde_json::to_value(&AssetsListHelper(entry)).handle_error()
+            serde_json::to_value(AssetsListHelper(entry)).handle_error()
         }
 
         let result = internal_fn(
@@ -332,7 +332,7 @@ pub unsafe extern "C" fn nt_accounts_storage_remove_accounts(
                 .map(AssetsListHelper)
                 .collect::<Vec<_>>();
 
-            serde_json::to_value(&entries).handle_error()
+            serde_json::to_value(entries).handle_error()
         }
 
         let result = internal_fn(accounts_storage, accounts).await.match_result();

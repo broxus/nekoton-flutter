@@ -5,9 +5,9 @@ import 'package:ffi/ffi.dart';
 import 'package:nekoton_flutter/src/bindings.dart';
 import 'package:nekoton_flutter/src/core/models/transaction.dart';
 import 'package:nekoton_flutter/src/ffi_utils.dart';
-import 'package:nekoton_flutter/src/helpers/abi/models/decoded_transaction_event.dart';
+import 'package:nekoton_flutter/src/helpers/abi/models/decoded_event.dart';
 
-List<DecodedTransactionEvent> decodeTransactionEvents({
+List<DecodedEvent> decodeTransactionEvents({
   required Transaction transaction,
   required String contractAbi,
 }) {
@@ -22,7 +22,7 @@ List<DecodedTransactionEvent> decodeTransactionEvents({
 
   final json = result as List<dynamic>;
   final list = json.cast<Map<String, dynamic>>();
-  final decodedTransactionEvents = list.map((e) => DecodedTransactionEvent.fromJson(e)).toList();
+  final decodedEvents = list.map((e) => DecodedEvent.fromJson(e)).toList();
 
-  return decodedTransactionEvents;
+  return decodedEvents;
 }

@@ -18,8 +18,9 @@ dynamic executeSync(Pointer<Char> Function() function) {
 
   final json = jsonDecode(string) as Map<String, dynamic>;
   final executionResult = ExecutionResult.fromJson(json);
+  final result = executionResult.handle();
 
-  return executionResult.handle();
+  return result;
 }
 
 Future<dynamic> executeAsync(void Function(int port) function) async {

@@ -1,5 +1,5 @@
 mod handler;
-pub(crate) mod models;
+pub mod models;
 
 use std::{
     os::raw::{c_char, c_longlong, c_schar, c_uchar, c_uint, c_void},
@@ -315,7 +315,7 @@ pub unsafe extern "C" fn nt_ton_wallet_wallet_type(
         fn internal_fn(ton_wallet: &TonWallet) -> Result<serde_json::Value, String> {
             let contract = ton_wallet.wallet_type();
 
-            serde_json::to_value(&WalletTypeHelper(contract)).handle_error()
+            serde_json::to_value(WalletTypeHelper(contract)).handle_error()
         }
 
         let ton_wallet = ton_wallet.read().await;
@@ -339,7 +339,7 @@ pub unsafe extern "C" fn nt_ton_wallet_contract_state(
         fn internal_fn(ton_wallet: &TonWallet) -> Result<serde_json::Value, String> {
             let contract_state = ton_wallet.contract_state();
 
-            serde_json::to_value(&contract_state).handle_error()
+            serde_json::to_value(contract_state).handle_error()
         }
 
         let ton_wallet = ton_wallet.read().await;
@@ -387,7 +387,7 @@ pub unsafe extern "C" fn nt_ton_wallet_polling_method(
         fn internal_fn(ton_wallet: &TonWallet) -> Result<serde_json::Value, String> {
             let polling_method = ton_wallet.polling_method();
 
-            serde_json::to_value(&polling_method).handle_error()
+            serde_json::to_value(polling_method).handle_error()
         }
 
         let ton_wallet = ton_wallet.read().await;
@@ -408,7 +408,7 @@ pub unsafe extern "C" fn nt_ton_wallet_details(result_port: c_longlong, ton_wall
         fn internal_fn(ton_wallet: &TonWallet) -> Result<serde_json::Value, String> {
             let details = ton_wallet.details();
 
-            serde_json::to_value(&details).handle_error()
+            serde_json::to_value(details).handle_error()
         }
 
         let ton_wallet = ton_wallet.read().await;
@@ -432,7 +432,7 @@ pub unsafe extern "C" fn nt_ton_wallet_unconfirmed_transactions(
         fn internal_fn(ton_wallet: &TonWallet) -> Result<serde_json::Value, String> {
             let unconfirmed_transactions = ton_wallet.get_unconfirmed_transactions();
 
-            serde_json::to_value(&unconfirmed_transactions).handle_error()
+            serde_json::to_value(unconfirmed_transactions).handle_error()
         }
 
         let ton_wallet = ton_wallet.read().await;
@@ -459,7 +459,7 @@ pub unsafe extern "C" fn nt_ton_wallet_custodians(
                 .to_owned()
                 .map(|e| e.iter().map(|e| e.to_hex_string()).collect::<Vec<_>>());
 
-            serde_json::to_value(&custodians).handle_error()
+            serde_json::to_value(custodians).handle_error()
         }
 
         let ton_wallet = ton_wallet.read().await;
@@ -789,7 +789,7 @@ pub unsafe extern "C" fn nt_ton_wallet_send(
                 .await
                 .handle_error()?;
 
-            serde_json::to_value(&pending_transaction).handle_error()
+            serde_json::to_value(pending_transaction).handle_error()
         }
 
         let mut ton_wallet = ton_wallet.write().await;
@@ -930,7 +930,7 @@ pub unsafe extern "C" fn nt_find_existing_wallets(
                     .map(ExistingWalletInfoHelper)
                     .collect::<Vec<_>>();
 
-            serde_json::to_value(&existing_wallets).handle_error()
+            serde_json::to_value(existing_wallets).handle_error()
         }
 
         let result = internal_fn(transport, public_key, workchain_id, wallet_types)
@@ -984,7 +984,7 @@ pub unsafe extern "C" fn nt_get_existing_wallet_info(
                 contract_state: existing_contract.brief(),
             };
 
-            serde_json::to_value(&ExistingWalletInfoHelper(existing_wallet_info)).handle_error()
+            serde_json::to_value(ExistingWalletInfoHelper(existing_wallet_info)).handle_error()
         }
 
         let result = internal_fn(transport, address).await.match_result();
@@ -1040,7 +1040,7 @@ pub unsafe extern "C" fn nt_get_wallet_custodians(
             .map(|e| e.to_hex_string())
             .collect::<Vec<_>>();
 
-            serde_json::to_value(&custodians).handle_error()
+            serde_json::to_value(custodians).handle_error()
         }
 
         let result = internal_fn(transport, address).await.match_result();

@@ -17,11 +17,11 @@ class AssetsList with _$AssetsList implements Comparable<AssetsList> {
 
   const AssetsList._();
 
-  String get publicKey => tonWallet.publicKey;
+  int get workchain => tonWallet.workchain;
 
   String get address => tonWallet.address;
 
-  int get workchain => tonWallet.workchain;
+  String get publicKey => tonWallet.publicKey;
 
   @override
   int compareTo(AssetsList other) => address.compareTo(other.address);

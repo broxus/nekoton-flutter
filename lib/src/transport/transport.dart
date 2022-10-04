@@ -17,6 +17,8 @@ abstract class Transport {
 
   String get name;
 
+  int get networkId;
+
   String get group;
 
   TransportType get type;
@@ -51,7 +53,7 @@ abstract class Transport {
           ),
     );
 
-    final json = result != null ? result as Map<String, dynamic> : null;
+    final json = result as Map<String, dynamic>?;
     final fullContractState = json != null ? FullContractState.fromJson(json) : null;
 
     return fullContractState;
@@ -117,7 +119,7 @@ abstract class Transport {
           ),
     );
 
-    final json = result != null ? result as Map<String, dynamic> : null;
+    final json = result as Map<String, dynamic>?;
     final transaction = json != null ? Transaction.fromJson(json) : null;
 
     return transaction;

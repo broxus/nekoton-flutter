@@ -1,6 +1,6 @@
 mod gql_transport;
 mod jrpc_transport;
-pub(crate) mod models;
+pub mod models;
 
 use std::{
     convert::TryFrom,
@@ -50,7 +50,7 @@ pub unsafe extern "C" fn nt_transport_get_contract_state(
                 .await
                 .handle_error()?;
 
-            serde_json::to_value(&RawContractStateHelper(contract_state)).handle_error()
+            serde_json::to_value(RawContractStateHelper(contract_state)).handle_error()
         }
 
         let result = internal_fn(transport, address).await.match_result();
@@ -159,7 +159,7 @@ pub unsafe extern "C" fn nt_transport_get_accounts_by_code_hash(
                 continuation: accounts.last().cloned(),
             };
 
-            serde_json::to_value(&accounts_list).handle_error()
+            serde_json::to_value(accounts_list).handle_error()
         }
 
         let result = internal_fn(transport, code_hash, limit, continuation)
@@ -235,7 +235,7 @@ pub unsafe extern "C" fn nt_transport_get_transactions(
                 info: batch_info,
             };
 
-            serde_json::to_value(&transactions_list).handle_error()
+            serde_json::to_value(transactions_list).handle_error()
         }
 
         let result = internal_fn(transport, address, from_lt, limit)

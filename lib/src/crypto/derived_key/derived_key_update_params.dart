@@ -8,11 +8,10 @@ part 'derived_key_update_params.g.dart';
 
 @Freezed(unionKey: 'type', unionValueCase: FreezedUnionCase.snake)
 class DerivedKeyUpdateParams with _$DerivedKeyUpdateParams implements UpdateKeyInput {
-  const factory DerivedKeyUpdateParams.renameKey(DerivedKeyUpdateParamsRenameKey data) =
-      _DerivedKeyUpdateParamsRenameKey;
+  const factory DerivedKeyUpdateParams.renameKey(DerivedKeyUpdateParamsRenameKey data) = _RenameKey;
 
   const factory DerivedKeyUpdateParams.changePassword(DerivedKeyUpdateParamsChangePassword data) =
-      _DerivedKeyUpdateParamsChangePassword;
+      _ChangePassword;
 
   factory DerivedKeyUpdateParams.fromJson(Map<String, dynamic> json) =>
       _$DerivedKeyUpdateParamsFromJson(json);

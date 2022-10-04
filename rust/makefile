@@ -95,11 +95,11 @@ target/aarch64-apple-darwin/release/libnekoton_flutter.dylib: $(SOURCES)
 	@echo "[DONE] $@"
 
 ## windows: Compile the Windows libraries
-windows: target/x86_64-pc-windows-gnu/release/libnekoton_flutter.dll
+windows: target/x86_64-pc-windows-gnu/release/nekoton_flutter.dll
 
-target/x86_64-pc-windows-gnu/release/libnekoton_flutter.dll: $(SOURCES)
-	cargo build --target x86_64-pc-windows-gnu --release ; \
-	cp $@ ../windows/include/libnekoton_flutter.dll ; \
+target/x86_64-pc-windows-gnu/release/nekoton_flutter.dll: $(SOURCES)
+	cargo build --target x86_64-pc-windows-gnu --release
+	cp $@ ../windows/include/nekoton_flutter.dll
 	@echo "[DONE] $@"
 
 ## linux: Compile the Linux libraries

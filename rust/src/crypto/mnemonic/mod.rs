@@ -1,4 +1,4 @@
-pub(crate) mod models;
+pub mod models;
 
 use std::os::raw::c_char;
 
@@ -21,7 +21,7 @@ pub unsafe extern "C" fn nt_generate_key(mnemonic_type: *mut c_char) -> *mut c_c
 
         let generated_key = generate_key(mnemonic_type);
 
-        serde_json::to_value(&GeneratedKeyHelper(generated_key)).handle_error()
+        serde_json::to_value(GeneratedKeyHelper(generated_key)).handle_error()
     }
 
     internal_fn(mnemonic_type).match_result()
@@ -34,7 +34,7 @@ pub unsafe extern "C" fn nt_get_hints(input: *mut c_char) -> *mut c_char {
     fn internal_fn(input: String) -> Result<serde_json::Value, String> {
         let hints = dict::get_hints(&input);
 
-        serde_json::to_value(&hints).handle_error()
+        serde_json::to_value(hints).handle_error()
     }
 
     internal_fn(input).match_result()
@@ -55,7 +55,7 @@ pub unsafe extern "C" fn nt_derive_from_phrase(
 
         let keypair = derive_from_phrase(&phrase, mnemonic_type).handle_error()?;
 
-        serde_json::to_value(&KeypairHelper(keypair)).handle_error()
+        serde_json::to_value(KeypairHelper(keypair)).handle_error()
     }
 
     internal_fn(phrase, mnemonic_type).match_result()

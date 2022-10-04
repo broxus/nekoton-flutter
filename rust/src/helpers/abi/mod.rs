@@ -18,15 +18,15 @@ use nekoton::{
     },
     crypto::SignedMessage,
 };
-use nekoton_abi::{get_state_init_hash, guess_method_by_input, FunctionExt, MethodName};
-use ton_block::{Deserializable, MsgAddressInt};
+use nekoton_abi::{guess_method_by_input, insert_state_init_data, FunctionExt, MethodName};
+use ton_block::{Deserializable, Serializable};
 
 use crate::{
     clock,
     helpers::{
         abi::models::{
             AbiParam, DecodedEvent, DecodedInput, DecodedOutput, DecodedTransaction,
-            DecodedTransactionEvent, ExecutionOutput,
+            ExecutionOutput,
         },
         parse_account_stuff,
     },
@@ -95,7 +95,7 @@ pub unsafe extern "C" fn nt_run_local(
             code: output.result_code,
         };
 
-        serde_json::to_value(&execution_output).handle_error()
+        serde_json::to_value(execution_output).handle_error()
     }
 
     internal_fn(account_stuff_boc, contract_abi, method, input, responsible).match_result()
@@ -121,7 +121,7 @@ pub unsafe extern "C" fn nt_get_expected_address(
         public_key: Option<String>,
         init_data: String,
     ) -> Result<serde_json::Value, String> {
-        let state_init = ton_block::StateInit::construct_from_base64(&tvc).handle_error()?;
+        let mut state_init = ton_block::StateInit::construct_from_base64(&tvc).handle_error()?;
         let contract_abi = parse_contract_abi(&contract_abi)?;
         let public_key = public_key.as_deref().map(parse_public_key).transpose()?;
 
@@ -134,17 +134,25 @@ pub unsafe extern "C" fn nt_get_expected_address(
         let init_data = serde_json::from_str::<serde_json::Value>(&init_data).handle_error()?;
         let init_data = nekoton_abi::parse_abi_tokens(&params, init_data).handle_error()?;
 
-        let hash = get_state_init_hash(state_init, &contract_abi, &public_key, init_data)
+        state_init.data = if let Some(data) = state_init.data.take() {
+            Some(
+                insert_state_init_data(&contract_abi, data.into(), &public_key, init_data)
+                    .handle_error()?
+                    .into_cell(),
+            )
+        } else {
+            None
+        };
+
+        let cell = state_init.serialize().handle_error()?;
+        let repr_hash = cell.repr_hash().to_hex_string();
+
+        let address = format!("{workchain_id}:{repr_hash}");
+        let state_init = ton_types::serialize_toc(&cell)
+            .map(base64::encode)
             .handle_error()?;
 
-        let address = MsgAddressInt::AddrStd(ton_block::MsgAddrStd {
-            anycast: None,
-            workchain_id,
-            address: hash.into(),
-        })
-        .to_string();
-
-        serde_json::to_value(address).handle_error()
+        serde_json::to_value((address, state_init)).handle_error()
     }
 
     internal_fn(tvc, contract_abi, workchain_id, public_key, init_data).match_result()
@@ -173,7 +181,7 @@ pub unsafe extern "C" fn nt_encode_internal_input(
         let input = nekoton_abi::parse_abi_tokens(&method.inputs, input).handle_error()?;
 
         let body = method
-            .encode_input(&Default::default(), &input, true, None)
+            .encode_internal_input(&input)
             .and_then(|e| e.into_cell())
             .handle_error()?;
 
@@ -240,7 +248,7 @@ pub unsafe extern "C" fn nt_create_external_message_without_signature(
         header.insert("pubkey".to_string(), ton_abi::TokenValue::PublicKey(None));
 
         let body = method
-            .encode_input(&header, &input, false, None)
+            .encode_input(&header, &input, false, None, Some(dst.clone()))
             .handle_error()?;
 
         let mut message =
@@ -260,7 +268,7 @@ pub unsafe extern "C" fn nt_create_external_message_without_signature(
             expire_at: expire_at.timestamp,
         };
 
-        serde_json::to_value(&signed_message).handle_error()
+        serde_json::to_value(signed_message).handle_error()
     }
 
     internal_fn(dst, contract_abi, method, state_init, input, timeout).match_result()
@@ -368,18 +376,18 @@ pub unsafe extern "C" fn nt_decode_input(
 ) -> *mut c_char {
     let message_body = message_body.to_string_from_ptr();
     let contract_abi = contract_abi.to_string_from_ptr();
-    let method = method.to_string_from_ptr();
+    let method = method.to_optional_string_from_ptr();
     let internal = internal != 0;
 
     fn internal_fn(
         message_body: String,
         contract_abi: String,
-        method: String,
+        method: Option<String>,
         internal: bool,
     ) -> Result<serde_json::Value, String> {
         let message_body = parse_slice(&message_body)?;
         let contract_abi = parse_contract_abi(&contract_abi)?;
-        let method = parse_method_name(&method)?;
+        let method = parse_method_name(method)?;
 
         let input = nekoton_abi::decode_input(&contract_abi, message_body, &method, internal)
             .handle_error()?;
@@ -393,7 +401,7 @@ pub unsafe extern "C" fn nt_decode_input(
                     input,
                 };
 
-                serde_json::to_value(&input).handle_error()
+                serde_json::to_value(input).handle_error()
             },
             None => Ok(serde_json::Value::Null),
         }
@@ -410,16 +418,16 @@ pub unsafe extern "C" fn nt_decode_event(
 ) -> *mut c_char {
     let message_body = message_body.to_string_from_ptr();
     let contract_abi = contract_abi.to_string_from_ptr();
-    let event = event.to_string_from_ptr();
+    let event = event.to_optional_string_from_ptr();
 
     fn internal_fn(
         message_body: String,
         contract_abi: String,
-        event: String,
+        event: Option<String>,
     ) -> Result<serde_json::Value, String> {
         let message_body = parse_slice(&message_body)?;
         let contract_abi = parse_contract_abi(&contract_abi)?;
-        let event = parse_method_name(&event)?;
+        let event = parse_method_name(event)?;
 
         let event =
             nekoton_abi::decode_event(&contract_abi, message_body, &event).handle_error()?;
@@ -433,7 +441,7 @@ pub unsafe extern "C" fn nt_decode_event(
                     data,
                 };
 
-                serde_json::to_value(&event).handle_error()
+                serde_json::to_value(event).handle_error()
             },
             None => Ok(serde_json::Value::Null),
         }
@@ -450,16 +458,16 @@ pub unsafe extern "C" fn nt_decode_output(
 ) -> *mut c_char {
     let message_body = message_body.to_string_from_ptr();
     let contract_abi = contract_abi.to_string_from_ptr();
-    let method = method.to_string_from_ptr();
+    let method = method.to_optional_string_from_ptr();
 
     fn internal_fn(
         message_body: String,
         contract_abi: String,
-        method: String,
+        method: Option<String>,
     ) -> Result<serde_json::Value, String> {
         let message_body = parse_slice(&message_body)?;
         let contract_abi = parse_contract_abi(&contract_abi)?;
-        let method = parse_method_name(&method)?;
+        let method = parse_method_name(method)?;
 
         let output =
             nekoton_abi::decode_output(&contract_abi, message_body, &method).handle_error()?;
@@ -473,7 +481,7 @@ pub unsafe extern "C" fn nt_decode_output(
                     output,
                 };
 
-                serde_json::to_value(&output).handle_error()
+                serde_json::to_value(output).handle_error()
             },
             None => Ok(serde_json::Value::Null),
         }
@@ -490,16 +498,16 @@ pub unsafe extern "C" fn nt_decode_transaction(
 ) -> *mut c_char {
     let transaction = transaction.to_string_from_ptr();
     let contract_abi = contract_abi.to_string_from_ptr();
-    let method = method.to_string_from_ptr();
+    let method = method.to_optional_string_from_ptr();
 
     fn internal_fn(
         transaction: String,
         contract_abi: String,
-        method: String,
+        method: Option<String>,
     ) -> Result<serde_json::Value, String> {
         let transaction = serde_json::from_str::<Transaction>(&transaction).handle_error()?;
         let contract_abi = parse_contract_abi(&contract_abi)?;
-        let method = parse_method_name(&method)?;
+        let method = parse_method_name(method)?;
 
         let internal = transaction.in_msg.src.is_some();
 
@@ -542,7 +550,7 @@ pub unsafe extern "C" fn nt_decode_transaction(
             output,
         };
 
-        serde_json::to_value(&decoded_transaction).handle_error()
+        serde_json::to_value(decoded_transaction).handle_error()
     }
 
     internal_fn(transaction, contract_abi, method).match_result()
@@ -583,7 +591,7 @@ pub unsafe extern "C" fn nt_decode_transaction_events(
                 let tokens = event.decode_input(e).ok()?;
 
                 let data = match nekoton_abi::make_abi_tokens(&tokens) {
-                    Ok(data) => Ok(DecodedTransactionEvent {
+                    Ok(data) => Ok(DecodedEvent {
                         event: event.name.to_owned(),
                         data,
                     }),
@@ -594,7 +602,7 @@ pub unsafe extern "C" fn nt_decode_transaction_events(
             })
             .collect::<Result<Vec<_>, String>>()?;
 
-        serde_json::to_value(&events).handle_error()
+        serde_json::to_value(events).handle_error()
     }
 
     internal_fn(transaction, contract_abi).match_result()
@@ -665,7 +673,7 @@ pub unsafe extern "C" fn nt_unpack_from_cell(
             .handle_error()
             .and_then(|e| nekoton_abi::make_abi_tokens(&e).handle_error())?;
 
-        serde_json::to_value(&tokens).handle_error()
+        serde_json::to_value(tokens).handle_error()
     }
 
     internal_fn(params, boc, allow_partial).match_result()
@@ -675,13 +683,18 @@ fn parse_contract_abi(contract_abi: &str) -> Result<ton_abi::Contract, String> {
     ton_abi::Contract::load(contract_abi).handle_error()
 }
 
-fn parse_method_name(value: &str) -> Result<MethodName, String> {
-    if let Ok(value) = serde_json::from_str::<String>(value) {
-        Ok(MethodName::Known(value))
-    } else if let Ok(value) = serde_json::from_str::<Vec<String>>(value) {
-        Ok(MethodName::GuessInRange(value))
-    } else {
-        Err(AbiError::ExpectedStringOrArray).handle_error()
+fn parse_method_name(value: Option<String>) -> Result<MethodName, String> {
+    match value {
+        Some(value) => {
+            if let Ok(value) = serde_json::from_str::<String>(&value) {
+                Ok(MethodName::Known(value))
+            } else if let Ok(value) = serde_json::from_str::<Vec<String>>(&value) {
+                Ok(MethodName::GuessInRange(value))
+            } else {
+                Err(AbiError::ExpectedStringOrArray).handle_error()
+            }
+        },
+        None => Ok(MethodName::Guess),
     }
 }
 

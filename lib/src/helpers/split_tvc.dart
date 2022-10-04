@@ -3,17 +3,19 @@ import 'dart:ffi';
 import 'package:ffi/ffi.dart';
 import 'package:nekoton_flutter/src/bindings.dart';
 import 'package:nekoton_flutter/src/ffi_utils.dart';
-import 'package:nekoton_flutter/src/helpers/models/splitted_tvc.dart';
+import 'package:tuple/tuple.dart';
 
-SplittedTvc splitTvc(String tvc) {
+Tuple2<String, String> splitTvc(String tvc) {
   final result = executeSync(
     () => NekotonFlutter.instance().bindings.nt_split_tvc(
           tvc.toNativeUtf8().cast<Char>(),
         ),
   );
 
-  final json = result as Map<String, dynamic>;
-  final splittedTvc = SplittedTvc.fromJson(json);
+  final json = result as List<dynamic>;
+  final list = json.cast<String>();
+  final data = list.first;
+  final code = list.last;
 
-  return splittedTvc;
+  return Tuple2(data, code);
 }

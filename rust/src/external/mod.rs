@@ -1,7 +1,7 @@
-pub(crate) mod gql_connection;
-pub(crate) mod jrpc_connection;
-pub(crate) mod ledger_connection;
-pub(crate) mod storage;
+pub mod gql_connection;
+pub mod jrpc_connection;
+pub mod ledger_connection;
+pub mod storage;
 
 use std::os::raw::{c_char, c_void};
 

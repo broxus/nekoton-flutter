@@ -15,5 +15,7 @@ String unpackStdSmcAddr({
         ),
   );
 
-  return result as String;
+  final unpacked = result as String;
+
+  return unpacked;
 }

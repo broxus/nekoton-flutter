@@ -21,5 +21,7 @@ String packIntoCell({
         ),
   );
 
-  return result as String;
+  final cell = result as String;
+
+  return cell;
 }

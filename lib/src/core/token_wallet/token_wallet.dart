@@ -4,39 +4,36 @@ import 'dart:ffi';
 import 'dart:isolate';
 
 import 'package:ffi/ffi.dart';
-import 'package:flutter/foundation.dart';
 import 'package:nekoton_flutter/src/bindings.dart';
-import 'package:nekoton_flutter/src/core/contract_subscription/contract_subscription.dart';
 import 'package:nekoton_flutter/src/core/models/contract_state.dart';
 import 'package:nekoton_flutter/src/core/models/internal_message.dart';
-import 'package:nekoton_flutter/src/core/models/polling_method.dart';
-import 'package:nekoton_flutter/src/core/token_wallet/models/on_balance_changed_payload.dart';
-import 'package:nekoton_flutter/src/core/token_wallet/models/on_token_wallet_transactions_found_payload.dart';
+import 'package:nekoton_flutter/src/core/models/transaction_with_data.dart';
+import 'package:nekoton_flutter/src/core/models/transactions_batch_info.dart';
 import 'package:nekoton_flutter/src/core/token_wallet/models/symbol.dart';
-import 'package:nekoton_flutter/src/core/token_wallet/models/token_wallet_transaction_with_data.dart';
+import 'package:nekoton_flutter/src/core/token_wallet/models/token_wallet_transaction.dart';
 import 'package:nekoton_flutter/src/core/token_wallet/models/token_wallet_version.dart';
 import 'package:nekoton_flutter/src/ffi_utils.dart';
 import 'package:nekoton_flutter/src/transport/transport.dart';
-import 'package:nekoton_flutter/src/utils.dart';
-import 'package:rxdart/rxdart.dart';
+import 'package:tuple/tuple.dart';
 
 final _nativeFinalizer =
     NativeFinalizer(NekotonFlutter.instance().bindings.addresses.nt_token_wallet_free_ptr);
 
-class TokenWallet extends ContractSubscription implements Finalizable {
+class TokenWallet implements Finalizable {
   late final Pointer<Void> _ptr;
   final Transport _transport;
   final _onBalanceChangedPort = ReceivePort();
   final _onTransactionsFoundPort = ReceivePort();
-  late final Stream<OnBalanceChangedPayload> onBalanceChangedStream;
-  late final Stream<OnTokenWalletTransactionsFoundPayload> _onTransactionsFoundStream;
-  late final StreamSubscription<OnTokenWalletTransactionsFoundPayload>
-      _onTransactionsFoundSubscription;
-  final _transactionsSubject = BehaviorSubject<List<TokenWalletTransactionWithData>>.seeded([]);
+  late final Stream<String> onBalanceChangedStream;
+  late final Stream<
+          Tuple2<List<TransactionWithData<TokenWalletTransaction?>>, TransactionsBatchInfo>>
+      onTransactionsFoundStream;
   late final String _owner;
   late final String _address;
   late final Symbol _symbol;
   late final TokenWalletVersion _version;
+  late String _balance;
+  late ContractState _contractState;
 
   TokenWallet._(this._transport);
 
@@ -55,13 +52,7 @@ class TokenWallet extends ContractSubscription implements Finalizable {
 
   Pointer<Void> get ptr => _ptr;
 
-  @override
   Transport get transport => _transport;
-
-  Stream<List<TokenWalletTransactionWithData>> get transactionsStream =>
-      _transactionsSubject.distinct((a, b) => listEquals(a, b));
-
-  List<TokenWalletTransactionWithData> get transactions => _transactionsSubject.value;
 
   String get owner => _owner;
 
@@ -78,7 +69,6 @@ class TokenWallet extends ContractSubscription implements Finalizable {
     return owner;
   }
 
-  @override
   String get address => _address;
 
   Future<String> get __address async {
@@ -126,7 +116,9 @@ class TokenWallet extends ContractSubscription implements Finalizable {
     return version;
   }
 
-  Future<String> get balance async {
+  String get balance => _balance;
+
+  Future<String> get __balance async {
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_token_wallet_balance(
             port,
@@ -139,7 +131,9 @@ class TokenWallet extends ContractSubscription implements Finalizable {
     return balance;
   }
 
-  Future<ContractState> get contractState async {
+  ContractState get contractState => _contractState;
+
+  Future<ContractState> get __contractState async {
     final result = await executeAsync(
       (port) => NekotonFlutter.instance().bindings.nt_token_wallet_contract_state(
             port,
@@ -152,9 +146,6 @@ class TokenWallet extends ContractSubscription implements Finalizable {
 
     return contractState;
   }
-
-  @override
-  Future<PollingMethod> get pollingMethod => Future.value(PollingMethod.manual);
 
   Future<InternalMessage> prepareTransfer({
     required String destination,
@@ -179,64 +170,79 @@ class TokenWallet extends ContractSubscription implements Finalizable {
     return internalMessage;
   }
 
-  @override
-  Future<void> refresh() => executeAsync(
-        (port) => NekotonFlutter.instance().bindings.nt_token_wallet_refresh(
-              port,
-              ptr,
-            ),
-      );
+  Future<void> refresh() async {
+    await executeAsync(
+      (port) => NekotonFlutter.instance().bindings.nt_token_wallet_refresh(
+            port,
+            ptr,
+          ),
+    );
 
-  Future<void> preloadTransactions(String fromLt) => executeAsync(
-        (port) => NekotonFlutter.instance().bindings.nt_token_wallet_preload_transactions(
-              port,
-              ptr,
-              fromLt.toNativeUtf8().cast<Char>(),
-            ),
-      );
+    await _updateData();
+  }
 
-  @override
-  Future<void> handleBlock(String block) => executeAsync(
-        (port) => NekotonFlutter.instance().bindings.nt_token_wallet_handle_block(
-              port,
-              ptr,
-              block.toNativeUtf8().cast<Char>(),
-            ),
-      );
+  Future<void> preloadTransactions(String fromLt) async {
+    await executeAsync(
+      (port) => NekotonFlutter.instance().bindings.nt_token_wallet_preload_transactions(
+            port,
+            ptr,
+            fromLt.toNativeUtf8().cast<Char>(),
+          ),
+    );
+
+    await _updateData();
+  }
+
+  Future<void> handleBlock(String block) async {
+    await executeAsync(
+      (port) => NekotonFlutter.instance().bindings.nt_token_wallet_handle_block(
+            port,
+            ptr,
+            block.toNativeUtf8().cast<Char>(),
+          ),
+    );
+
+    await _updateData();
+  }
 
   Future<void> dispose() async {
-    await _onTransactionsFoundSubscription.cancel();
-
     _onBalanceChangedPort.close();
     _onTransactionsFoundPort.close();
+  }
 
-    await _transactionsSubject.close();
+  Future<void> _updateData() async {
+    _balance = await __balance;
+    _contractState = await __contractState;
   }
 
   Future<void> _initialize({
     required String owner,
     required String rootTokenContract,
   }) async {
-    onBalanceChangedStream = _onBalanceChangedPort.cast<String>().map((e) {
-      final json = jsonDecode(e) as Map<String, dynamic>;
-      final payload = OnBalanceChangedPayload.fromJson(json);
-      return payload;
-    }).asBroadcastStream();
+    onBalanceChangedStream = _onBalanceChangedPort
+        .cast<String>()
+        .asBroadcastStream(onCancel: (subscription) => subscription.cancel());
 
-    _onTransactionsFoundStream = _onTransactionsFoundPort.cast<String>().map((e) {
-      final json = jsonDecode(e) as Map<String, dynamic>;
-      final payload = OnTokenWalletTransactionsFoundPayload.fromJson(json);
-      return payload;
-    }).asBroadcastStream();
+    onTransactionsFoundStream = _onTransactionsFoundPort.cast<String>().map((e) {
+      final json = jsonDecode(e) as List<dynamic>;
 
-    _onTransactionsFoundSubscription = _onTransactionsFoundStream.listen(
-      (e) => _transactionsSubject.tryAdd(
-        [
-          ..._transactionsSubject.value,
-          ...e.transactions,
-        ]..sort((a, b) => a.transaction.compareTo(b.transaction)),
-      ),
-    );
+      final transactionsJson = json.first as List<dynamic>;
+      final transactions = transactionsJson
+          .cast<Map<String, dynamic>>()
+          .map(
+            (e) => TransactionWithData<TokenWalletTransaction?>.fromJson(
+              e,
+              (json) => json != null
+                  ? TokenWalletTransaction.fromJson(json as Map<String, dynamic>)
+                  : null,
+            ),
+          )
+          .toList();
+      final batchInfoJson = json.last as Map<String, dynamic>;
+      final batchInfo = TransactionsBatchInfo.fromJson(batchInfoJson);
+
+      return Tuple2(transactions, batchInfo);
+    }).asBroadcastStream(onCancel: (subscription) => subscription.cancel());
 
     final transportPtr = _transport.ptr;
     final transportTypeStr = jsonEncode(_transport.type.toString());
@@ -261,5 +267,7 @@ class TokenWallet extends ContractSubscription implements Finalizable {
     _address = await __address;
     _symbol = await __symbol;
     _version = await __version;
+
+    await _updateData();
   }
 }

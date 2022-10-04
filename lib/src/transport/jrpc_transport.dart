@@ -34,6 +34,9 @@ class JrpcTransport extends Transport implements Finalizable {
   String get name => _jrpcConnection.name;
 
   @override
+  int get networkId => _jrpcConnection.networkId;
+
+  @override
   String get group => _jrpcConnection.group;
 
   @override

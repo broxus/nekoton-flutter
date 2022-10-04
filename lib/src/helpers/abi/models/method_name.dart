@@ -1,1 +1,1 @@
-typedef MethodName = Object;
+typedef MethodName = dynamic;

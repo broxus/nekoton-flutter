@@ -1,8 +1,8 @@
-pub(crate) mod derived_key;
-pub(crate) mod encrypted_key;
-pub(crate) mod ledger_key;
+pub mod derived_key;
+pub mod encrypted_key;
+pub mod ledger_key;
 mod mnemonic;
-pub(crate) mod models;
+pub mod models;
 
 use std::os::raw::{c_char, c_longlong, c_void};
 
@@ -119,7 +119,7 @@ pub unsafe extern "C" fn nt_unsigned_message_sign(
 
             let signed_message = unsigned_message.sign(&signature).handle_error()?;
 
-            serde_json::to_value(&signed_message).handle_error()
+            serde_json::to_value(signed_message).handle_error()
         }
 
         let unsigned_message = unsigned_message.read().await;

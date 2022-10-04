@@ -84,7 +84,7 @@ pub unsafe extern "C" fn nt_keystore_entries(result_port: c_longlong, keystore: 
         async fn internal_fn(keystore: &KeyStore) -> Result<serde_json::Value, String> {
             let entries = keystore.get_entries().await;
 
-            serde_json::to_value(&entries).handle_error()
+            serde_json::to_value(entries).handle_error()
         }
 
         let result = internal_fn(keystore).await.match_result();
@@ -144,7 +144,7 @@ pub unsafe extern "C" fn nt_keystore_add_key(
                 panic!()
             };
 
-            serde_json::to_value(&entry).handle_error()
+            serde_json::to_value(entry).handle_error()
         }
 
         let result = internal_fn(keystore, signer, input).await.match_result();
@@ -208,7 +208,7 @@ pub unsafe extern "C" fn nt_keystore_add_keys(
                 panic!()
             };
 
-            serde_json::to_value(&entries).handle_error()
+            serde_json::to_value(entries).handle_error()
         }
 
         let result = internal_fn(keystore, signer, input).await.match_result();
@@ -264,7 +264,7 @@ pub unsafe extern "C" fn nt_keystore_update_key(
                 panic!()
             };
 
-            serde_json::to_value(&entry).handle_error()
+            serde_json::to_value(entry).handle_error()
         }
 
         let result = internal_fn(keystore, signer, input).await.match_result();
@@ -301,7 +301,7 @@ pub unsafe extern "C" fn nt_keystore_export_key(
                     .await
                     .handle_error()?;
 
-                serde_json::to_value(&EncryptedKeyExportOutputHelper(output)).handle_error()
+                serde_json::to_value(EncryptedKeyExportOutputHelper(output)).handle_error()
             } else if signer == DERIVED_KEY_SIGNER_NAME {
                 let input =
                     serde_json::from_str::<DerivedKeyExportParams>(&input).handle_error()?;
@@ -311,7 +311,7 @@ pub unsafe extern "C" fn nt_keystore_export_key(
                     .await
                     .handle_error()?;
 
-                serde_json::to_value(&output).handle_error()
+                serde_json::to_value(output).handle_error()
             } else {
                 panic!()
             }
@@ -355,7 +355,7 @@ pub unsafe extern "C" fn nt_keystore_get_public_keys(
                     .map(|e| hex::encode(e.as_bytes()))
                     .collect::<Vec<_>>();
 
-                serde_json::to_value(&output).handle_error()
+                serde_json::to_value(output).handle_error()
             } else if signer == DERIVED_KEY_SIGNER_NAME {
                 let input =
                     serde_json::from_str::<DerivedKeyGetPublicKeys>(&input).handle_error()?;
@@ -368,7 +368,7 @@ pub unsafe extern "C" fn nt_keystore_get_public_keys(
                     .map(|e| hex::encode(e.as_bytes()))
                     .collect::<Vec<_>>();
 
-                serde_json::to_value(&output).handle_error()
+                serde_json::to_value(output).handle_error()
             } else if signer == LEDGER_KEY_SIGNER_NAME {
                 let input =
                     serde_json::from_str::<LedgerKeyGetPublicKeys>(&input).handle_error()?;
@@ -381,7 +381,7 @@ pub unsafe extern "C" fn nt_keystore_get_public_keys(
                     .map(|e| hex::encode(e.as_bytes()))
                     .collect::<Vec<_>>();
 
-                serde_json::to_value(&output).handle_error()
+                serde_json::to_value(output).handle_error()
             } else {
                 panic!()
             }
@@ -458,7 +458,7 @@ pub unsafe extern "C" fn nt_keystore_encrypt(
                 panic!()
             };
 
-            serde_json::to_value(&data).handle_error()
+            serde_json::to_value(data).handle_error()
         }
 
         let result = internal_fn(keystore, signer, data, public_keys, algorithm, input)
@@ -610,7 +610,7 @@ pub unsafe extern "C" fn nt_keystore_sign_data(
                 },
             };
 
-            serde_json::to_value(&signed_data).handle_error()
+            serde_json::to_value(signed_data).handle_error()
         }
 
         let result = internal_fn(keystore, signer, data, input)
@@ -657,7 +657,7 @@ pub unsafe extern "C" fn nt_keystore_sign_data_raw(
                 },
             };
 
-            serde_json::to_value(&signed_data_raw).handle_error()
+            serde_json::to_value(signed_data_raw).handle_error()
         }
 
         let result = internal_fn(keystore, signer, data, input)
@@ -723,7 +723,7 @@ pub unsafe extern "C" fn nt_keystore_remove_keys(
 
             let entries = keystore.remove_keys(&public_keys).await.handle_error()?;
 
-            serde_json::to_value(&entries).handle_error()
+            serde_json::to_value(entries).handle_error()
         }
 
         let result = internal_fn(keystore, public_keys).await.match_result();

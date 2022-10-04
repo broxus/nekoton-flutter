@@ -81,6 +81,7 @@ class NekotonRepository {
               )
               .then((v) => v.body),
           name: 'Mainnet (GQL)',
+          networkId: 1,
           group: 'mainnet',
           settings: const GqlNetworkSettings(
             endpoints: [
@@ -113,6 +114,7 @@ class NekotonRepository {
                   )
                   .then((v) => v.body),
           name: 'Mainnet (ADNL)',
+          networkId: 1,
           group: 'mainnet',
           settings: const JrpcNetworkSettings(endpoint: 'https://jrpc.everwallet.net/rpc'),
         ),

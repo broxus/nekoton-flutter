@@ -6,12 +6,24 @@ import 'dart:isolate';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:nekoton_flutter/src/bindings.dart';
-import 'package:nekoton_flutter/src/external/models/storage_get_request.dart';
-import 'package:nekoton_flutter/src/external/models/storage_remove_request.dart';
-import 'package:nekoton_flutter/src/external/models/storage_remove_unchecked_request.dart';
-import 'package:nekoton_flutter/src/external/models/storage_set_request.dart';
-import 'package:nekoton_flutter/src/external/models/storage_set_unchecked_request.dart';
 import 'package:nekoton_flutter/src/ffi_utils.dart';
+import 'package:tuple/tuple.dart';
+
+typedef StorageGet = Future<String?> Function(String key);
+
+typedef StorageSet = Future<void> Function({
+  required String key,
+  required String value,
+});
+
+typedef StorageSetUnchecked = void Function({
+  required String key,
+  required String value,
+});
+
+typedef StorageRemove = Future<void> Function(String key);
+
+typedef StorageRemoveUnchecked = void Function(String key);
 
 final _nativeFinalizer =
     NativeFinalizer(NekotonFlutter.instance().bindings.addresses.nt_storage_free_ptr);
@@ -23,71 +35,67 @@ class Storage implements Finalizable {
   final _setUncheckedPort = ReceivePort();
   final _removePort = ReceivePort();
   final _removeUncheckedPort = ReceivePort();
-  late final StreamSubscription<StorageGetRequest> _getSubscription;
-  late final StreamSubscription<StorageSetRequest> _setSubscription;
-  late final StreamSubscription<StorageSetUncheckedRequest> _setUncheckedSubscription;
-  late final StreamSubscription<StorageRemoveRequest> _removeSubscription;
-  late final StreamSubscription<StorageRemoveUncheckedRequest> _removeUncheckedSubscription;
-  final Future<String?> Function(String key) _get;
-  final Future<void> Function({
-    required String key,
-    required String value,
-  }) _set;
-  final void Function({
-    required String key,
-    required String value,
-  }) _setUnchecked;
-  final Future<void> Function(String key) _remove;
-  final void Function(String key) _removeUnchecked;
+  late final StreamSubscription<Tuple2<String, String>> _getSubscription;
+  late final StreamSubscription<Tuple3<String, String, String>> _setSubscription;
+  late final StreamSubscription<Tuple2<String, String>> _setUncheckedSubscription;
+  late final StreamSubscription<Tuple2<String, String>> _removeSubscription;
+  late final StreamSubscription<String> _removeUncheckedSubscription;
+  final StorageGet _get;
+  final StorageSet _set;
+  final StorageSetUnchecked _setUnchecked;
+  final StorageRemove _remove;
+  final StorageRemoveUnchecked _removeUnchecked;
 
   Storage({
-    required Future<String?> Function(String key) get,
-    required Future<void> Function({
-      required String key,
-      required String value,
-    })
-        set,
-    required void Function({
-      required String key,
-      required String value,
-    })
-        setUnchecked,
-    required Future<void> Function(String key) remove,
-    required void Function(String key) removeUnchecked,
+    required StorageGet get,
+    required StorageSet set,
+    required StorageSetUnchecked setUnchecked,
+    required StorageRemove remove,
+    required StorageRemoveUnchecked removeUnchecked,
   })  : _get = get,
         _set = set,
         _setUnchecked = setUnchecked,
         _remove = remove,
         _removeUnchecked = removeUnchecked {
     _getSubscription = _getPort.cast<String>().map((e) {
-      final json = jsonDecode(e) as Map<String, dynamic>;
-      final payload = StorageGetRequest.fromJson(json);
-      return payload;
+      final json = jsonDecode(e) as List<dynamic>;
+
+      final tx = json.first as String;
+      final key = json.last as String;
+
+      return Tuple2(tx, key);
     }).listen(_getRequestHandler);
 
     _setSubscription = _setPort.cast<String>().map((e) {
-      final json = jsonDecode(e) as Map<String, dynamic>;
-      final payload = StorageSetRequest.fromJson(json);
-      return payload;
+      final json = jsonDecode(e) as List<dynamic>;
+
+      final tx = json.first as String;
+      final key = json[1] as String;
+      final value = json.last as String;
+
+      return Tuple3(tx, key, value);
     }).listen(_setRequestHandler);
 
     _setUncheckedSubscription = _setUncheckedPort.cast<String>().map((e) {
-      final json = jsonDecode(e) as Map<String, dynamic>;
-      final payload = StorageSetUncheckedRequest.fromJson(json);
-      return payload;
+      final json = jsonDecode(e) as List<dynamic>;
+
+      final key = json.first as String;
+      final value = json.last as String;
+
+      return Tuple2(key, value);
     }).listen(_setUncheckedRequestHandler);
 
     _removeSubscription = _removePort.cast<String>().map((e) {
-      final json = jsonDecode(e) as Map<String, dynamic>;
-      final payload = StorageRemoveRequest.fromJson(json);
-      return payload;
+      final json = jsonDecode(e) as List<dynamic>;
+
+      final tx = json.first as String;
+      final key = json.last as String;
+
+      return Tuple2(tx, key);
     }).listen(_removeRequestHandler);
 
-    _removeUncheckedSubscription = _removeUncheckedPort.cast<String>().map((e) {
-      final json = jsonDecode(e) as Map<String, dynamic>;
-      final payload = StorageRemoveUncheckedRequest.fromJson(json);
-      return payload;
-    }).listen(_removeUncheckedRequestHandler);
+    _removeUncheckedSubscription =
+        _removeUncheckedPort.cast<String>().listen(_removeUncheckedRequestHandler);
 
     final result = executeSync(
       () => NekotonFlutter.instance().bindings.nt_storage_create(
@@ -120,14 +128,14 @@ class Storage implements Finalizable {
     _removeUncheckedPort.close();
   }
 
-  Future<void> _getRequestHandler(StorageGetRequest event) async {
-    final tx = toPtrFromAddress(event.tx);
+  Future<void> _getRequestHandler(Tuple2<String, String> event) async {
+    final tx = toPtrFromAddress(event.item1);
 
     String? ok;
     String? err;
 
     try {
-      ok = await _get(event.key);
+      ok = await _get(event.item2);
     } catch (error) {
       err = error.toString();
     }
@@ -139,15 +147,15 @@ class Storage implements Finalizable {
         );
   }
 
-  Future<void> _setRequestHandler(StorageSetRequest event) async {
-    final tx = toPtrFromAddress(event.tx);
+  Future<void> _setRequestHandler(Tuple3<String, String, String> event) async {
+    final tx = toPtrFromAddress(event.item1);
 
     String? err;
 
     try {
       await _set(
-        key: event.key,
-        value: event.value,
+        key: event.item2,
+        value: event.item3,
       );
     } catch (error) {
       err = error.toString();
@@ -159,11 +167,11 @@ class Storage implements Finalizable {
         );
   }
 
-  Future<void> _setUncheckedRequestHandler(StorageSetUncheckedRequest event) async {
+  Future<void> _setUncheckedRequestHandler(Tuple2<String, String> event) async {
     try {
       _setUnchecked(
-        key: event.key,
-        value: event.value,
+        key: event.item1,
+        value: event.item2,
       );
     } catch (err, st) {
       debugPrint(err.toString());
@@ -171,13 +179,13 @@ class Storage implements Finalizable {
     }
   }
 
-  Future<void> _removeRequestHandler(StorageRemoveRequest event) async {
-    final tx = toPtrFromAddress(event.tx);
+  Future<void> _removeRequestHandler(Tuple2<String, String> event) async {
+    final tx = toPtrFromAddress(event.item1);
 
     String? err;
 
     try {
-      await _remove(event.key);
+      await _remove(event.item2);
     } catch (error) {
       err = error.toString();
     }
@@ -188,9 +196,9 @@ class Storage implements Finalizable {
         );
   }
 
-  Future<void> _removeUncheckedRequestHandler(StorageRemoveUncheckedRequest event) async {
+  Future<void> _removeUncheckedRequestHandler(String event) async {
     try {
-      _removeUnchecked(event.key);
+      _removeUnchecked(event);
     } catch (err, st) {
       debugPrint(err.toString());
       debugPrint(st.toString());

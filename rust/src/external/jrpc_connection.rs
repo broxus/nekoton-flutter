@@ -7,11 +7,10 @@ use std::{
 use allo_isolate::Isolate;
 use anyhow::{bail, Result};
 use async_trait::async_trait;
-use nekoton::external::JrpcConnection;
-use serde::Serialize;
+use nekoton::external::{JrpcConnection, JrpcRequest};
 use tokio::sync::oneshot::{channel, Sender};
 
-use crate::{HandleError, MatchResult, ToPtrAddress, ToPtrFromAddress};
+use crate::{HandleError, MatchResult, ToPtrAddress, ToPtrFromAddress, ISOLATE_MESSAGE_POST_ERROR};
 
 pub struct JrpcConnectionImpl {
     port: Isolate,
@@ -27,16 +26,13 @@ impl JrpcConnectionImpl {
 
 #[async_trait]
 impl JrpcConnection for JrpcConnectionImpl {
-    async fn post(&self, data: &str) -> Result<String> {
+    async fn post(&self, req: JrpcRequest) -> Result<String> {
         let (tx, rx) = channel::<Result<String>>();
 
         let tx = Box::into_raw(Box::new(tx)).to_ptr_address();
-        let data = data.to_owned();
+        let data = req.data;
 
-        let request = serde_json::to_string(&JrpcConnectionPostRequest {
-            tx: tx.clone(),
-            data,
-        })?;
+        let request = serde_json::to_string(&(tx.clone(), data))?;
 
         match self.port.post(request) {
             true => rx.await.unwrap(),
@@ -45,16 +41,10 @@ impl JrpcConnection for JrpcConnectionImpl {
                     Box::from_raw(tx.to_ptr_from_address::<Sender<Result<String>>>());
                 }
 
-                bail!("Message was not posted successfully")
+                bail!(ISOLATE_MESSAGE_POST_ERROR)
             },
         }
     }
-}
-
-#[derive(Serialize)]
-pub struct JrpcConnectionPostRequest {
-    pub tx: String,
-    pub data: String,
 }
 
 #[no_mangle]

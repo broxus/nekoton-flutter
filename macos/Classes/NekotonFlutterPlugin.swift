@@ -248,6 +248,14 @@ public class NekotonFlutterPlugin: NSObject, FlutterPlugin {
 
     nt_code_to_tvc(nil);
 
+    nt_merge_tvc(nil, nil);
+
+    nt_split_tvc(nil);
+
+    nt_set_code_salt(nil, nil);
+
+    nt_get_code_salt(nil);
+
     nt_split_tvc(nil);
 
     nt_check_public_key(nil);

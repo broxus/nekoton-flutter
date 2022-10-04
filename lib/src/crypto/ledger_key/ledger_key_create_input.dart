@@ -6,7 +6,6 @@ part 'ledger_key_create_input.g.dart';
 
 @freezed
 class LedgerKeyCreateInput with _$LedgerKeyCreateInput implements CreateKeyInput {
-  @JsonSerializable(fieldRename: FieldRename.snake)
   const factory LedgerKeyCreateInput({
     String? name,
     required int accountId,

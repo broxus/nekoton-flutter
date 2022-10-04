@@ -1,1 +1,1 @@
-pub(crate) const DERIVED_KEY_SIGNER_NAME: &str = "DerivedKeySigner";
+pub const DERIVED_KEY_SIGNER_NAME: &str = "DerivedKeySigner";

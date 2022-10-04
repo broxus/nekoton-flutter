@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::mnemonic::models::MnemonicTypeDef;
 
-pub(crate) const ENCRYPTED_KEY_SIGNER_NAME: &str = "EncryptedKeySigner";
+pub const ENCRYPTED_KEY_SIGNER_NAME: &str = "EncryptedKeySigner";
 
 #[derive(Deserialize)]
 pub struct EncryptedKeyCreateInputHelper(

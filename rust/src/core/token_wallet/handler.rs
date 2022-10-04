@@ -6,10 +6,6 @@ use nekoton::core::{
 };
 use nekoton_abi::num_bigint::BigUint;
 
-use crate::core::{
-    models::OnTransactionsFoundPayload, token_wallet::models::OnBalanceChangedPayload,
-};
-
 pub struct TokenWalletSubscriptionHandlerImpl {
     on_balance_changed_port: Isolate,
     on_transactions_found_port: Isolate,
@@ -27,10 +23,7 @@ impl TokenWalletSubscriptionHandlerImpl {
 #[async_trait]
 impl TokenWalletSubscriptionHandler for TokenWalletSubscriptionHandlerImpl {
     fn on_balance_changed(&self, balance: BigUint) {
-        let payload = serde_json::to_string(&OnBalanceChangedPayload {
-            balance: balance.to_string(),
-        })
-        .unwrap();
+        let payload = balance.to_string();
 
         self.on_balance_changed_port.post(payload);
     }
@@ -40,11 +33,7 @@ impl TokenWalletSubscriptionHandler for TokenWalletSubscriptionHandlerImpl {
         transactions: Vec<TransactionWithData<TokenWalletTransaction>>,
         batch_info: TransactionsBatchInfo,
     ) {
-        let payload = serde_json::to_string(&OnTransactionsFoundPayload {
-            transactions,
-            batch_info,
-        })
-        .unwrap();
+        let payload = serde_json::to_string(&(transactions, batch_info)).unwrap();
 
         self.on_transactions_found_port.post(payload);
     }

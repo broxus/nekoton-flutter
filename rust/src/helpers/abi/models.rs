@@ -39,9 +39,3 @@ pub struct DecodedTransaction {
     pub input: serde_json::Value,
     pub output: serde_json::Value,
 }
-
-#[derive(Serialize)]
-pub struct DecodedTransactionEvent {
-    pub event: String,
-    pub data: serde_json::Value,
-}

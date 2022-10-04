@@ -355,7 +355,13 @@ char *nt_extract_public_key(char *boc);
 
 char *nt_code_to_tvc(char *code);
 
+char *nt_merge_tvc(char *code, char *data);
+
 char *nt_split_tvc(char *tvc);
+
+char *nt_set_code_salt(char *code, char *salt);
+
+char *nt_get_code_salt(char *code);
 
 char *nt_check_public_key(char *public_key);
 

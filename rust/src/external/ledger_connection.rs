@@ -7,10 +7,9 @@ use allo_isolate::Isolate;
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use nekoton::external::{LedgerConnection, LedgerSignatureContext};
-use serde::Serialize;
 use tokio::sync::oneshot::{channel, Sender};
 
-use crate::{HandleError, MatchResult, ToPtrAddress, ToPtrFromAddress};
+use crate::{HandleError, MatchResult, ToPtrAddress, ToPtrFromAddress, ISOLATE_MESSAGE_POST_ERROR};
 
 pub struct LedgerConnectionImpl {
     get_public_key_port: Isolate,
@@ -36,10 +35,7 @@ impl LedgerConnection for LedgerConnectionImpl {
 
         let tx = Box::into_raw(Box::new(tx)).to_ptr_address();
 
-        let request = serde_json::to_string(&LedgerConnectionGetPublicKeyRequest {
-            tx: tx.clone(),
-            account_id,
-        })?;
+        let request = serde_json::to_string(&(tx.clone(), account_id))?;
 
         match self.get_public_key_port.post(request) {
             true => rx
@@ -53,7 +49,7 @@ impl LedgerConnection for LedgerConnectionImpl {
                     Box::from_raw(tx.to_ptr_from_address::<Sender<Result<String>>>());
                 }
 
-                bail!("Message was not posted successfully")
+                bail!(ISOLATE_MESSAGE_POST_ERROR)
             },
         }
     }
@@ -70,12 +66,7 @@ impl LedgerConnection for LedgerConnectionImpl {
         let message = message.to_owned();
         let context = context.to_owned();
 
-        let request = serde_json::to_string(&LedgerConnectionSignRequest {
-            tx: tx.clone(),
-            account,
-            message,
-            context,
-        })?;
+        let request = serde_json::to_string(&(tx.clone(), account, message, context))?;
 
         match self.sign_port.post(request) {
             true => rx
@@ -89,25 +80,10 @@ impl LedgerConnection for LedgerConnectionImpl {
                     Box::from_raw(tx.to_ptr_from_address::<Sender<Result<String>>>());
                 }
 
-                bail!("Message was not posted successfully")
+                bail!(ISOLATE_MESSAGE_POST_ERROR)
             },
         }
     }
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct LedgerConnectionGetPublicKeyRequest {
-    pub tx: String,
-    pub account_id: u16,
-}
-
-#[derive(Serialize)]
-pub struct LedgerConnectionSignRequest {
-    pub tx: String,
-    pub account: u16,
-    pub message: Vec<u8>,
-    pub context: Option<LedgerSignatureContext>,
 }
 
 #[no_mangle]

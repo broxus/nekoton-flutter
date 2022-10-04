@@ -6,11 +6,11 @@ part 'wallet_type.g.dart';
 
 @Freezed(unionKey: 'type')
 class WalletType with _$WalletType {
-  const factory WalletType.multisig(MultisigType data) = _WalletTypeMultisig;
+  const factory WalletType.multisig(MultisigType data) = _Multisig;
 
-  const factory WalletType.walletV3() = _WalletTypeWalletV3;
+  const factory WalletType.walletV3() = _WalletV3;
 
-  const factory WalletType.highloadWalletV2() = _WalletTypeHighloadWalletV2;
+  const factory WalletType.highloadWalletV2() = _HighloadWalletV2;
 
   factory WalletType.fromJson(Map<String, dynamic> json) => _$WalletTypeFromJson(json);
 }

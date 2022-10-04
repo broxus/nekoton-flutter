@@ -7,10 +7,9 @@ use allo_isolate::Isolate;
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use nekoton::external::Storage;
-use serde::Serialize;
 use tokio::sync::oneshot::{channel, Sender};
 
-use crate::{HandleError, MatchResult, ToPtrAddress, ToPtrFromAddress};
+use crate::{HandleError, MatchResult, ToPtrAddress, ToPtrFromAddress, ISOLATE_MESSAGE_POST_ERROR};
 
 pub struct StorageImpl {
     get_port: Isolate,
@@ -46,10 +45,7 @@ impl Storage for StorageImpl {
         let tx = Box::into_raw(Box::new(tx)).to_ptr_address();
         let key = key.to_owned();
 
-        let request = serde_json::to_string(&StorageGetRequest {
-            tx: tx.clone(),
-            key,
-        })?;
+        let request = serde_json::to_string(&(tx.clone(), key))?;
 
         match self.get_port.post(request) {
             true => rx.await.unwrap(),
@@ -58,7 +54,7 @@ impl Storage for StorageImpl {
                     Box::from_raw(tx.to_ptr_from_address::<Sender<Result<Option<String>>>>());
                 }
 
-                bail!("Message was not posted successfully")
+                bail!(ISOLATE_MESSAGE_POST_ERROR)
             },
         }
     }
@@ -70,11 +66,7 @@ impl Storage for StorageImpl {
         let key = key.to_owned();
         let value = value.to_owned();
 
-        let request = serde_json::to_string(&StorageSetRequest {
-            tx: tx.clone(),
-            key,
-            value,
-        })?;
+        let request = serde_json::to_string(&(tx.clone(), key, value))?;
 
         match self.set_port.post(request) {
             true => rx.await.unwrap(),
@@ -83,7 +75,7 @@ impl Storage for StorageImpl {
                     Box::from_raw(tx.to_ptr_from_address::<Sender<Result<()>>>());
                 }
 
-                bail!("Message was not posted successfully")
+                bail!(ISOLATE_MESSAGE_POST_ERROR)
             },
         }
     }
@@ -92,7 +84,7 @@ impl Storage for StorageImpl {
         let key = key.to_owned();
         let value = value.to_owned();
 
-        let request = serde_json::to_string(&StorageSetUncheckedRequest { key, value }).unwrap();
+        let request = serde_json::to_string(&(key, value)).unwrap();
 
         self.set_unchecked_port.post(request);
     }
@@ -103,10 +95,7 @@ impl Storage for StorageImpl {
         let tx = Box::into_raw(Box::new(tx)).to_ptr_address();
         let key = key.to_owned();
 
-        let request = serde_json::to_string(&StorageRemoveRequest {
-            tx: tx.clone(),
-            key,
-        })?;
+        let request = serde_json::to_string(&(tx.clone(), key))?;
 
         match self.remove_port.post(request) {
             true => rx.await.unwrap(),
@@ -115,7 +104,7 @@ impl Storage for StorageImpl {
                     Box::from_raw(tx.to_ptr_from_address::<Sender<Result<()>>>());
                 }
 
-                bail!("Message was not posted successfully")
+                bail!(ISOLATE_MESSAGE_POST_ERROR)
             },
         }
     }
@@ -123,40 +112,10 @@ impl Storage for StorageImpl {
     fn remove_unchecked(&self, key: &str) {
         let key = key.to_owned();
 
-        let request = serde_json::to_string(&StorageRemoveUncheckedRequest { key }).unwrap();
+        let request = serde_json::to_string(&key).unwrap();
 
         self.remove_unchecked_port.post(request);
     }
-}
-
-#[derive(Serialize)]
-pub struct StorageGetRequest {
-    pub tx: String,
-    pub key: String,
-}
-
-#[derive(Serialize)]
-pub struct StorageSetRequest {
-    pub tx: String,
-    pub key: String,
-    pub value: String,
-}
-
-#[derive(Serialize)]
-pub struct StorageSetUncheckedRequest {
-    pub key: String,
-    pub value: String,
-}
-
-#[derive(Serialize)]
-pub struct StorageRemoveRequest {
-    pub tx: String,
-    pub key: String,
-}
-
-#[derive(Serialize)]
-pub struct StorageRemoveUncheckedRequest {
-    pub key: String,
 }
 
 #[no_mangle]

@@ -31,6 +31,8 @@ use serde::Serialize;
 use tokio::runtime::{Builder, Runtime};
 use ton_block::MsgAddressInt;
 
+pub const ISOLATE_MESSAGE_POST_ERROR: &str = "Message was not posted successfully";
+
 lazy_static! {
     static ref RUNTIME: io::Result<Runtime> = Builder::new_multi_thread()
         .enable_all()
@@ -118,7 +120,7 @@ where
     }
 }
 
-trait PostWithResult {
+pub trait PostWithResult {
     fn post_with_result(&self, data: impl IntoDart) -> Result<(), String>;
 }
 
@@ -126,7 +128,7 @@ impl PostWithResult for Isolate {
     fn post_with_result(&self, data: impl IntoDart) -> Result<(), String> {
         match self.post(data) {
             true => Ok(()),
-            false => Err("Message was not posted successfully").handle_error(),
+            false => Err(ISOLATE_MESSAGE_POST_ERROR).handle_error(),
         }
     }
 }

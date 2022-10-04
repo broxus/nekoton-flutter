@@ -7,7 +7,7 @@ import 'package:nekoton_flutter/src/crypto/unsigned_message.dart';
 import 'package:nekoton_flutter/src/ffi_utils.dart';
 import 'package:nekoton_flutter/src/helpers/abi/models/tokens_object.dart';
 
-UnsignedMessage createExternalMessage({
+Future<UnsignedMessage> createExternalMessage({
   required String dst,
   required String contractAbi,
   required String method,
@@ -15,7 +15,7 @@ UnsignedMessage createExternalMessage({
   required TokensObject input,
   required String publicKey,
   required int timeout,
-}) {
+}) async {
   final inputStr = jsonEncode(input);
 
   final result = executeSync(
@@ -30,7 +30,7 @@ UnsignedMessage createExternalMessage({
         ),
   );
 
-  final unsignedMessage = UnsignedMessage(toPtrFromAddress(result as String));
+  final unsignedMessage = await UnsignedMessage.create(toPtrFromAddress(result as String));
 
   return unsignedMessage;
 }

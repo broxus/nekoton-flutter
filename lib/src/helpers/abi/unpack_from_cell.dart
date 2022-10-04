@@ -22,8 +22,7 @@ TokensObject unpackFromCell({
         ),
   );
 
-  final json = result as dynamic;
-  final tokensObject = json as TokensObject;
+  final tokensObject = result as TokensObject;
 
   return tokensObject;
 }

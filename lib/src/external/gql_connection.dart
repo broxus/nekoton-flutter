@@ -7,11 +7,19 @@ import 'package:async/async.dart';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:nekoton_flutter/src/bindings.dart';
-import 'package:nekoton_flutter/src/external/models/gql_connection_post_request.dart';
 import 'package:nekoton_flutter/src/external/models/gql_network_settings.dart';
 import 'package:nekoton_flutter/src/ffi_utils.dart';
 import 'package:nekoton_flutter/src/models/nekoton_exception.dart';
 import 'package:nekoton_flutter/src/transport/models/transport_type.dart';
+import 'package:tuple/tuple.dart';
+
+typedef GqlConnectionPost = Future<String> Function({
+  required String endpoint,
+  required Map<String, String> headers,
+  required String data,
+});
+
+typedef GqlConnectionGet = Future<String> Function(String endpoint);
 
 final _nativeFinalizer =
     NativeFinalizer(NekotonFlutter.instance().bindings.addresses.nt_gql_connection_free_ptr);
@@ -19,14 +27,11 @@ final _nativeFinalizer =
 class GqlConnection implements Finalizable {
   late final Pointer<Void> _ptr;
   final _postPort = ReceivePort();
-  late final StreamSubscription<GqlConnectionPostRequest> _postSubscription;
-  final Future<String> Function({
-    required String endpoint,
-    required Map<String, String> headers,
-    required String data,
-  }) _post;
-  final Future<String> Function(String endpoint) _get;
+  late final StreamSubscription<Tuple2<String, String>> _postSubscription;
+  final GqlConnectionPost _post;
+  final GqlConnectionGet _get;
   final String _name;
+  final int _networkId;
   final String _group;
   final _type = TransportType.gql;
   final GqlNetworkSettings _settings;
@@ -34,25 +39,25 @@ class GqlConnection implements Finalizable {
       AsyncCache<String>(Duration(milliseconds: _settings.latencyDetectionInterval));
 
   GqlConnection({
-    required Future<String> Function({
-      required String endpoint,
-      required Map<String, String> headers,
-      required String data,
-    })
-        post,
-    required Future<String> Function(String endpoint) get,
+    required GqlConnectionPost post,
+    required GqlConnectionGet get,
     required String name,
+    required int networkId,
     required String group,
     required GqlNetworkSettings settings,
   })  : _post = post,
         _get = get,
         _name = name,
+        _networkId = networkId,
         _group = group,
         _settings = settings {
     _postSubscription = _postPort.cast<String>().map((e) {
-      final json = jsonDecode(e) as Map<String, dynamic>;
-      final payload = GqlConnectionPostRequest.fromJson(json);
-      return payload;
+      final json = jsonDecode(e) as List<dynamic>;
+
+      final tx = json.first as String;
+      final data = json.last as String;
+
+      return Tuple2(tx, data);
     }).listen(_postRequestHandler);
 
     final result = executeSync(
@@ -71,6 +76,8 @@ class GqlConnection implements Finalizable {
 
   String get name => _name;
 
+  int get networkId => _networkId;
+
   String get group => _group;
 
   TransportType get type => _type;
@@ -81,8 +88,8 @@ class GqlConnection implements Finalizable {
     _postPort.close();
   }
 
-  Future<void> _postRequestHandler(GqlConnectionPostRequest event) async {
-    final tx = toPtrFromAddress(event.tx);
+  Future<void> _postRequestHandler(Tuple2<String, String> event) async {
+    final tx = toPtrFromAddress(event.item1);
 
     String? ok;
     String? err;
@@ -101,7 +108,7 @@ class GqlConnection implements Finalizable {
         headers: {
           'Content-Type': 'application/json',
         },
-        data: event.data,
+        data: event.item2,
       );
     } catch (error) {
       err = error.toString();

@@ -21,5 +21,7 @@ String encodeInternalInput({
         ),
   );
 
-  return result as String;
+  final encodedInput = result as String;
+
+  return encodedInput;
 }

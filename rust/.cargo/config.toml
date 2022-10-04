@@ -1,3 +1,10 @@
+[build]
+rustflags = [
+    "--remap-path-prefix=/user_path/Projects/nekoton_flutter/rust=src",
+    "--remap-path-prefix=/user_path/.cargo=cargo",
+    "--remap-path-prefix=/user_path/.rustup=rustup",
+]
+
 [target.aarch64-linux-android]
 rustflags = [ "-C", "link-arg=-Wl,--hash-style=both" ]
 
