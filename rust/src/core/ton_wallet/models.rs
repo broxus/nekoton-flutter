@@ -178,6 +178,7 @@ pub enum WalletType {
     Multisig { multisig_type: MultisigType },
     WalletV3,
     HighloadWalletV2,
+    EverWallet,
 }
 
 impl ToSerializable<WalletType> for ton_wallet::WalletType {
@@ -188,6 +189,7 @@ impl ToSerializable<WalletType> for ton_wallet::WalletType {
             }
             ton_wallet::WalletType::WalletV3 => WalletType::WalletV3,
             ton_wallet::WalletType::HighloadWalletV2 => WalletType::HighloadWalletV2,
+            ton_wallet::WalletType::EverWallet => WalletType::EverWallet,
         }
     }
 }
@@ -200,6 +202,7 @@ impl ToNekoton<ton_wallet::WalletType> for WalletType {
             }
             WalletType::WalletV3 => ton_wallet::WalletType::WalletV3,
             WalletType::HighloadWalletV2 => ton_wallet::WalletType::HighloadWalletV2,
+            WalletType::EverWallet => ton_wallet::WalletType::EverWallet,
         }
     }
 }

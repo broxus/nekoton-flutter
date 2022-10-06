@@ -18,4 +18,6 @@ enum MultisigType {
   bridgeMultisigWallet,
   @HiveField(5)
   surfWallet,
+  @HiveField(6)
+  multisig2,
 }

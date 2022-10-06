@@ -650,8 +650,9 @@ pub unsafe extern "C" fn nt_pack_into_cell(
         let params = parse_params_list(&params)?;
         let tokens = serde_json::from_str::<serde_json::Value>(&tokens).handle_error()?;
         let tokens = nekoton_abi::parse_abi_tokens(&params, tokens).handle_error()?;
+        let version = ton_abi::contract::AbiVersion { major: 2, minor: 2 };
 
-        let cell = nekoton_abi::pack_into_cell(&tokens).handle_error()?;
+        let cell = nekoton_abi::pack_into_cell(&tokens, version).handle_error()?;
         let bytes = ton_types::serialize_toc(&cell).handle_error()?;
 
         let bytes = base64::encode(&bytes);
@@ -680,8 +681,9 @@ pub unsafe extern "C" fn nt_unpack_from_cell(
         let params = parse_params_list(&params)?;
         let body = base64::decode(boc).handle_error()?;
         let cell = ton_types::deserialize_tree_of_cells(&mut body.as_slice()).handle_error()?;
+        let version = ton_abi::contract::AbiVersion { major: 2, minor: 2 };
 
-        let tokens = nekoton_abi::unpack_from_cell(&params, cell.into(), allow_partial)
+        let tokens = nekoton_abi::unpack_from_cell(&params, cell.into(), allow_partial, version)
             .handle_error()
             .and_then(|e| nekoton_abi::make_abi_tokens(&e).handle_error())?;
 

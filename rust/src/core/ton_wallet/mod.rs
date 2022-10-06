@@ -543,7 +543,7 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_deploy_with_multiple_owners(
                 .collect::<Result<Vec<_>, String>>()?;
 
             let unsigned_message = ton_wallet
-                .prepare_deploy_with_multiple_owners(expiration, &custodians, req_confirms)
+                .prepare_deploy_with_multiple_owners(expiration, &custodians, req_confirms, None)
                 .handle_error()?;
 
             let ptr = Box::into_raw(Box::new(Arc::new(RwLock::new(unsigned_message))));

@@ -1,5 +1,5 @@
 use nekoton::crypto;
-use nekoton_utils::{serde_message, serde_uint256};
+use nekoton_utils::serde_uint256;
 use serde::{Deserialize, Serialize};
 use ton_block::Serializable;
 use ton_types::{Cell, UInt256};
@@ -64,4 +64,29 @@ pub struct SignedDataRaw {
 pub struct SignatureParts {
     pub high: String,
     pub low: String,
+}
+
+pub mod serde_message {
+    use nekoton_utils::serde_cell;
+    use serde::de::Error;
+    use ton_block::{Deserializable, Serializable};
+
+    use super::*;
+
+    pub fn serialize<S>(data: &ton_block::Message, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::Error;
+
+        serde_cell::serialize(&data.serialize().map_err(S::Error::custom)?, serializer)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<ton_block::Message, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let data = String::deserialize(deserializer)?;
+        ton_block::Message::construct_from_base64(&data).map_err(D::Error::custom)
+    }
 }

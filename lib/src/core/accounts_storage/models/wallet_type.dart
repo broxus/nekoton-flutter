@@ -20,5 +20,8 @@ class WalletType with _$WalletType {
   @HiveType(typeId: 200)
   const factory WalletType.highloadWalletV2() = _WalletTypeHighloadWalletV2;
 
+  @HiveType(typeId: 56)
+  const factory WalletType.everWallet() = _WalletTypeEverWallet;
+
   factory WalletType.fromJson(Map<String, dynamic> json) => _$WalletTypeFromJson(json);
 }
