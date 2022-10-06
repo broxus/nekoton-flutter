@@ -13,9 +13,9 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         nt_store_dart_post_cobject(nil);
 
-        nt_free_cstring(nil);
+        nt_cstring_to_void_ptr(nil);
 
-        nt_free_execution_result(nil);
+        nt_free_cstring(nil);
 
         nt_accounts_storage_key();
 
@@ -240,6 +240,14 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
         nt_extract_public_key(nil);
 
         nt_code_to_tvc(nil);
+
+        nt_merge_tvc(nil, nil);
+
+        nt_split_tvc(nil);
+
+        nt_set_code_salt(nil, nil);
+
+        nt_get_code_salt(nil);
 
         nt_split_tvc(nil);
 

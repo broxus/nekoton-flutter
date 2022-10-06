@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ffi';
 import 'dart:isolate';
 
@@ -7,25 +8,34 @@ import 'package:ffi/ffi.dart';
 import 'bindings.dart';
 import 'models/execution_result.dart';
 
-int executeSync(Pointer<Void> Function() function) {
-  final ptr = function();
-  final executionResult = ptr.cast<ExecutionResult>().ref;
+Pointer<Void> toPtrFromAddress(String address) =>
+    NekotonFlutter.instance().bindings.nt_cstring_to_void_ptr(address.toNativeUtf8().cast<Char>());
 
-  try {
-    return executionResult.handle();
-  } finally {
-    NekotonFlutter.bindings.nt_free_execution_result(ptr);
-  }
+dynamic executeSync(Pointer<Char> Function() function) {
+  final ptr = function();
+  final string = ptr.cast<Utf8>().toDartString();
+
+  NekotonFlutter.instance().bindings.nt_free_cstring(ptr);
+
+  final json = jsonDecode(string) as Map<String, dynamic>;
+  final executionResult = ExecutionResult.fromJson(json);
+
+  return executionResult.handle();
 }
 
-Future<int> executeAsync(void Function(int port) function) async {
+Future<dynamic> executeAsync(void Function(int port) function) async {
   final receivePort = ReceivePort();
-  final completer = Completer<int>();
+  final completer = Completer<dynamic>();
   final st = StackTrace.current;
 
-  receivePort.cast<int>().listen((data) {
-    final ptr = Pointer.fromAddress(data).cast<Void>();
-    final executionResult = ptr.cast<ExecutionResult>().ref;
+  receivePort.cast<String>().listen((data) {
+    final ptr = toPtrFromAddress(data).cast<Char>();
+    final string = ptr.cast<Utf8>().toDartString();
+
+    NekotonFlutter.instance().bindings.nt_free_cstring(ptr);
+
+    final json = jsonDecode(string) as Map<String, dynamic>;
+    final executionResult = ExecutionResult.fromJson(json);
 
     try {
       final result = executionResult.handle();
@@ -33,7 +43,6 @@ Future<int> executeAsync(void Function(int port) function) async {
     } catch (err) {
       completer.completeError(err, st);
     } finally {
-      NekotonFlutter.bindings.nt_free_execution_result(ptr);
       receivePort.close();
     }
   });
@@ -41,22 +50,4 @@ Future<int> executeAsync(void Function(int port) function) async {
   function(receivePort.sendPort.nativePort);
 
   return completer.future;
-}
-
-String cStringToDart(int address) {
-  final ptr = Pointer.fromAddress(address).cast<Char>();
-
-  final string = ptr.cast<Utf8>().toDartString();
-
-  NekotonFlutter.bindings.nt_free_cstring(ptr);
-
-  return string;
-}
-
-String? optionalCStringToDart(int address) {
-  if (Pointer.fromAddress(address) == nullptr) {
-    return null;
-  } else {
-    return cStringToDart(address);
-  }
 }

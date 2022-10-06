@@ -7,12 +7,12 @@ import '../ffi_utils.dart';
 
 String extractPublicKey(String boc) {
   final result = executeSync(
-    () => NekotonFlutter.bindings.nt_extract_public_key(
-      boc.toNativeUtf8().cast<Char>(),
-    ),
+    () => NekotonFlutter.instance().bindings.nt_extract_public_key(
+          boc.toNativeUtf8().cast<Char>(),
+        ),
   );
 
-  final string = cStringToDart(result);
+  final publicKey = result as String;
 
-  return string;
+  return publicKey;
 }

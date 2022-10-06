@@ -23,5 +23,6 @@ class TokenWalletTransactionWithData
   const TokenWalletTransactionWithData._();
 
   @override
-  int compareTo(TokenWalletTransactionWithData other) => -transaction.createdAt.compareTo(other.transaction.createdAt);
+  int compareTo(TokenWalletTransactionWithData other) =>
+      -transaction.createdAt.compareTo(other.transaction.createdAt);
 }

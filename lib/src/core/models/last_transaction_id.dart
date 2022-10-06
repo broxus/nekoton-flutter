@@ -13,5 +13,6 @@ class LastTransactionId with _$LastTransactionId {
     @HiveField(2) String? hash,
   }) = _LastTransactionId;
 
-  factory LastTransactionId.fromJson(Map<String, dynamic> json) => _$LastTransactionIdFromJson(json);
+  factory LastTransactionId.fromJson(Map<String, dynamic> json) =>
+      _$LastTransactionIdFromJson(json);
 }

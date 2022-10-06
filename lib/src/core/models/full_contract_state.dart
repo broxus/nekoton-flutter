@@ -18,5 +18,6 @@ class FullContractState with _$FullContractState {
     required String boc,
   }) = _FullContractState;
 
-  factory FullContractState.fromJson(Map<String, dynamic> json) => _$FullContractStateFromJson(json);
+  factory FullContractState.fromJson(Map<String, dynamic> json) =>
+      _$FullContractStateFromJson(json);
 }

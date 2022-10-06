@@ -30,14 +30,14 @@ class GqlTransport extends Transport {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_gql_transport_get_latest_block_id(
-        port,
-        ptr,
-        address.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_gql_transport_get_latest_block_id(
+            port,
+            ptr,
+            address.toNativeUtf8().cast<Char>(),
+          ),
     );
 
-    final id = cStringToDart(result);
+    final id = result as String;
 
     return id;
   }
@@ -46,14 +46,14 @@ class GqlTransport extends Transport {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_gql_transport_get_block(
-        port,
-        ptr,
-        id.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_gql_transport_get_block(
+            port,
+            ptr,
+            id.toNativeUtf8().cast<Char>(),
+          ),
     );
 
-    final block = cStringToDart(result);
+    final block = result as String;
 
     return block;
   }
@@ -66,16 +66,16 @@ class GqlTransport extends Transport {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_gql_transport_wait_for_next_block_id(
-        port,
-        ptr,
-        currentBlockId.toNativeUtf8().cast<Char>(),
-        address.toNativeUtf8().cast<Char>(),
-        timeout,
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_gql_transport_wait_for_next_block_id(
+            port,
+            ptr,
+            currentBlockId.toNativeUtf8().cast<Char>(),
+            address.toNativeUtf8().cast<Char>(),
+            timeout,
+          ),
     );
 
-    final id = cStringToDart(result);
+    final id = result as String;
 
     return id;
   }
@@ -84,9 +84,9 @@ class GqlTransport extends Transport {
   Future<Pointer<Void>> clonePtr() => _lock.synchronized(() {
         if (_ptr == null) throw Exception('Gql transport use after free');
 
-        final ptr = NekotonFlutter.bindings.nt_gql_transport_clone_ptr(
-          _ptr!,
-        );
+        final ptr = NekotonFlutter.instance().bindings.nt_gql_transport_clone_ptr(
+              _ptr!,
+            );
 
         return ptr;
       });
@@ -95,9 +95,9 @@ class GqlTransport extends Transport {
   Future<void> freePtr() => _lock.synchronized(() {
         if (_ptr == null) return;
 
-        NekotonFlutter.bindings.nt_gql_transport_free_ptr(
-          _ptr!,
-        );
+        NekotonFlutter.instance().bindings.nt_gql_transport_free_ptr(
+              _ptr!,
+            );
 
         _ptr = null;
       });
@@ -116,11 +116,11 @@ class GqlTransport extends Transport {
         final settingsStr = jsonEncode(settings);
 
         final result = executeSync(
-          () => NekotonFlutter.bindings.nt_gql_transport_create(
-            settingsStr.toNativeUtf8().cast<Char>(),
-          ),
+          () => NekotonFlutter.instance().bindings.nt_gql_transport_create(
+                settingsStr.toNativeUtf8().cast<Char>(),
+              ),
         );
 
-        _ptr = Pointer.fromAddress(result).cast<Void>();
+        _ptr = toPtrFromAddress(result as String);
       });
 }

@@ -8,6 +8,7 @@ part 'connection_data.freezed.dart';
 class ConnectionData with _$ConnectionData {
   const factory ConnectionData({
     required String name,
+    required int networkId,
     required String group,
     required TransportType type,
     required List<String> endpoints,

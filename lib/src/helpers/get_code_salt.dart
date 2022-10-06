@@ -5,14 +5,14 @@ import 'package:ffi/ffi.dart';
 import '../bindings.dart';
 import '../ffi_utils.dart';
 
-String codeToTvc(String code) {
+String? getCodeSalt(String code) {
   final result = executeSync(
-    () => NekotonFlutter.instance().bindings.nt_code_to_tvc(
+    () => NekotonFlutter.instance().bindings.nt_get_code_salt(
           code.toNativeUtf8().cast<Char>(),
         ),
   );
 
-  final tvc = result as String;
+  final salt = result as String?;
 
-  return tvc;
+  return salt;
 }

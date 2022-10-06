@@ -17,5 +17,6 @@ class OnTransactionsFoundPayload with _$OnTransactionsFoundPayload {
     required TransactionsBatchInfo batchInfo,
   }) = _OnTransactionsFoundPayload;
 
-  factory OnTransactionsFoundPayload.fromJson(Map<String, dynamic> json) => _$OnTransactionsFoundPayloadFromJson(json);
+  factory OnTransactionsFoundPayload.fromJson(Map<String, dynamic> json) =>
+      _$OnTransactionsFoundPayloadFromJson(json);
 }

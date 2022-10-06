@@ -28,5 +28,6 @@ class DerivedKeySignParams with _$DerivedKeySignParams implements SignInput {
     required Password password,
   }) = _DerivedKeySignParamsByPublicKey;
 
-  factory DerivedKeySignParams.fromJson(Map<String, dynamic> json) => _$DerivedKeySignParamsFromJson(json);
+  factory DerivedKeySignParams.fromJson(Map<String, dynamic> json) =>
+      _$DerivedKeySignParamsFromJson(json);
 }

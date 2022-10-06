@@ -16,18 +16,15 @@ mod transport;
 use std::{
     intrinsics::transmute,
     io,
-    os::raw::{c_char, c_longlong, c_ulonglong, c_void},
+    os::raw::{c_char, c_void},
     str::FromStr,
     sync::Arc,
 };
 
-use allo_isolate::{
-    ffi::{DartCObject, DartPort},
-    Isolate,
-};
+use allo_isolate::ffi::{DartCObject, DartPort};
 use anyhow::Result;
 use lazy_static::lazy_static;
-use models::{ExecutionResult, HandleError, ToCStringPtr, ToStringFromPtr};
+use models::{HandleError, ToPtrFromAddress, ToStringFromPtr};
 use nekoton_utils::SimpleClock;
 use tokio::runtime::{Builder, Runtime};
 use ton_block::MsgAddressInt;
@@ -47,6 +44,13 @@ macro_rules! runtime {
     };
 }
 
+#[macro_export]
+macro_rules! clock {
+    () => {
+        CLOCK.clone()
+    };
+}
+
 #[no_mangle]
 pub unsafe extern "C" fn nt_store_dart_post_cobject(ptr: *mut c_void) {
     let ptr = transmute::<
@@ -57,18 +61,14 @@ pub unsafe extern "C" fn nt_store_dart_post_cobject(ptr: *mut c_void) {
     allo_isolate::store_dart_post_cobject(ptr);
 }
 
-fn send_to_result_port(port: c_longlong, result: *mut c_void) {
-    Isolate::new(port).post(result as c_ulonglong);
+#[no_mangle]
+pub unsafe extern "C" fn nt_cstring_to_void_ptr(ptr: *mut c_char) -> *mut c_void {
+    ptr.to_string_from_ptr().to_ptr_from_address::<c_void>()
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_free_cstring(ptr: *mut c_char) {
     ptr.to_string_from_ptr();
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn nt_free_execution_result(ptr: *mut c_void) {
-    Box::from_raw(ptr as *mut ExecutionResult);
 }
 
 fn parse_hash(hash: &str) -> Result<ton_types::UInt256, String> {

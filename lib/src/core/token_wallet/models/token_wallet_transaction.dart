@@ -43,5 +43,6 @@ class TokenWalletTransaction with _$TokenWalletTransaction {
     @HiveField(0) required String value,
   }) = _TokenWalletTransactionSwapBackBounced;
 
-  factory TokenWalletTransaction.fromJson(Map<String, dynamic> json) => _$TokenWalletTransactionFromJson(json);
+  factory TokenWalletTransaction.fromJson(Map<String, dynamic> json) =>
+      _$TokenWalletTransactionFromJson(json);
 }

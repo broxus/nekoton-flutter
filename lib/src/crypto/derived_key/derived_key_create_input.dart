@@ -29,5 +29,6 @@ class DerivedKeyCreateInput with _$DerivedKeyCreateInput implements CreateKeyInp
     required Password password,
   }) = _DerivedKeyCreateInputDerive;
 
-  factory DerivedKeyCreateInput.fromJson(Map<String, dynamic> json) => _$DerivedKeyCreateInputFromJson(json);
+  factory DerivedKeyCreateInput.fromJson(Map<String, dynamic> json) =>
+      _$DerivedKeyCreateInputFromJson(json);
 }

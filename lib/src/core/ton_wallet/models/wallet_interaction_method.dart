@@ -9,7 +9,8 @@ part 'wallet_interaction_method.g.dart';
 @Freezed(unionValueCase: FreezedUnionCase.pascal)
 class WalletInteractionMethod with _$WalletInteractionMethod {
   @HiveType(typeId: 49)
-  const factory WalletInteractionMethod.walletV3Transfer() = _WalletInteractionMethodWalletV3Transfer;
+  const factory WalletInteractionMethod.walletV3Transfer() =
+      _WalletInteractionMethodWalletV3Transfer;
 
   @JsonSerializable(
     fieldRename: FieldRename.snake,
@@ -20,5 +21,6 @@ class WalletInteractionMethod with _$WalletInteractionMethod {
     @HiveField(0) required MultisigTransaction multisigTransaction,
   }) = _WalletInteractionMethodMultisig;
 
-  factory WalletInteractionMethod.fromJson(Map<String, dynamic> json) => _$WalletInteractionMethodFromJson(json);
+  factory WalletInteractionMethod.fromJson(Map<String, dynamic> json) =>
+      _$WalletInteractionMethodFromJson(json);
 }

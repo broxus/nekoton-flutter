@@ -13,5 +13,6 @@ class TransactionsBatchInfo with _$TransactionsBatchInfo {
     required TransactionsBatchType batchType,
   }) = _TransactionsBatchInfo;
 
-  factory TransactionsBatchInfo.fromJson(Map<String, dynamic> json) => _$TransactionsBatchInfoFromJson(json);
+  factory TransactionsBatchInfo.fromJson(Map<String, dynamic> json) =>
+      _$TransactionsBatchInfoFromJson(json);
 }

@@ -61,13 +61,13 @@ class GenericContract extends ContractSubscription implements Pointed {
         final ptr = await clonePtr();
 
         final result = await executeAsync(
-          (port) => NekotonFlutter.bindings.nt_generic_contract_address(
-            port,
-            ptr,
-          ),
+          (port) => NekotonFlutter.instance().bindings.nt_generic_contract_address(
+                port,
+                ptr,
+              ),
         );
 
-        final address = cStringToDart(result);
+        final address = result as String;
 
         return address;
       });
@@ -76,14 +76,13 @@ class GenericContract extends ContractSubscription implements Pointed {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_generic_contract_contract_state(
-        port,
-        ptr,
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_generic_contract_contract_state(
+            port,
+            ptr,
+          ),
     );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>;
+    final json = result as Map<String, dynamic>;
     final contractState = ContractState.fromJson(json);
 
     return contractState;
@@ -93,14 +92,13 @@ class GenericContract extends ContractSubscription implements Pointed {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_generic_contract_pending_transactions(
-        port,
-        ptr,
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_generic_contract_pending_transactions(
+            port,
+            ptr,
+          ),
     );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as List<dynamic>;
+    final json = result as List<dynamic>;
     final list = json.cast<Map<String, dynamic>>();
     final pendingTransactions = list.map((e) => PendingTransaction.fromJson(e)).toList();
 
@@ -112,14 +110,13 @@ class GenericContract extends ContractSubscription implements Pointed {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_generic_contract_polling_method(
-        port,
-        ptr,
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_generic_contract_polling_method(
+            port,
+            ptr,
+          ),
     );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as String;
+    final json = result as String;
     final pollingMethod = pollingMethodFromEnumString(json);
 
     return pollingMethod;
@@ -130,14 +127,14 @@ class GenericContract extends ContractSubscription implements Pointed {
     final signedMessageStr = jsonEncode(signedMessage);
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_generic_contract_estimate_fees(
-        port,
-        ptr,
-        signedMessageStr.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_generic_contract_estimate_fees(
+            port,
+            ptr,
+            signedMessageStr.toNativeUtf8().cast<Char>(),
+          ),
     );
 
-    final fees = cStringToDart(result);
+    final fees = result as String;
 
     return fees;
   }
@@ -149,17 +146,16 @@ class GenericContract extends ContractSubscription implements Pointed {
     await prepareReliablePolling();
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_generic_contract_send(
-        port,
-        ptr,
-        signedMessageStr.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_generic_contract_send(
+            port,
+            ptr,
+            signedMessageStr.toNativeUtf8().cast<Char>(),
+          ),
     );
 
     skipRefreshTimer();
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>;
+    final json = result as Map<String, dynamic>;
     final pendingTransaction = PendingTransaction.fromJson(json);
 
     _pendingTransactionsSubject.add(await pendingTransactions);
@@ -176,16 +172,15 @@ class GenericContract extends ContractSubscription implements Pointed {
     final optionsStr = jsonEncode(options);
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_generic_contract_execute_transaction_locally(
-        port,
-        ptr,
-        signedMessageStr.toNativeUtf8().cast<Char>(),
-        optionsStr.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_generic_contract_execute_transaction_locally(
+            port,
+            ptr,
+            signedMessageStr.toNativeUtf8().cast<Char>(),
+            optionsStr.toNativeUtf8().cast<Char>(),
+          ),
     );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>;
+    final json = result as Map<String, dynamic>;
     final transaction = Transaction.fromJson(json);
 
     return transaction;
@@ -196,10 +191,10 @@ class GenericContract extends ContractSubscription implements Pointed {
     final ptr = await clonePtr();
 
     await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_generic_contract_refresh(
-        port,
-        ptr,
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_generic_contract_refresh(
+            port,
+            ptr,
+          ),
     );
 
     _pendingTransactionsSubject.add(await pendingTransactions);
@@ -210,11 +205,11 @@ class GenericContract extends ContractSubscription implements Pointed {
     final fromStr = jsonEncode(from);
 
     await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_generic_contract_preload_transactions(
-        port,
-        ptr,
-        fromStr.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_generic_contract_preload_transactions(
+            port,
+            ptr,
+            fromStr.toNativeUtf8().cast<Char>(),
+          ),
     );
   }
 
@@ -223,11 +218,11 @@ class GenericContract extends ContractSubscription implements Pointed {
     final ptr = await clonePtr();
 
     await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_generic_contract_handle_block(
-        port,
-        ptr,
-        block.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_generic_contract_handle_block(
+            port,
+            ptr,
+            block.toNativeUtf8().cast<Char>(),
+          ),
     );
 
     _pendingTransactionsSubject.add(await pendingTransactions);
@@ -237,9 +232,9 @@ class GenericContract extends ContractSubscription implements Pointed {
   Future<Pointer<Void>> clonePtr() => _lock.synchronized(() {
         if (_ptr == null) throw Exception('Generic contract use after free');
 
-        final ptr = NekotonFlutter.bindings.nt_generic_contract_clone_ptr(
-          _ptr!,
-        );
+        final ptr = NekotonFlutter.instance().bindings.nt_generic_contract_clone_ptr(
+              _ptr!,
+            );
 
         return ptr;
       });
@@ -255,9 +250,9 @@ class GenericContract extends ContractSubscription implements Pointed {
 
         await pausePolling();
 
-        NekotonFlutter.bindings.nt_generic_contract_free_ptr(
-          _ptr!,
-        );
+        NekotonFlutter.instance().bindings.nt_generic_contract_free_ptr(
+              _ptr!,
+            );
 
         _ptr = null;
       });
@@ -299,19 +294,19 @@ class GenericContract extends ContractSubscription implements Pointed {
         final transportType = transport.connectionData.type;
 
         final result = await executeAsync(
-          (port) => NekotonFlutter.bindings.nt_generic_contract_subscribe(
-            port,
-            _onMessageSentPort.sendPort.nativePort,
-            _onMessageExpiredPort.sendPort.nativePort,
-            _onStateChangedPort.sendPort.nativePort,
-            _onTransactionsFoundPort.sendPort.nativePort,
-            transportPtr,
-            transportType.index,
-            address.toNativeUtf8().cast<Char>(),
-          ),
+          (port) => NekotonFlutter.instance().bindings.nt_generic_contract_subscribe(
+                port,
+                _onMessageSentPort.sendPort.nativePort,
+                _onMessageExpiredPort.sendPort.nativePort,
+                _onStateChangedPort.sendPort.nativePort,
+                _onTransactionsFoundPort.sendPort.nativePort,
+                transportPtr,
+                transportType.index,
+                address.toNativeUtf8().cast<Char>(),
+              ),
         );
 
-        _ptr = Pointer.fromAddress(result).cast<Void>();
+        _ptr = toPtrFromAddress(result as String);
 
         await startPolling();
       });

@@ -28,14 +28,13 @@ class AccountsStorage implements Pointed {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_accounts_storage_entries(
-        port,
-        ptr,
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_accounts_storage_entries(
+            port,
+            ptr,
+          ),
     );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as List<dynamic>;
+    final json = result as List<dynamic>;
     final list = json.cast<Map<String, dynamic>>();
     final entries = list.map((e) => AssetsList.fromJson(e)).toList();
 
@@ -47,15 +46,14 @@ class AccountsStorage implements Pointed {
     final newAccountStr = jsonEncode(newAccount);
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_accounts_storage_add_account(
-        port,
-        ptr,
-        newAccountStr.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_accounts_storage_add_account(
+            port,
+            ptr,
+            newAccountStr.toNativeUtf8().cast<Char>(),
+          ),
     );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>;
+    final json = result as Map<String, dynamic>;
     final entry = AssetsList.fromJson(json);
 
     return entry;
@@ -66,15 +64,14 @@ class AccountsStorage implements Pointed {
     final newAccountsStr = jsonEncode(newAccounts);
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_accounts_storage_add_accounts(
-        port,
-        ptr,
-        newAccountsStr.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_accounts_storage_add_accounts(
+            port,
+            ptr,
+            newAccountsStr.toNativeUtf8().cast<Char>(),
+          ),
     );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as List<dynamic>;
+    final json = result as List<dynamic>;
     final list = json.cast<Map<String, dynamic>>();
     final entries = list.map((e) => AssetsList.fromJson(e)).toList();
 
@@ -88,16 +85,15 @@ class AccountsStorage implements Pointed {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_accounts_storage_rename_account(
-        port,
-        ptr,
-        account.toNativeUtf8().cast<Char>(),
-        name.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_accounts_storage_rename_account(
+            port,
+            ptr,
+            account.toNativeUtf8().cast<Char>(),
+            name.toNativeUtf8().cast<Char>(),
+          ),
     );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>;
+    final json = result as Map<String, dynamic>;
     final entry = AssetsList.fromJson(json);
 
     return entry;
@@ -111,17 +107,16 @@ class AccountsStorage implements Pointed {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_accounts_storage_add_token_wallet(
-        port,
-        ptr,
-        account.toNativeUtf8().cast<Char>(),
-        networkGroup.toNativeUtf8().cast<Char>(),
-        rootTokenContract.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_accounts_storage_add_token_wallet(
+            port,
+            ptr,
+            account.toNativeUtf8().cast<Char>(),
+            networkGroup.toNativeUtf8().cast<Char>(),
+            rootTokenContract.toNativeUtf8().cast<Char>(),
+          ),
     );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>;
+    final json = result as Map<String, dynamic>;
     final entry = AssetsList.fromJson(json);
 
     return entry;
@@ -135,17 +130,16 @@ class AccountsStorage implements Pointed {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_accounts_storage_remove_token_wallet(
-        port,
-        ptr,
-        account.toNativeUtf8().cast<Char>(),
-        networkGroup.toNativeUtf8().cast<Char>(),
-        rootTokenContract.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_accounts_storage_remove_token_wallet(
+            port,
+            ptr,
+            account.toNativeUtf8().cast<Char>(),
+            networkGroup.toNativeUtf8().cast<Char>(),
+            rootTokenContract.toNativeUtf8().cast<Char>(),
+          ),
     );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>;
+    final json = result as Map<String, dynamic>;
     final entry = AssetsList.fromJson(json);
 
     return entry;
@@ -155,15 +149,14 @@ class AccountsStorage implements Pointed {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_accounts_storage_remove_account(
-        port,
-        ptr,
-        account.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_accounts_storage_remove_account(
+            port,
+            ptr,
+            account.toNativeUtf8().cast<Char>(),
+          ),
     );
 
-    final string = optionalCStringToDart(result);
-    final json = string != null ? jsonDecode(string) as Map<String, dynamic> : null;
+    final json = result as Map<String, dynamic>?;
     final entry = json != null ? AssetsList.fromJson(json) : null;
 
     return entry;
@@ -174,15 +167,14 @@ class AccountsStorage implements Pointed {
     final accountsStr = jsonEncode(accounts);
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_accounts_storage_remove_accounts(
-        port,
-        ptr,
-        accountsStr.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_accounts_storage_remove_accounts(
+            port,
+            ptr,
+            accountsStr.toNativeUtf8().cast<Char>(),
+          ),
     );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as List<dynamic>;
+    final json = result as List<dynamic>;
     final list = json.cast<Map<String, dynamic>>();
     final entries = list.map((e) => AssetsList.fromJson(e)).toList();
 
@@ -193,10 +185,10 @@ class AccountsStorage implements Pointed {
     final ptr = await clonePtr();
 
     await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_accounts_storage_clear(
-        port,
-        ptr,
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_accounts_storage_clear(
+            port,
+            ptr,
+          ),
     );
   }
 
@@ -204,10 +196,10 @@ class AccountsStorage implements Pointed {
     final ptr = await clonePtr();
 
     await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_accounts_storage_reload(
-        port,
-        ptr,
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_accounts_storage_reload(
+            port,
+            ptr,
+          ),
     );
   }
 
@@ -215,9 +207,9 @@ class AccountsStorage implements Pointed {
   Future<Pointer<Void>> clonePtr() => _lock.synchronized(() {
         if (_ptr == null) throw Exception('Accounts storage use after free');
 
-        final ptr = NekotonFlutter.bindings.nt_accounts_storage_clone_ptr(
-          _ptr!,
-        );
+        final ptr = NekotonFlutter.instance().bindings.nt_accounts_storage_clone_ptr(
+              _ptr!,
+            );
 
         return ptr;
       });
@@ -226,9 +218,9 @@ class AccountsStorage implements Pointed {
   Future<void> freePtr() => _lock.synchronized(() {
         if (_ptr == null) return;
 
-        NekotonFlutter.bindings.nt_accounts_storage_free_ptr(
-          _ptr!,
-        );
+        NekotonFlutter.instance().bindings.nt_accounts_storage_free_ptr(
+              _ptr!,
+            );
 
         _ptr = null;
       });
@@ -237,12 +229,12 @@ class AccountsStorage implements Pointed {
         final storagePtr = await storage.clonePtr();
 
         final result = await executeAsync(
-          (port) => NekotonFlutter.bindings.nt_accounts_storage_create(
-            port,
-            storagePtr,
-          ),
+          (port) => NekotonFlutter.instance().bindings.nt_accounts_storage_create(
+                port,
+                storagePtr,
+              ),
         );
 
-        _ptr = Pointer.fromAddress(result).cast<Void>();
+        _ptr = toPtrFromAddress(result as String);
       });
 }

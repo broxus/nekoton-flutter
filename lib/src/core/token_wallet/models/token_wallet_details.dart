@@ -13,5 +13,6 @@ class TokenWalletDetails with _$TokenWalletDetails {
     @HiveField(2) required String balance,
   }) = _TokenWalletDetails;
 
-  factory TokenWalletDetails.fromJson(Map<String, dynamic> json) => _$TokenWalletDetailsFromJson(json);
+  factory TokenWalletDetails.fromJson(Map<String, dynamic> json) =>
+      _$TokenWalletDetailsFromJson(json);
 }

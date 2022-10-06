@@ -37,5 +37,6 @@ class MultisigTransaction with _$MultisigTransaction {
     @HiveField(0) required MultisigConfirmTransaction multisigConfirmTransaction,
   }) = _MultisigTransactionConfirm;
 
-  factory MultisigTransaction.fromJson(Map<String, dynamic> json) => _$MultisigTransactionFromJson(json);
+  factory MultisigTransaction.fromJson(Map<String, dynamic> json) =>
+      _$MultisigTransactionFromJson(json);
 }

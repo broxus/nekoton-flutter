@@ -15,5 +15,6 @@ class OnStateChangedPayload with _$OnStateChangedPayload {
     required ContractState newState,
   }) = _OnStateChangedPayload;
 
-  factory OnStateChangedPayload.fromJson(Map<String, dynamic> json) => _$OnStateChangedPayloadFromJson(json);
+  factory OnStateChangedPayload.fromJson(Map<String, dynamic> json) =>
+      _$OnStateChangedPayloadFromJson(json);
 }

@@ -14,5 +14,6 @@ class TokenOutgoingTransfer with _$TokenOutgoingTransfer {
     @HiveField(1) required String tokens,
   }) = _TokenOutgoingTransfer;
 
-  factory TokenOutgoingTransfer.fromJson(Map<String, dynamic> json) => _$TokenOutgoingTransferFromJson(json);
+  factory TokenOutgoingTransfer.fromJson(Map<String, dynamic> json) =>
+      _$TokenOutgoingTransferFromJson(json);
 }

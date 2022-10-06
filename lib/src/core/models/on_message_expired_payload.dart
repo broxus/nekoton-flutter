@@ -15,5 +15,6 @@ class OnMessageExpiredPayload with _$OnMessageExpiredPayload {
     required PendingTransaction pendingTransaction,
   }) = _OnMessageExpiredPayload;
 
-  factory OnMessageExpiredPayload.fromJson(Map<String, dynamic> json) => _$OnMessageExpiredPayloadFromJson(json);
+  factory OnMessageExpiredPayload.fromJson(Map<String, dynamic> json) =>
+      _$OnMessageExpiredPayloadFromJson(json);
 }

@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
@@ -15,16 +14,15 @@ Future<List<String>> getWalletCustodians({
   final transportType = transport.connectionData.type;
 
   final result = await executeAsync(
-    (port) => NekotonFlutter.bindings.nt_get_wallet_custodians(
-      port,
-      ptr,
-      transportType.index,
-      address.toNativeUtf8().cast<Char>(),
-    ),
+    (port) => NekotonFlutter.instance().bindings.nt_get_wallet_custodians(
+          port,
+          ptr,
+          transportType.index,
+          address.toNativeUtf8().cast<Char>(),
+        ),
   );
 
-  final string = cStringToDart(result);
-  final json = jsonDecode(string) as List<dynamic>;
+  final json = result as List<dynamic>;
   final custodians = json.cast<String>();
 
   return custodians;

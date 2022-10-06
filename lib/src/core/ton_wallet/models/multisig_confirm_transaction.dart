@@ -12,5 +12,6 @@ class MultisigConfirmTransaction with _$MultisigConfirmTransaction {
     @HiveField(1) required String transactionId,
   }) = _MultisigConfirmTransaction;
 
-  factory MultisigConfirmTransaction.fromJson(Map<String, dynamic> json) => _$MultisigConfirmTransactionFromJson(json);
+  factory MultisigConfirmTransaction.fromJson(Map<String, dynamic> json) =>
+      _$MultisigConfirmTransactionFromJson(json);
 }

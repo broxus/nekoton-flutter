@@ -19,5 +19,6 @@ class ExistingWalletInfo with _$ExistingWalletInfo {
     required ContractState contractState,
   }) = _ExistingWalletInfo;
 
-  factory ExistingWalletInfo.fromJson(Map<String, dynamic> json) => _$ExistingWalletInfoFromJson(json);
+  factory ExistingWalletInfo.fromJson(Map<String, dynamic> json) =>
+      _$ExistingWalletInfoFromJson(json);
 }

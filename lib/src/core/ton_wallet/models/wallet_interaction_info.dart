@@ -20,5 +20,6 @@ class WalletInteractionInfo with _$WalletInteractionInfo {
     @HiveField(2) required WalletInteractionMethod method,
   }) = _WalletInteractionInfo;
 
-  factory WalletInteractionInfo.fromJson(Map<String, dynamic> json) => _$WalletInteractionInfoFromJson(json);
+  factory WalletInteractionInfo.fromJson(Map<String, dynamic> json) =>
+      _$WalletInteractionInfoFromJson(json);
 }

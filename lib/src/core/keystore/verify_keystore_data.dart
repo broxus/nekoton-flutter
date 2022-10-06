@@ -7,9 +7,9 @@ import '../../ffi_utils.dart';
 
 bool verifyKeystoreData(String data) {
   final result = executeSync(
-    () => NekotonFlutter.bindings.nt_keystore_verify_data(
-      data.toNativeUtf8().cast<Char>(),
-    ),
+    () => NekotonFlutter.instance().bindings.nt_keystore_verify_data(
+          data.toNativeUtf8().cast<Char>(),
+        ),
   );
 
   final isValid = result != 0;

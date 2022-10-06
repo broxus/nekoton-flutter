@@ -36,5 +36,6 @@ class TransactionAdditionalInfo with _$TransactionAdditionalInfo {
     @HiveField(0) required WalletInteractionInfo info,
   }) = _TransactionAdditionalInfoWalletInteraction;
 
-  factory TransactionAdditionalInfo.fromJson(Map<String, dynamic> json) => _$TransactionAdditionalInfoFromJson(json);
+  factory TransactionAdditionalInfo.fromJson(Map<String, dynamic> json) =>
+      _$TransactionAdditionalInfoFromJson(json);
 }

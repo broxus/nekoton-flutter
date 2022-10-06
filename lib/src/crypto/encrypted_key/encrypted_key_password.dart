@@ -18,5 +18,6 @@ class EncryptedKeyPassword with _$EncryptedKeyPassword implements ExportKeyInput
     required Password password,
   }) = _EncryptedKeyPassword;
 
-  factory EncryptedKeyPassword.fromJson(Map<String, dynamic> json) => _$EncryptedKeyPasswordFromJson(json);
+  factory EncryptedKeyPassword.fromJson(Map<String, dynamic> json) =>
+      _$EncryptedKeyPasswordFromJson(json);
 }

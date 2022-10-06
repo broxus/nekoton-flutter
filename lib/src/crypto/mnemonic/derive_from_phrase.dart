@@ -16,14 +16,13 @@ Keypair deriveFromPhrase({
   final mnemonicTypeStr = jsonEncode(mnemonicType);
 
   final result = executeSync(
-    () => NekotonFlutter.bindings.nt_derive_from_phrase(
-      phraseStr.toNativeUtf8().cast<Char>(),
-      mnemonicTypeStr.toNativeUtf8().cast<Char>(),
-    ),
+    () => NekotonFlutter.instance().bindings.nt_derive_from_phrase(
+          phraseStr.toNativeUtf8().cast<Char>(),
+          mnemonicTypeStr.toNativeUtf8().cast<Char>(),
+        ),
   );
 
-  final string = cStringToDart(result);
-  final json = jsonDecode(string) as Map<String, dynamic>;
+  final json = result as Map<String, dynamic>;
   final keypair = Keypair.fromJson(json);
 
   return keypair;

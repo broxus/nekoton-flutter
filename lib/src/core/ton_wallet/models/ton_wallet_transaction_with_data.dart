@@ -23,5 +23,6 @@ class TonWalletTransactionWithData
   const TonWalletTransactionWithData._();
 
   @override
-  int compareTo(TonWalletTransactionWithData other) => -transaction.createdAt.compareTo(other.transaction.createdAt);
+  int compareTo(TonWalletTransactionWithData other) =>
+      -transaction.createdAt.compareTo(other.transaction.createdAt);
 }

@@ -19,5 +19,6 @@ class RootTokenContractDetails with _$RootTokenContractDetails {
     @HiveField(5) required String totalSupply,
   }) = _RootTokenContractDetails;
 
-  factory RootTokenContractDetails.fromJson(Map<String, dynamic> json) => _$RootTokenContractDetailsFromJson(json);
+  factory RootTokenContractDetails.fromJson(Map<String, dynamic> json) =>
+      _$RootTokenContractDetailsFromJson(json);
 }

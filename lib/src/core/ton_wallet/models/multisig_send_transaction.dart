@@ -15,5 +15,6 @@ class MultisigSendTransaction with _$MultisigSendTransaction {
     @HiveField(4) required String payload,
   }) = _MultisigSendTransaction;
 
-  factory MultisigSendTransaction.fromJson(Map<String, dynamic> json) => _$MultisigSendTransactionFromJson(json);
+  factory MultisigSendTransaction.fromJson(Map<String, dynamic> json) =>
+      _$MultisigSendTransactionFromJson(json);
 }

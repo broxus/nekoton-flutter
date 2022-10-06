@@ -8,6 +8,7 @@ use std::{
     sync::Arc,
 };
 
+use allo_isolate::Isolate;
 use nekoton::{
     core::models::{Transaction, TransactionsBatchInfo, TransactionsBatchType},
     transport::{gql::GqlTransport, jrpc::JrpcTransport, models::RawContractState, Transport},
@@ -18,10 +19,10 @@ use ton_block::Serializable;
 
 use crate::{
     models::{
-        HandleError, MatchResult, ToCStringPtr, ToOptionalCStringPtr, ToOptionalStringFromPtr,
+        HandleError, MatchResult, PostWithResult, ToOptionalStringFromPtr, ToPtrAddress,
         ToSerializable, ToStringFromPtr,
     },
-    parse_address, parse_hash, runtime, send_to_result_port,
+    parse_address, parse_hash, runtime,
     transport::models::{AccountsList, FullContractState, TransactionsList, TransportType},
     RUNTIME,
 };
@@ -41,7 +42,7 @@ pub unsafe extern "C" fn nt_transport_get_contract_state(
         async fn internal_fn(
             transport: Arc<dyn Transport>,
             address: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let address = parse_address(&address)?;
 
             let contract_state = transport
@@ -50,16 +51,14 @@ pub unsafe extern "C" fn nt_transport_get_contract_state(
                 .handle_error()?
                 .to_serializable();
 
-            let contract_state = serde_json::to_string(&contract_state)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(contract_state)
+            serde_json::to_value(contract_state).handle_error()
         }
 
         let result = internal_fn(transport, address).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -78,7 +77,7 @@ pub unsafe extern "C" fn nt_transport_get_full_contract_state(
         async fn internal_fn(
             transport: Arc<dyn Transport>,
             address: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let address = parse_address(&address)?;
 
             let raw_contract_state = transport
@@ -114,19 +113,14 @@ pub unsafe extern "C" fn nt_transport_get_full_contract_state(
                 RawContractState::NotExists => None,
             };
 
-            let full_contract_state = full_contract_state
-                .as_ref()
-                .map(serde_json::to_string)
-                .transpose()
-                .handle_error()?
-                .to_optional_cstring_ptr() as u64;
-
-            Ok(full_contract_state)
+            serde_json::to_value(full_contract_state).handle_error()
         }
 
         let result = internal_fn(transport, address).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -150,7 +144,7 @@ pub unsafe extern "C" fn nt_transport_get_accounts_by_code_hash(
             code_hash: String,
             limit: u8,
             continuation: Option<String>,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let code_hash = parse_hash(&code_hash)?;
             let continuation = continuation.map(|addr| parse_address(&addr)).transpose()?;
 
@@ -164,18 +158,16 @@ pub unsafe extern "C" fn nt_transport_get_accounts_by_code_hash(
                 continuation: accounts.last().cloned(),
             };
 
-            let accounts_list = serde_json::to_string(&accounts_list)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(accounts_list)
+            serde_json::to_value(accounts_list).handle_error()
         }
 
         let result = internal_fn(transport, code_hash, limit, continuation)
             .await
             .match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -199,7 +191,7 @@ pub unsafe extern "C" fn nt_transport_get_transactions(
             address: String,
             continuation: Option<String>,
             limit: u8,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let address = parse_address(&address)?;
 
             let continuation = continuation
@@ -247,18 +239,16 @@ pub unsafe extern "C" fn nt_transport_get_transactions(
                 info: batch_info,
             };
 
-            let transactions_list = serde_json::to_string(&transactions_list)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(transactions_list)
+            serde_json::to_value(transactions_list).handle_error()
         }
 
         let result = internal_fn(transport, address, continuation, limit)
             .await
             .match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -274,7 +264,10 @@ pub unsafe extern "C" fn nt_transport_get_transaction(
     let hash = hash.to_string_from_ptr();
 
     runtime!().spawn(async move {
-        async fn internal_fn(transport: Arc<dyn Transport>, hash: String) -> Result<u64, String> {
+        async fn internal_fn(
+            transport: Arc<dyn Transport>,
+            hash: String,
+        ) -> Result<serde_json::Value, String> {
             let hash = parse_hash(&hash)?;
 
             let transaction = transport
@@ -285,19 +278,14 @@ pub unsafe extern "C" fn nt_transport_get_transaction(
                 .transpose()
                 .handle_error()?;
 
-            let transaction = transaction
-                .as_ref()
-                .map(serde_json::to_string)
-                .transpose()
-                .handle_error()?
-                .to_optional_cstring_ptr() as u64;
-
-            Ok(transaction)
+            serde_json::to_value(transaction).handle_error()
         }
 
         let result = internal_fn(transport, hash).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 

@@ -6,6 +6,7 @@ use std::{
     sync::Arc,
 };
 
+use allo_isolate::Isolate;
 use nekoton::{
     core::{
         models::MessageFlags,
@@ -18,6 +19,7 @@ use tokio::sync::RwLock;
 use ton_block::{Block, Deserializable};
 
 use crate::{
+    clock,
     core::{
         models::Expiration,
         ton_wallet::{
@@ -26,10 +28,13 @@ use crate::{
         },
     },
     crypto::models::SignedMessage,
-    models::{HandleError, MatchResult, ToNekoton, ToOptionalStringFromPtr, ToSerializable},
-    parse_address, parse_public_key, runtime, send_to_result_port,
+    models::{
+        HandleError, MatchResult, PostWithResult, ToNekoton, ToOptionalStringFromPtr, ToPtrAddress,
+        ToSerializable,
+    },
+    parse_address, parse_public_key, runtime,
     transport::{match_transport, models::RawContractState},
-    ToCStringPtr, ToStringFromPtr, CLOCK, RUNTIME,
+    ToStringFromPtr, CLOCK, RUNTIME,
 };
 
 #[no_mangle]
@@ -60,7 +65,7 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe(
             workchain: i8,
             public_key: String,
             contract: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let public_key = parse_public_key(&public_key)?;
 
             let contract = serde_json::from_str::<WalletType>(&contract)
@@ -75,7 +80,7 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe(
             ));
 
             let ton_wallet = TonWallet::subscribe(
-                CLOCK.clone(),
+                clock!().clone(),
                 transport,
                 workchain,
                 public_key,
@@ -85,9 +90,9 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe(
             .await
             .handle_error()?;
 
-            let ptr = Box::into_raw(Box::new(Arc::new(RwLock::new(ton_wallet)))) as u64;
+            let ptr = Box::into_raw(Box::new(Arc::new(RwLock::new(ton_wallet))));
 
-            Ok(ptr)
+            serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
 
         let result = internal_fn(
@@ -103,7 +108,9 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe(
         .await
         .match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -130,7 +137,7 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe_by_address(
             on_transactions_found_port: i64,
             transport: Arc<dyn Transport>,
             address: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let address = parse_address(&address)?;
 
             let handler = Arc::new(TonWalletSubscriptionHandlerImpl::new(
@@ -141,13 +148,13 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe_by_address(
             ));
 
             let ton_wallet =
-                TonWallet::subscribe_by_address(CLOCK.clone(), transport, address, handler)
+                TonWallet::subscribe_by_address(clock!().clone(), transport, address, handler)
                     .await
                     .handle_error()?;
 
-            let ptr = Box::into_raw(Box::new(Arc::new(RwLock::new(ton_wallet)))) as u64;
+            let ptr = Box::into_raw(Box::new(Arc::new(RwLock::new(ton_wallet))));
 
-            Ok(ptr)
+            serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
 
         let result = internal_fn(
@@ -161,7 +168,9 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe_by_address(
         .await
         .match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -188,7 +197,7 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe_by_existing(
             on_transactions_found_port: i64,
             transport: Arc<dyn Transport>,
             existing_wallet: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let existing_wallet = serde_json::from_str::<ExistingWalletInfo>(&existing_wallet)
                 .handle_error()?
                 .to_nekoton();
@@ -201,7 +210,7 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe_by_existing(
             ));
 
             let ton_wallet = TonWallet::subscribe_by_existing(
-                CLOCK.clone(),
+                clock!().clone(),
                 transport,
                 existing_wallet,
                 handler,
@@ -209,9 +218,9 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe_by_existing(
             .await
             .handle_error()?;
 
-            let ptr = Box::into_raw(Box::new(Arc::new(RwLock::new(ton_wallet)))) as u64;
+            let ptr = Box::into_raw(Box::new(Arc::new(RwLock::new(ton_wallet))));
 
-            Ok(ptr)
+            serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
 
         let result = internal_fn(
@@ -225,7 +234,9 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe_by_existing(
         .await
         .match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -234,17 +245,19 @@ pub unsafe extern "C" fn nt_ton_wallet_workchain(result_port: c_longlong, ton_wa
     let ton_wallet = ton_wallet_from_ptr(ton_wallet);
 
     runtime!().spawn(async move {
-        fn internal_fn(ton_wallet: &TonWallet) -> Result<u64, String> {
-            let workchain = ton_wallet.workchain() as u64;
+        fn internal_fn(ton_wallet: &TonWallet) -> Result<serde_json::Value, String> {
+            let workchain = ton_wallet.workchain();
 
-            Ok(workchain)
+            serde_json::to_value(workchain).handle_error()
         }
 
         let ton_wallet = ton_wallet.read().await;
 
         let result = internal_fn(&ton_wallet).match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -253,17 +266,19 @@ pub unsafe extern "C" fn nt_ton_wallet_address(result_port: c_longlong, ton_wall
     let ton_wallet = ton_wallet_from_ptr(ton_wallet);
 
     runtime!().spawn(async move {
-        fn internal_fn(ton_wallet: &TonWallet) -> Result<u64, String> {
-            let address = ton_wallet.address().to_string().to_cstring_ptr() as u64;
+        fn internal_fn(ton_wallet: &TonWallet) -> Result<serde_json::Value, String> {
+            let address = ton_wallet.address().to_string();
 
-            Ok(address)
+            serde_json::to_value(address).handle_error()
         }
 
         let ton_wallet = ton_wallet.read().await;
 
         let result = internal_fn(&ton_wallet).match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -275,19 +290,21 @@ pub unsafe extern "C" fn nt_ton_wallet_public_key(
     let ton_wallet = ton_wallet_from_ptr(ton_wallet);
 
     runtime!().spawn(async move {
-        fn internal_fn(ton_wallet: &TonWallet) -> Result<u64, String> {
+        fn internal_fn(ton_wallet: &TonWallet) -> Result<serde_json::Value, String> {
             let public_key = ton_wallet.public_key();
 
-            let public_key = hex::encode(public_key.to_bytes()).to_cstring_ptr() as u64;
+            let public_key = hex::encode(public_key.to_bytes());
 
-            Ok(public_key)
+            serde_json::to_value(public_key).handle_error()
         }
 
         let ton_wallet = ton_wallet.read().await;
 
         let result = internal_fn(&ton_wallet).match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -299,21 +316,19 @@ pub unsafe extern "C" fn nt_ton_wallet_wallet_type(
     let ton_wallet = ton_wallet_from_ptr(ton_wallet);
 
     runtime!().spawn(async move {
-        fn internal_fn(ton_wallet: &TonWallet) -> Result<u64, String> {
+        fn internal_fn(ton_wallet: &TonWallet) -> Result<serde_json::Value, String> {
             let contract = ton_wallet.wallet_type().to_serializable();
 
-            let contract = serde_json::to_string(&contract)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(contract)
+            serde_json::to_value(contract).handle_error()
         }
 
         let ton_wallet = ton_wallet.read().await;
 
         let result = internal_fn(&ton_wallet).match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -325,21 +340,19 @@ pub unsafe extern "C" fn nt_ton_wallet_contract_state(
     let ton_wallet = ton_wallet_from_ptr(ton_wallet);
 
     runtime!().spawn(async move {
-        fn internal_fn(ton_wallet: &TonWallet) -> Result<u64, String> {
+        fn internal_fn(ton_wallet: &TonWallet) -> Result<serde_json::Value, String> {
             let contract_state = ton_wallet.contract_state();
 
-            let contract_state = serde_json::to_string(&contract_state)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(contract_state)
+            serde_json::to_value(contract_state).handle_error()
         }
 
         let ton_wallet = ton_wallet.read().await;
 
         let result = internal_fn(&ton_wallet).match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -351,21 +364,19 @@ pub unsafe extern "C" fn nt_ton_wallet_pending_transactions(
     let ton_wallet = ton_wallet_from_ptr(ton_wallet);
 
     runtime!().spawn(async move {
-        fn internal_fn(ton_wallet: &TonWallet) -> Result<u64, String> {
+        fn internal_fn(ton_wallet: &TonWallet) -> Result<serde_json::Value, String> {
             let pending_transactions = ton_wallet.pending_transactions();
 
-            let pending_transactions = serde_json::to_string(pending_transactions)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(pending_transactions)
+            serde_json::to_value(pending_transactions).handle_error()
         }
 
         let ton_wallet = ton_wallet.read().await;
 
         let result = internal_fn(&ton_wallet).match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -377,21 +388,19 @@ pub unsafe extern "C" fn nt_ton_wallet_polling_method(
     let ton_wallet = ton_wallet_from_ptr(ton_wallet);
 
     runtime!().spawn(async move {
-        fn internal_fn(ton_wallet: &TonWallet) -> Result<u64, String> {
+        fn internal_fn(ton_wallet: &TonWallet) -> Result<serde_json::Value, String> {
             let polling_method = ton_wallet.polling_method();
 
-            let polling_method = serde_json::to_string(&polling_method)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(polling_method)
+            serde_json::to_value(polling_method).handle_error()
         }
 
         let ton_wallet = ton_wallet.read().await;
 
         let result = internal_fn(&ton_wallet).match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -400,21 +409,19 @@ pub unsafe extern "C" fn nt_ton_wallet_details(result_port: c_longlong, ton_wall
     let ton_wallet = ton_wallet_from_ptr(ton_wallet);
 
     runtime!().spawn(async move {
-        fn internal_fn(ton_wallet: &TonWallet) -> Result<u64, String> {
+        fn internal_fn(ton_wallet: &TonWallet) -> Result<serde_json::Value, String> {
             let details = ton_wallet.details();
 
-            let details = serde_json::to_string(&details)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(details)
+            serde_json::to_value(details).handle_error()
         }
 
         let ton_wallet = ton_wallet.read().await;
 
         let result = internal_fn(&ton_wallet).match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -426,21 +433,19 @@ pub unsafe extern "C" fn nt_ton_wallet_unconfirmed_transactions(
     let ton_wallet = ton_wallet_from_ptr(ton_wallet);
 
     runtime!().spawn(async move {
-        fn internal_fn(ton_wallet: &TonWallet) -> Result<u64, String> {
+        fn internal_fn(ton_wallet: &TonWallet) -> Result<serde_json::Value, String> {
             let unconfirmed_transactions = ton_wallet.get_unconfirmed_transactions();
 
-            let unconfirmed_transactions = serde_json::to_string(&unconfirmed_transactions)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(unconfirmed_transactions)
+            serde_json::to_value(unconfirmed_transactions).handle_error()
         }
 
         let ton_wallet = ton_wallet.read().await;
 
         let result = internal_fn(&ton_wallet).match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -452,24 +457,22 @@ pub unsafe extern "C" fn nt_ton_wallet_custodians(
     let ton_wallet = ton_wallet_from_ptr(ton_wallet);
 
     runtime!().spawn(async move {
-        fn internal_fn(ton_wallet: &TonWallet) -> Result<u64, String> {
+        fn internal_fn(ton_wallet: &TonWallet) -> Result<serde_json::Value, String> {
             let custodians = ton_wallet
                 .get_custodians()
                 .to_owned()
                 .map(|e| e.iter().map(|e| e.to_hex_string()).collect::<Vec<_>>());
 
-            let custodians = serde_json::to_string(&custodians)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(custodians)
+            serde_json::to_value(custodians).handle_error()
         }
 
         let ton_wallet = ton_wallet.read().await;
 
         let result = internal_fn(&ton_wallet).match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -484,23 +487,28 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_deploy(
     let expiration = expiration.to_string_from_ptr();
 
     runtime!().spawn(async move {
-        fn internal_fn(ton_wallet: &TonWallet, expiration: String) -> Result<u64, String> {
+        fn internal_fn(
+            ton_wallet: &TonWallet,
+            expiration: String,
+        ) -> Result<serde_json::Value, String> {
             let expiration = serde_json::from_str::<Expiration>(&expiration)
                 .handle_error()?
                 .to_nekoton();
 
             let unsigned_message = ton_wallet.prepare_deploy(expiration).handle_error()?;
 
-            let ptr = Box::into_raw(Box::new(Arc::new(RwLock::new(unsigned_message)))) as u64;
+            let ptr = Box::into_raw(Box::new(Arc::new(RwLock::new(unsigned_message))));
 
-            Ok(ptr)
+            serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
 
         let ton_wallet = ton_wallet.read().await;
 
         let result = internal_fn(&ton_wallet, expiration).match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -523,7 +531,7 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_deploy_with_multiple_owners(
             expiration: String,
             custodians: String,
             req_confirms: u8,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let expiration = serde_json::from_str::<Expiration>(&expiration)
                 .handle_error()?
                 .to_nekoton();
@@ -538,16 +546,18 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_deploy_with_multiple_owners(
                 .prepare_deploy_with_multiple_owners(expiration, &custodians, req_confirms)
                 .handle_error()?;
 
-            let ptr = Box::into_raw(Box::new(Arc::new(RwLock::new(unsigned_message)))) as u64;
+            let ptr = Box::into_raw(Box::new(Arc::new(RwLock::new(unsigned_message))));
 
-            Ok(ptr)
+            serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
 
         let ton_wallet = ton_wallet.read().await;
 
         let result = internal_fn(&ton_wallet, expiration, custodians, req_confirms).match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -582,7 +592,7 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_transfer(
             bounce: u32,
             body: Option<String>,
             expiration: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let contract_state = serde_json::from_str::<RawContractState>(&contract_state)
                 .handle_error()?
                 .to_nekoton();
@@ -632,9 +642,9 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_transfer(
                 TransferAction::Sign(unsigned_message) => unsigned_message,
             };
 
-            let ptr = Box::into_raw(Box::new(Arc::new(RwLock::new(unsigned_message)))) as u64;
+            let ptr = Box::into_raw(Box::new(Arc::new(RwLock::new(unsigned_message))));
 
-            Ok(ptr)
+            serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
 
         let mut ton_wallet = ton_wallet.write().await;
@@ -651,7 +661,9 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_transfer(
         )
         .match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -678,7 +690,7 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_confirm_transaction(
             public_key: String,
             transaction_id: String,
             expiration: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let contract_state = serde_json::from_str::<RawContractState>(&contract_state)
                 .handle_error()?
                 .to_nekoton();
@@ -707,9 +719,9 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_confirm_transaction(
                 )
                 .handle_error()?;
 
-            let ptr = Box::into_raw(Box::new(Arc::new(RwLock::new(unsigned_message)))) as u64;
+            let ptr = Box::into_raw(Box::new(Arc::new(RwLock::new(unsigned_message))));
 
-            Ok(ptr)
+            serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
 
         let ton_wallet = ton_wallet.read().await;
@@ -723,7 +735,9 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_confirm_transaction(
         )
         .match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -741,7 +755,7 @@ pub unsafe extern "C" fn nt_ton_wallet_estimate_fees(
         async fn internal_fn(
             ton_wallet: &mut TonWallet,
             signed_message: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let message = serde_json::from_str::<SignedMessage>(&signed_message)
                 .handle_error()?
                 .to_nekoton()
@@ -751,10 +765,9 @@ pub unsafe extern "C" fn nt_ton_wallet_estimate_fees(
                 .estimate_fees(&message)
                 .await
                 .handle_error()?
-                .to_string()
-                .to_cstring_ptr() as u64;
+                .to_string();
 
-            Ok(fees)
+            serde_json::to_value(fees).handle_error()
         }
 
         let mut ton_wallet = ton_wallet.write().await;
@@ -763,7 +776,9 @@ pub unsafe extern "C" fn nt_ton_wallet_estimate_fees(
             .await
             .match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -781,7 +796,7 @@ pub unsafe extern "C" fn nt_ton_wallet_send(
         async fn internal_fn(
             ton_wallet: &mut TonWallet,
             signed_message: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let signed_message = serde_json::from_str::<SignedMessage>(&signed_message)
                 .handle_error()?
                 .to_nekoton();
@@ -791,11 +806,7 @@ pub unsafe extern "C" fn nt_ton_wallet_send(
                 .await
                 .handle_error()?;
 
-            let pending_transaction = serde_json::to_string(&pending_transaction)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(pending_transaction)
+            serde_json::to_value(pending_transaction).handle_error()
         }
 
         let mut ton_wallet = ton_wallet.write().await;
@@ -804,7 +815,9 @@ pub unsafe extern "C" fn nt_ton_wallet_send(
             .await
             .match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -813,17 +826,19 @@ pub unsafe extern "C" fn nt_ton_wallet_refresh(result_port: c_longlong, ton_wall
     let ton_wallet = ton_wallet_from_ptr(ton_wallet);
 
     runtime!().spawn(async move {
-        async fn internal_fn(ton_wallet: &mut TonWallet) -> Result<u64, String> {
+        async fn internal_fn(ton_wallet: &mut TonWallet) -> Result<serde_json::Value, String> {
             ton_wallet.refresh().await.handle_error()?;
 
-            Ok(u64::default())
+            Ok(serde_json::Value::Null)
         }
 
         let mut ton_wallet = ton_wallet.write().await;
 
         let result = internal_fn(&mut ton_wallet).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -838,7 +853,10 @@ pub unsafe extern "C" fn nt_ton_wallet_preload_transactions(
     let from = from.to_string_from_ptr();
 
     runtime!().spawn(async move {
-        async fn internal_fn(ton_wallet: &mut TonWallet, from: String) -> Result<u64, String> {
+        async fn internal_fn(
+            ton_wallet: &mut TonWallet,
+            from: String,
+        ) -> Result<serde_json::Value, String> {
             let from = serde_json::from_str::<TransactionId>(&from).handle_error()?;
 
             ton_wallet
@@ -846,14 +864,16 @@ pub unsafe extern "C" fn nt_ton_wallet_preload_transactions(
                 .await
                 .handle_error()?;
 
-            Ok(u64::default())
+            Ok(serde_json::Value::Null)
         }
 
         let mut ton_wallet = ton_wallet.write().await;
 
         let result = internal_fn(&mut ton_wallet, from).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -868,19 +888,24 @@ pub unsafe extern "C" fn nt_ton_wallet_handle_block(
     let block = block.to_string_from_ptr();
 
     runtime!().spawn(async move {
-        async fn internal_fn(ton_wallet: &mut TonWallet, block: String) -> Result<u64, String> {
+        async fn internal_fn(
+            ton_wallet: &mut TonWallet,
+            block: String,
+        ) -> Result<serde_json::Value, String> {
             let block = Block::construct_from_base64(&block).handle_error()?;
 
             ton_wallet.handle_block(&block).await.handle_error()?;
 
-            Ok(u64::default())
+            Ok(serde_json::Value::Null)
         }
 
         let mut ton_wallet = ton_wallet.write().await;
 
         let result = internal_fn(&mut ton_wallet, block).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -904,7 +929,7 @@ pub unsafe extern "C" fn nt_find_existing_wallets(
             public_key: String,
             workchain_id: i8,
             wallet_types: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let public_key = parse_public_key(&public_key)?;
 
             let wallet_types = serde_json::from_str::<Vec<WalletType>>(&wallet_types)
@@ -925,18 +950,16 @@ pub unsafe extern "C" fn nt_find_existing_wallets(
             .map(|e| e.to_serializable())
             .collect::<Vec<_>>();
 
-            let existing_wallets = serde_json::to_string(&existing_wallets)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(existing_wallets)
+            serde_json::to_value(existing_wallets).handle_error()
         }
 
         let result = internal_fn(transport, public_key, workchain_id, wallet_types)
             .await
             .match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -955,7 +978,7 @@ pub unsafe extern "C" fn nt_get_existing_wallet_info(
         async fn internal_fn(
             transport: Arc<dyn Transport>,
             address: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let address = parse_address(&address)?;
 
             let raw_contract_state = transport
@@ -980,16 +1003,14 @@ pub unsafe extern "C" fn nt_get_existing_wallet_info(
                 contract_state: existing_contract.brief(),
             };
 
-            let existing_wallet_info = serde_json::to_string(&existing_wallet_info)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(existing_wallet_info)
+            serde_json::to_value(existing_wallet_info).handle_error()
         }
 
         let result = internal_fn(transport, address).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -1008,7 +1029,7 @@ pub unsafe extern "C" fn nt_get_wallet_custodians(
         async fn internal_fn(
             transport: Arc<dyn Transport>,
             address: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let address = parse_address(&address)?;
 
             let raw_contract_state = transport
@@ -1027,7 +1048,7 @@ pub unsafe extern "C" fn nt_get_wallet_custodians(
                 ton_wallet::extract_wallet_init_data(&existing_contract).handle_error()?;
 
             let custodians = ton_wallet::get_wallet_custodians(
-                CLOCK.as_ref(),
+                clock!().as_ref(),
                 &existing_contract,
                 &public_key,
                 wallet_type,
@@ -1037,16 +1058,14 @@ pub unsafe extern "C" fn nt_get_wallet_custodians(
             .map(|e| e.to_hex_string())
             .collect::<Vec<_>>();
 
-            let custodians = serde_json::to_string(&custodians)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(custodians)
+            serde_json::to_value(custodians).handle_error()
         }
 
         let result = internal_fn(transport, address).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 

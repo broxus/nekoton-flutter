@@ -17,5 +17,6 @@ class OnMessageSentPayload with _$OnMessageSentPayload {
     Transaction? transaction,
   }) = _OnMessageSentPayload;
 
-  factory OnMessageSentPayload.fromJson(Map<String, dynamic> json) => _$OnMessageSentPayloadFromJson(json);
+  factory OnMessageSentPayload.fromJson(Map<String, dynamic> json) =>
+      _$OnMessageSentPayloadFromJson(json);
 }

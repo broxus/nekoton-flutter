@@ -11,11 +11,11 @@ bool verifySignature({
   required String signature,
 }) {
   final result = executeSync(
-    () => NekotonFlutter.bindings.nt_verify_signature(
-      publicKey.toNativeUtf8().cast<Char>(),
-      dataHash.toNativeUtf8().cast<Char>(),
-      signature.toNativeUtf8().cast<Char>(),
-    ),
+    () => NekotonFlutter.instance().bindings.nt_verify_signature(
+          publicKey.toNativeUtf8().cast<Char>(),
+          dataHash.toNativeUtf8().cast<Char>(),
+          signature.toNativeUtf8().cast<Char>(),
+        ),
   );
 
   final isValid = result != 0;

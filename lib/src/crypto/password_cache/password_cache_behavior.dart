@@ -14,5 +14,6 @@ class PasswordCacheBehavior with _$PasswordCacheBehavior {
 
   const factory PasswordCacheBehavior.remove() = _PasswordCacheBehaviorRemove;
 
-  factory PasswordCacheBehavior.fromJson(Map<String, dynamic> json) => _$PasswordCacheBehaviorFromJson(json);
+  factory PasswordCacheBehavior.fromJson(Map<String, dynamic> json) =>
+      _$PasswordCacheBehaviorFromJson(json);
 }

@@ -9,5 +9,6 @@ class OnBalanceChangedPayload with _$OnBalanceChangedPayload {
     required String balance,
   }) = _OnBalanceChangedPayload;
 
-  factory OnBalanceChangedPayload.fromJson(Map<String, dynamic> json) => _$OnBalanceChangedPayloadFromJson(json);
+  factory OnBalanceChangedPayload.fromJson(Map<String, dynamic> json) =>
+      _$OnBalanceChangedPayloadFromJson(json);
 }

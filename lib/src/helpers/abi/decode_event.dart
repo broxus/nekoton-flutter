@@ -13,18 +13,17 @@ DecodedEvent? decodeEvent({
   required String contractAbi,
   required MethodName event,
 }) {
-  final eventStr = jsonEncode(event);
+  final eventStr = event != null ? jsonEncode(event) : null;
 
   final result = executeSync(
-    () => NekotonFlutter.bindings.nt_decode_event(
-      messageBody.toNativeUtf8().cast<Char>(),
-      contractAbi.toNativeUtf8().cast<Char>(),
-      eventStr.toNativeUtf8().cast<Char>(),
-    ),
+    () => NekotonFlutter.instance().bindings.nt_decode_event(
+          messageBody.toNativeUtf8().cast<Char>(),
+          contractAbi.toNativeUtf8().cast<Char>(),
+          eventStr?.toNativeUtf8().cast<Char>() ?? nullptr,
+        ),
   );
 
-  final string = optionalCStringToDart(result);
-  final json = string != null ? jsonDecode(string) as Map<String, dynamic> : null;
+  final json = result != null ? result as Map<String, dynamic> : null;
   final decodedEvent = json != null ? DecodedEvent.fromJson(json) : null;
 
   return decodedEvent;

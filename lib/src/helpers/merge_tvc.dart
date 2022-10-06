@@ -5,10 +5,14 @@ import 'package:ffi/ffi.dart';
 import '../bindings.dart';
 import '../ffi_utils.dart';
 
-String codeToTvc(String code) {
+String mergeTvc({
+  required String code,
+  required String data,
+}) {
   final result = executeSync(
-    () => NekotonFlutter.instance().bindings.nt_code_to_tvc(
+    () => NekotonFlutter.instance().bindings.nt_merge_tvc(
           code.toNativeUtf8().cast<Char>(),
+          data.toNativeUtf8().cast<Char>(),
         ),
   );
 

@@ -40,14 +40,13 @@ class Keystore implements Pointed {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_keystore_entries(
-        port,
-        ptr,
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_keystore_entries(
+            port,
+            ptr,
+          ),
     );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as List<dynamic>;
+    final json = result as List<dynamic>;
     final list = json.cast<Map<String, dynamic>>();
     final entries = list.map((e) => KeyStoreEntry.fromJson(e)).toList();
 
@@ -59,15 +58,14 @@ class Keystore implements Pointed {
     final inputStr = jsonEncode(input);
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_keystore_add_key(
-        port,
-        ptr,
-        inputStr.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_keystore_add_key(
+            port,
+            ptr,
+            inputStr.toNativeUtf8().cast<Char>(),
+          ),
     );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>;
+    final json = result as Map<String, dynamic>;
     final entry = KeyStoreEntry.fromJson(json);
 
     return entry;
@@ -78,15 +76,14 @@ class Keystore implements Pointed {
     final inputStr = jsonEncode(input);
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_keystore_add_key(
-        port,
-        ptr,
-        inputStr.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_keystore_add_key(
+            port,
+            ptr,
+            inputStr.toNativeUtf8().cast<Char>(),
+          ),
     );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as List<dynamic>;
+    final json = result as List<dynamic>;
     final list = json.cast<Map<String, dynamic>>();
     final entries = list.map((e) => KeyStoreEntry.fromJson(e)).toList();
 
@@ -98,15 +95,14 @@ class Keystore implements Pointed {
     final inputStr = jsonEncode(input);
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_keystore_update_key(
-        port,
-        ptr,
-        inputStr.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_keystore_update_key(
+            port,
+            ptr,
+            inputStr.toNativeUtf8().cast<Char>(),
+          ),
     );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>;
+    final json = result as Map<String, dynamic>;
     final entry = KeyStoreEntry.fromJson(json);
 
     return entry;
@@ -117,15 +113,14 @@ class Keystore implements Pointed {
     final inputStr = jsonEncode(input);
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_keystore_export_key(
-        port,
-        ptr,
-        inputStr.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_keystore_export_key(
+            port,
+            ptr,
+            inputStr.toNativeUtf8().cast<Char>(),
+          ),
     );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>;
+    final json = result as Map<String, dynamic>;
 
     late ExportKeyOutput output;
 
@@ -152,18 +147,17 @@ class Keystore implements Pointed {
     final inputStr = jsonEncode(input);
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_keystore_encrypt(
-        port,
-        ptr,
-        data.toNativeUtf8().cast<Char>(),
-        publicKeysStr.toNativeUtf8().cast<Char>(),
-        algorithmStr.toNativeUtf8().cast<Char>(),
-        inputStr.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_keystore_encrypt(
+            port,
+            ptr,
+            data.toNativeUtf8().cast<Char>(),
+            publicKeysStr.toNativeUtf8().cast<Char>(),
+            algorithmStr.toNativeUtf8().cast<Char>(),
+            inputStr.toNativeUtf8().cast<Char>(),
+          ),
     );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as List<dynamic>;
+    final json = result as List<dynamic>;
     final list = json.cast<Map<String, dynamic>>();
     final encryptedData = list.map((e) => EncryptedData.fromJson(e)).toList();
 
@@ -179,15 +173,15 @@ class Keystore implements Pointed {
     final inputStr = jsonEncode(input);
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_keystore_decrypt(
-        port,
-        ptr,
-        dataStr.toNativeUtf8().cast<Char>(),
-        inputStr.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_keystore_decrypt(
+            port,
+            ptr,
+            dataStr.toNativeUtf8().cast<Char>(),
+            inputStr.toNativeUtf8().cast<Char>(),
+          ),
     );
 
-    final decryptedData = cStringToDart(result);
+    final decryptedData = result as String;
 
     return decryptedData;
   }
@@ -200,15 +194,15 @@ class Keystore implements Pointed {
     final inputStr = jsonEncode(input);
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_keystore_sign(
-        port,
-        ptr,
-        data.toNativeUtf8().cast<Char>(),
-        inputStr.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_keystore_sign(
+            port,
+            ptr,
+            data.toNativeUtf8().cast<Char>(),
+            inputStr.toNativeUtf8().cast<Char>(),
+          ),
     );
 
-    final signature = cStringToDart(result);
+    final signature = result as String;
 
     return signature;
   }
@@ -221,16 +215,15 @@ class Keystore implements Pointed {
     final inputStr = jsonEncode(input);
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_keystore_sign_data(
-        port,
-        ptr,
-        data.toNativeUtf8().cast<Char>(),
-        inputStr.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_keystore_sign_data(
+            port,
+            ptr,
+            data.toNativeUtf8().cast<Char>(),
+            inputStr.toNativeUtf8().cast<Char>(),
+          ),
     );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>;
+    final json = result as Map<String, dynamic>;
     final signedData = SignedData.fromJson(json);
 
     return signedData;
@@ -244,16 +237,15 @@ class Keystore implements Pointed {
     final inputStr = jsonEncode(input);
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_keystore_sign_data_raw(
-        port,
-        ptr,
-        data.toNativeUtf8().cast<Char>(),
-        inputStr.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_keystore_sign_data_raw(
+            port,
+            ptr,
+            data.toNativeUtf8().cast<Char>(),
+            inputStr.toNativeUtf8().cast<Char>(),
+          ),
     );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as Map<String, dynamic>;
+    final json = result as Map<String, dynamic>;
     final signedDataRaw = SignedDataRaw.fromJson(json);
 
     return signedDataRaw;
@@ -263,15 +255,14 @@ class Keystore implements Pointed {
     final ptr = await clonePtr();
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_keystore_remove_key(
-        port,
-        ptr,
-        publicKey.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_keystore_remove_key(
+            port,
+            ptr,
+            publicKey.toNativeUtf8().cast<Char>(),
+          ),
     );
 
-    final string = optionalCStringToDart(result);
-    final json = string != null ? jsonDecode(string) as Map<String, dynamic> : null;
+    final json = result as Map<String, dynamic>?;
     final entry = json != null ? KeyStoreEntry.fromJson(json) : null;
 
     return entry;
@@ -282,15 +273,14 @@ class Keystore implements Pointed {
     final publicKeysStr = jsonEncode(publicKeys);
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_keystore_remove_keys(
-        port,
-        ptr,
-        publicKeysStr.toNativeUtf8().cast<Char>(),
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_keystore_remove_keys(
+            port,
+            ptr,
+            publicKeysStr.toNativeUtf8().cast<Char>(),
+          ),
     );
 
-    final string = cStringToDart(result);
-    final json = jsonDecode(string) as List<dynamic>;
+    final json = result as List<dynamic>;
     final list = json.cast<Map<String, dynamic>>();
     final entries = list.map((e) => KeyStoreEntry.fromJson(e)).toList();
 
@@ -301,10 +291,10 @@ class Keystore implements Pointed {
     final ptr = await clonePtr();
 
     await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_keystore_clear(
-        port,
-        ptr,
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_keystore_clear(
+            port,
+            ptr,
+          ),
     );
   }
 
@@ -312,10 +302,10 @@ class Keystore implements Pointed {
     final ptr = await clonePtr();
 
     await executeAsync(
-      (port) => NekotonFlutter.bindings.nt_keystore_reload(
-        port,
-        ptr,
-      ),
+      (port) => NekotonFlutter.instance().bindings.nt_keystore_reload(
+            port,
+            ptr,
+          ),
     );
   }
 
@@ -326,11 +316,11 @@ class Keystore implements Pointed {
     final ptr = await clonePtr();
 
     final result = executeSync(
-      () => NekotonFlutter.bindings.nt_keystore_is_password_cached(
-        ptr,
-        publicKey.toNativeUtf8().cast<Char>(),
-        duration,
-      ),
+      () => NekotonFlutter.instance().bindings.nt_keystore_is_password_cached(
+            ptr,
+            publicKey.toNativeUtf8().cast<Char>(),
+            duration,
+          ),
     );
 
     final isCached = result != 0;
@@ -342,9 +332,9 @@ class Keystore implements Pointed {
   Future<Pointer<Void>> clonePtr() => _lock.synchronized(() {
         if (_ptr == null) throw Exception('Keystore use after free');
 
-        final ptr = NekotonFlutter.bindings.nt_keystore_clone_ptr(
-          _ptr!,
-        );
+        final ptr = NekotonFlutter.instance().bindings.nt_keystore_clone_ptr(
+              _ptr!,
+            );
 
         return ptr;
       });
@@ -353,9 +343,9 @@ class Keystore implements Pointed {
   Future<void> freePtr() => _lock.synchronized(() {
         if (_ptr == null) return;
 
-        NekotonFlutter.bindings.nt_keystore_free_ptr(
-          _ptr!,
-        );
+        NekotonFlutter.instance().bindings.nt_keystore_free_ptr(
+              _ptr!,
+            );
 
         _ptr = null;
       });
@@ -364,12 +354,12 @@ class Keystore implements Pointed {
         final storagePtr = await storage.clonePtr();
 
         final result = await executeAsync(
-          (port) => NekotonFlutter.bindings.nt_keystore_create(
-            port,
-            storagePtr,
-          ),
+          (port) => NekotonFlutter.instance().bindings.nt_keystore_create(
+                port,
+                storagePtr,
+              ),
         );
 
-        _ptr = Pointer.fromAddress(result).cast<Void>();
+        _ptr = toPtrFromAddress(result as String);
       });
 }

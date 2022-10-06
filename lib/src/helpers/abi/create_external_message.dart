@@ -20,18 +20,18 @@ UnsignedMessage createExternalMessage({
   final inputStr = jsonEncode(input);
 
   final result = executeSync(
-    () => NekotonFlutter.bindings.nt_create_external_message(
-      dst.toNativeUtf8().cast<Char>(),
-      contractAbi.toNativeUtf8().cast<Char>(),
-      method.toNativeUtf8().cast<Char>(),
-      stateInit?.toNativeUtf8().cast<Char>() ?? nullptr,
-      inputStr.toNativeUtf8().cast<Char>(),
-      publicKey.toNativeUtf8().cast<Char>(),
-      timeout,
-    ),
+    () => NekotonFlutter.instance().bindings.nt_create_external_message(
+          dst.toNativeUtf8().cast<Char>(),
+          contractAbi.toNativeUtf8().cast<Char>(),
+          method.toNativeUtf8().cast<Char>(),
+          stateInit?.toNativeUtf8().cast<Char>() ?? nullptr,
+          inputStr.toNativeUtf8().cast<Char>(),
+          publicKey.toNativeUtf8().cast<Char>(),
+          timeout,
+        ),
   );
 
-  final unsignedMessage = UnsignedMessage(Pointer.fromAddress(result).cast<Void>());
+  final unsignedMessage = UnsignedMessage(toPtrFromAddress(result as String));
 
   return unsignedMessage;
 }

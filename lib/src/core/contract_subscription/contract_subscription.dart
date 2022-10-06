@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:async/async.dart';
 import 'package:flutter/material.dart';
 
-import '../../bindings.dart';
 import '../../transport/gql_transport.dart';
 import '../../transport/models/transport_type.dart';
 import '../../transport/transport.dart';
@@ -63,13 +62,16 @@ abstract class ContractSubscription {
         if (isSimpleTransport || _currentPollingMethod == PollingMethod.manual) {
           _currentBlockId = null;
 
-          final currentPollingInterval =
-              _currentPollingMethod == PollingMethod.manual ? _pollingInterval : kIntensivePollingInterval;
+          final currentPollingInterval = _currentPollingMethod == PollingMethod.manual
+              ? _pollingInterval
+              : kIntensivePollingInterval;
 
           final refreshCompleter = CancelableCompleter<void>();
           _refreshCompleter = refreshCompleter;
           Future.delayed(currentPollingInterval, () async {
-            if (!refreshCompleter.isCanceled && !refreshCompleter.isCompleted) refreshCompleter.complete();
+            if (!refreshCompleter.isCanceled && !refreshCompleter.isCompleted) {
+              refreshCompleter.complete();
+            }
           });
           await refreshCompleter.operation.valueOrCancellation();
 
@@ -79,7 +81,8 @@ abstract class ContractSubscription {
             await refresh();
             _currentPollingMethod = await pollingMethod;
           } catch (err, st) {
-            NekotonFlutter.logger?.e('Unable to refresh', err, st);
+            debugPrint('Unable to refresh');
+            debugPrint(st.toString());
           }
         } else {
           final transport = this.transport as GqlTransport;
@@ -95,7 +98,8 @@ abstract class ContractSubscription {
               _currentBlockId = await transport.getLatestBlockId(await address);
               nextBlockId = _currentBlockId!;
             } catch (err, st) {
-              NekotonFlutter.logger?.e('Unable to get latest block id', err, st);
+              debugPrint('Unable to get latest block id');
+              debugPrint(st.toString());
               continue;
             }
           } else {
@@ -106,7 +110,8 @@ abstract class ContractSubscription {
                 timeout: kNextBlockTimeout.inSeconds,
               );
             } catch (err, st) {
-              NekotonFlutter.logger?.e('Unable to wait for next block id', err, st);
+              debugPrint('Unable to wait for next block id');
+              debugPrint(st.toString());
               continue;
             }
           }
@@ -117,7 +122,8 @@ abstract class ContractSubscription {
             _currentPollingMethod = await pollingMethod;
             _currentBlockId = nextBlockId;
           } catch (err, st) {
-            NekotonFlutter.logger?.e('Unable to handle block', err, st);
+            debugPrint('Unable to handle block');
+            debugPrint(st.toString());
           }
         }
       }
@@ -155,7 +161,8 @@ abstract class ContractSubscription {
         _suggestedBlockId = await transport.getLatestBlockId(await address);
       }
     } catch (err, st) {
-      NekotonFlutter.logger?.e('Unable to get latest block id', err, st);
+      debugPrint('Unable to get latest block id');
+      debugPrint(st.toString());
     }
   }
 }

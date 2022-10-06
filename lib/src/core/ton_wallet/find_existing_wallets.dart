@@ -20,18 +20,17 @@ Future<List<ExistingWalletInfo>> findExistingWallets({
   final walletTypesStr = jsonEncode(walletTypes);
 
   final result = await executeAsync(
-    (port) => NekotonFlutter.bindings.nt_find_existing_wallets(
-      port,
-      ptr,
-      transportType.index,
-      publicKey.toNativeUtf8().cast<Char>(),
-      workchainId,
-      walletTypesStr.toNativeUtf8().cast<Char>(),
-    ),
+    (port) => NekotonFlutter.instance().bindings.nt_find_existing_wallets(
+          port,
+          ptr,
+          transportType.index,
+          publicKey.toNativeUtf8().cast<Char>(),
+          workchainId,
+          walletTypesStr.toNativeUtf8().cast<Char>(),
+        ),
   );
 
-  final string = cStringToDart(result);
-  final json = jsonDecode(string) as List<dynamic>;
+  final json = result as List<dynamic>;
   final list = json.cast<Map<String, dynamic>>();
   final existingWallets = list.map((e) => ExistingWalletInfo.fromJson(e)).toList();
 

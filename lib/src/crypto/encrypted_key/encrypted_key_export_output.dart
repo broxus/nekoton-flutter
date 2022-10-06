@@ -17,5 +17,6 @@ class EncryptedKeyExportOutput with _$EncryptedKeyExportOutput implements Export
     required MnemonicType mnemonicType,
   }) = _EncryptedKeyExportOutput;
 
-  factory EncryptedKeyExportOutput.fromJson(Map<String, dynamic> json) => _$EncryptedKeyExportOutputFromJson(json);
+  factory EncryptedKeyExportOutput.fromJson(Map<String, dynamic> json) =>
+      _$EncryptedKeyExportOutputFromJson(json);
 }

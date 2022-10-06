@@ -1,18 +1,19 @@
 use std::{
     ffi::{CStr, CString},
-    os::raw::{c_char, c_uint, c_ulonglong, c_void},
-    ptr::null,
+    os::raw::c_char,
 };
 
-#[repr(C)]
-pub struct ExecutionResult {
-    pub status_code: c_uint,
-    pub payload: c_ulonglong,
-}
+use allo_isolate::{IntoDart, Isolate};
+use serde::Serialize;
 
-enum ExecutionStatus {
-    Ok,
-    Err,
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase", tag = "type", content = "data")]
+pub enum ExecutionResult<T>
+where
+    T: Serialize,
+{
+    Ok(T),
+    Err(String),
 }
 
 pub trait ToCStringPtr {
@@ -22,19 +23,6 @@ pub trait ToCStringPtr {
 impl ToCStringPtr for String {
     fn to_cstring_ptr(self) -> *mut c_char {
         CString::new(self).unwrap().into_raw()
-    }
-}
-
-pub trait ToOptionalCStringPtr {
-    fn to_optional_cstring_ptr(self) -> *mut c_char;
-}
-
-impl ToOptionalCStringPtr for Option<String> {
-    fn to_optional_cstring_ptr(self) -> *mut c_char {
-        match self {
-            Some(string) => string.to_cstring_ptr(),
-            None => null::<c_char>() as *mut c_char,
-        }
     }
 }
 
@@ -79,23 +67,53 @@ where
 }
 
 pub trait MatchResult {
-    fn match_result(self) -> *mut c_void;
+    fn match_result(self) -> *mut c_char;
 }
 
-impl MatchResult for Result<u64, String> {
-    fn match_result(self) -> *mut c_void {
+impl<T> MatchResult for Result<T, String>
+where
+    T: Serialize,
+{
+    fn match_result(self) -> *mut c_char {
         let result = match self {
-            Ok(data) => ExecutionResult {
-                status_code: ExecutionStatus::Ok as c_uint,
-                payload: data as c_ulonglong,
-            },
-            Err(err) => ExecutionResult {
-                status_code: ExecutionStatus::Err as c_uint,
-                payload: err.to_cstring_ptr() as c_ulonglong,
-            },
+            Ok(ok) => ExecutionResult::Ok(ok),
+            Err(err) => ExecutionResult::Err(err),
         };
 
-        Box::into_raw(Box::new(result)) as *mut c_void
+        serde_json::to_string(&result).unwrap().to_cstring_ptr()
+    }
+}
+
+pub trait PostWithResult {
+    fn post_with_result(&self, data: impl IntoDart) -> Result<(), String>;
+}
+
+impl PostWithResult for Isolate {
+    fn post_with_result(&self, data: impl IntoDart) -> Result<(), String> {
+        match self.post(data) {
+            true => Ok(()),
+            false => Err("Message was not posted successfully").handle_error(),
+        }
+    }
+}
+
+pub trait ToPtrAddress {
+    fn to_ptr_address(self) -> String;
+}
+
+impl<T> ToPtrAddress for *mut T {
+    fn to_ptr_address(self) -> String {
+        (self as usize).to_string()
+    }
+}
+
+pub trait ToPtrFromAddress {
+    fn to_ptr_from_address<T>(self) -> *mut T;
+}
+
+impl ToPtrFromAddress for String {
+    fn to_ptr_from_address<T>(self) -> *mut T {
+        self.parse::<usize>().unwrap() as *mut T
     }
 }
 

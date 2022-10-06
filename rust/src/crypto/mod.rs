@@ -9,13 +9,17 @@ use std::{
     sync::Arc,
 };
 
+use allo_isolate::Isolate;
 use ed25519_dalek::*;
 use nekoton::crypto::UnsignedMessage;
 use tokio::sync::RwLock;
 
 use crate::{
-    models::{HandleError, MatchResult, ToSerializable, ToStringFromPtr},
-    parse_public_key, runtime, send_to_result_port, ToCStringPtr, CLOCK, RUNTIME,
+    clock,
+    models::{
+        HandleError, MatchResult, PostWithResult, ToPtrAddress, ToSerializable, ToStringFromPtr,
+    },
+    parse_public_key, runtime, CLOCK, RUNTIME,
 };
 
 #[no_mangle]
@@ -26,17 +30,21 @@ pub unsafe extern "C" fn nt_unsigned_message_refresh_timeout(
     let unsigned_message = unsigned_message_from_ptr(unsigned_message);
 
     runtime!().spawn(async move {
-        fn internal_fn(unsigned_message: &mut Box<dyn UnsignedMessage>) -> Result<u64, String> {
-            unsigned_message.refresh_timeout(CLOCK.as_ref());
+        fn internal_fn(
+            unsigned_message: &mut Box<dyn UnsignedMessage>,
+        ) -> Result<serde_json::Value, String> {
+            unsigned_message.refresh_timeout(clock!().as_ref());
 
-            Ok(u64::default())
+            Ok(serde_json::Value::Null)
         }
 
         let mut unsigned_message = unsigned_message.write().await;
 
         let result = internal_fn(&mut unsigned_message).match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -48,17 +56,21 @@ pub unsafe extern "C" fn nt_unsigned_message_expire_at(
     let unsigned_message = unsigned_message_from_ptr(unsigned_message);
 
     runtime!().spawn(async move {
-        fn internal_fn(unsigned_message: &Box<dyn UnsignedMessage>) -> Result<u64, String> {
-            let expire_at = unsigned_message.expire_at() as u64;
+        fn internal_fn(
+            unsigned_message: &Box<dyn UnsignedMessage>,
+        ) -> Result<serde_json::Value, String> {
+            let expire_at = unsigned_message.expire_at();
 
-            Ok(expire_at)
+            serde_json::to_value(expire_at).handle_error()
         }
 
         let unsigned_message = unsigned_message.read().await;
 
         let result = internal_fn(&unsigned_message).match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -70,19 +82,23 @@ pub unsafe extern "C" fn nt_unsigned_message_hash(
     let unsigned_message = unsigned_message_from_ptr(unsigned_message);
 
     runtime!().spawn(async move {
-        fn internal_fn(unsigned_message: &Box<dyn UnsignedMessage>) -> Result<u64, String> {
+        fn internal_fn(
+            unsigned_message: &Box<dyn UnsignedMessage>,
+        ) -> Result<serde_json::Value, String> {
             let hash = unsigned_message.hash();
 
-            let hash = base64::encode(&hash).to_cstring_ptr() as u64;
+            let hash = base64::encode(&hash);
 
-            Ok(hash)
+            serde_json::to_value(hash).handle_error()
         }
 
         let unsigned_message = unsigned_message.read().await;
 
         let result = internal_fn(&unsigned_message).match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -100,7 +116,7 @@ pub unsafe extern "C" fn nt_unsigned_message_sign(
         fn internal_fn(
             unsigned_message: &Box<dyn UnsignedMessage>,
             signature: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let signature: [u8; 64] = base64::decode(&signature)
                 .handle_error()?
                 .as_slice()
@@ -112,18 +128,16 @@ pub unsafe extern "C" fn nt_unsigned_message_sign(
                 .handle_error()?
                 .to_serializable();
 
-            let signed_message = serde_json::to_string(&signed_message)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(signed_message)
+            serde_json::to_value(signed_message).handle_error()
         }
 
         let unsigned_message = unsigned_message.read().await;
 
         let result = internal_fn(&unsigned_message, signature).match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -148,7 +162,7 @@ pub unsafe extern "C" fn nt_verify_signature(
     public_key: *mut c_char,
     data_hash: *mut c_char,
     signature: *mut c_char,
-) -> *mut c_void {
+) -> *mut c_char {
     let public_key = public_key.to_string_from_ptr();
     let data_hash = data_hash.to_string_from_ptr();
     let signature = signature.to_string_from_ptr();
@@ -157,7 +171,7 @@ pub unsafe extern "C" fn nt_verify_signature(
         public_key: String,
         data_hash: String,
         signature: String,
-    ) -> Result<u64, String> {
+    ) -> Result<serde_json::Value, String> {
         let public_key = parse_public_key(&public_key)?;
 
         let data_hash = match hex::decode(&data_hash) {
@@ -185,9 +199,9 @@ pub unsafe extern "C" fn nt_verify_signature(
             Err(_) => return Err("Invalid signature. Expected 64 bytes").handle_error(),
         };
 
-        let is_valid = public_key.verify(&data_hash, &signature).is_ok() as u64;
+        let is_valid = public_key.verify(&data_hash, &signature).is_ok();
 
-        Ok(is_valid)
+        serde_json::to_value(is_valid).handle_error()
     }
 
     internal_fn(public_key, data_hash, signature).match_result()

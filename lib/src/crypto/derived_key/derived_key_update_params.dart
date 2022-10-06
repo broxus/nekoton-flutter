@@ -25,5 +25,6 @@ class DerivedKeyUpdateParams with _$DerivedKeyUpdateParams implements UpdateKeyI
     required Password newPassword,
   }) = _DerivedKeyUpdateParamsChangePassword;
 
-  factory DerivedKeyUpdateParams.fromJson(Map<String, dynamic> json) => _$DerivedKeyUpdateParamsFromJson(json);
+  factory DerivedKeyUpdateParams.fromJson(Map<String, dynamic> json) =>
+      _$DerivedKeyUpdateParamsFromJson(json);
 }

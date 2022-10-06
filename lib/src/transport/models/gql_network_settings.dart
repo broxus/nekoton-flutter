@@ -14,5 +14,6 @@ class GqlNetworkSettings with _$GqlNetworkSettings {
     required bool local,
   }) = _GqlNetworkSettings;
 
-  factory GqlNetworkSettings.fromJson(Map<String, dynamic> json) => _$GqlNetworkSettingsFromJson(json);
+  factory GqlNetworkSettings.fromJson(Map<String, dynamic> json) =>
+      _$GqlNetworkSettingsFromJson(json);
 }

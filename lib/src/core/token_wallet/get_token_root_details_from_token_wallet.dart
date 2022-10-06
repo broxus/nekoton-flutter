@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
@@ -17,16 +16,15 @@ Future<Tuple2<String, RootTokenContractDetails>> getTokenRootDetailsFromTokenWal
   final transportType = transport.connectionData.type;
 
   final result = await executeAsync(
-    (port) => NekotonFlutter.bindings.nt_get_token_wallet_details(
-      port,
-      ptr,
-      transportType.index,
-      tokenWalletAddress.toNativeUtf8().cast<Char>(),
-    ),
+    (port) => NekotonFlutter.instance().bindings.nt_get_token_wallet_details(
+          port,
+          ptr,
+          transportType.index,
+          tokenWalletAddress.toNativeUtf8().cast<Char>(),
+        ),
   );
 
-  final string = cStringToDart(result);
-  final list = jsonDecode(string) as List<dynamic>;
+  final list = result as List<dynamic>;
   final rootTokenContract = list.first as String;
   final rootContractDetails = RootTokenContractDetails.fromJson(list.last as Map<String, dynamic>);
 

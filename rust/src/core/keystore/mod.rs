@@ -6,6 +6,7 @@ use std::{
     time::Duration,
 };
 
+use allo_isolate::Isolate;
 use nekoton::{
     core::keystore::{KeyStore, KeyStoreBuilder, KEYSTORE_STORAGE_KEY},
     crypto::{
@@ -26,8 +27,11 @@ use crate::{
         models::{SignatureParts, SignedData, SignedDataRaw},
     },
     external::storage::storage_from_ptr,
-    models::{HandleError, MatchResult, ToNekoton, ToOptionalCStringPtr, ToSerializable},
-    parse_public_key, runtime, send_to_result_port, ToCStringPtr, ToStringFromPtr, RUNTIME,
+    models::{
+        HandleError, MatchResult, PostWithResult, ToCStringPtr, ToNekoton, ToPtrAddress,
+        ToSerializable,
+    },
+    parse_public_key, runtime, ToStringFromPtr, RUNTIME,
 };
 
 #[no_mangle]
@@ -40,17 +44,19 @@ pub unsafe extern "C" fn nt_keystore_create(result_port: c_longlong, storage: *m
     let storage = storage_from_ptr(storage);
 
     runtime!().spawn(async move {
-        async fn internal_fn(storage: Arc<dyn Storage>) -> Result<u64, String> {
+        async fn internal_fn(storage: Arc<dyn Storage>) -> Result<serde_json::Value, String> {
             let keystore = build_keystore()?.load(storage).await.handle_error()?;
 
-            let ptr = Box::into_raw(Box::new(Arc::new(keystore))) as u64;
+            let ptr = Box::into_raw(Box::new(Arc::new(keystore)));
 
-            Ok(ptr)
+            serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
 
         let result = internal_fn(storage).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -59,19 +65,17 @@ pub unsafe extern "C" fn nt_keystore_entries(result_port: c_longlong, keystore: 
     let keystore = keystore_from_ptr(keystore);
 
     runtime!().spawn(async move {
-        async fn internal_fn(keystore: &KeyStore) -> Result<u64, String> {
+        async fn internal_fn(keystore: &KeyStore) -> Result<serde_json::Value, String> {
             let entries = keystore.get_entries().await;
 
-            let entries = serde_json::to_string(&entries)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(entries)
+            serde_json::to_value(entries).handle_error()
         }
 
         let result = internal_fn(&keystore).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -86,7 +90,10 @@ pub unsafe extern "C" fn nt_keystore_add_key(
     let input = input.to_string_from_ptr();
 
     runtime!().spawn(async move {
-        async fn internal_fn(keystore: &KeyStore, input: String) -> Result<u64, String> {
+        async fn internal_fn(
+            keystore: &KeyStore,
+            input: String,
+        ) -> Result<serde_json::Value, String> {
             let entry = if let Ok(input) = serde_json::from_str::<EncryptedKeyCreateInput>(&input) {
                 let input = input.to_nekoton();
 
@@ -105,16 +112,14 @@ pub unsafe extern "C" fn nt_keystore_add_key(
                 panic!()
             };
 
-            let entry = serde_json::to_string(&entry)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(entry)
+            serde_json::to_value(entry).handle_error()
         }
 
         let result = internal_fn(&keystore, input).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -129,7 +134,10 @@ pub unsafe extern "C" fn nt_keystore_add_keys(
     let input = input.to_string_from_ptr();
 
     runtime!().spawn(async move {
-        async fn internal_fn(keystore: &KeyStore, input: String) -> Result<u64, String> {
+        async fn internal_fn(
+            keystore: &KeyStore,
+            input: String,
+        ) -> Result<serde_json::Value, String> {
             let entries = if let Ok(input) =
                 serde_json::from_str::<Vec<EncryptedKeyCreateInput>>(&input)
             {
@@ -156,16 +164,14 @@ pub unsafe extern "C" fn nt_keystore_add_keys(
                 panic!()
             };
 
-            let entries = serde_json::to_string(&entries)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(entries)
+            serde_json::to_value(entries).handle_error()
         }
 
         let result = internal_fn(&keystore, input).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -180,7 +186,10 @@ pub unsafe extern "C" fn nt_keystore_update_key(
     let input = input.to_string_from_ptr();
 
     runtime!().spawn(async move {
-        async fn internal_fn(keystore: &KeyStore, input: String) -> Result<u64, String> {
+        async fn internal_fn(
+            keystore: &KeyStore,
+            input: String,
+        ) -> Result<serde_json::Value, String> {
             let entry = if let Ok(input) = serde_json::from_str::<EncryptedKeyUpdateParams>(&input)
             {
                 let input = input.to_nekoton();
@@ -200,16 +209,14 @@ pub unsafe extern "C" fn nt_keystore_update_key(
                 panic!()
             };
 
-            let entry = serde_json::to_string(&entry)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(entry)
+            serde_json::to_value(entry).handle_error()
         }
 
         let result = internal_fn(&keystore, input).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -224,8 +231,11 @@ pub unsafe extern "C" fn nt_keystore_export_key(
     let input = input.to_string_from_ptr();
 
     runtime!().spawn(async move {
-        async fn internal_fn(keystore: &KeyStore, input: String) -> Result<u64, String> {
-            let output = if let Ok(input) = serde_json::from_str::<EncryptedKeyPassword>(&input) {
+        async fn internal_fn(
+            keystore: &KeyStore,
+            input: String,
+        ) -> Result<serde_json::Value, String> {
+            if let Ok(input) = serde_json::from_str::<EncryptedKeyPassword>(&input) {
                 let input = input.to_nekoton();
 
                 let output = keystore
@@ -234,7 +244,7 @@ pub unsafe extern "C" fn nt_keystore_export_key(
                     .handle_error()?
                     .to_serializable();
 
-                serde_json::to_string(&output).handle_error()?
+                serde_json::to_value(output).handle_error()
             } else if let Ok(input) = serde_json::from_str::<DerivedKeyExportParams>(&input) {
                 let input = input.to_nekoton();
 
@@ -243,18 +253,17 @@ pub unsafe extern "C" fn nt_keystore_export_key(
                     .await
                     .handle_error()?;
 
-                serde_json::to_string(&output).handle_error()?
+                serde_json::to_value(output).handle_error()
             } else {
                 panic!()
             }
-            .to_cstring_ptr() as u64;
-
-            Ok(output)
         }
 
         let result = internal_fn(&keystore, input).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -281,7 +290,7 @@ pub unsafe extern "C" fn nt_keystore_encrypt(
             public_keys: String,
             algorithm: String,
             input: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let data = base64::decode(data).handle_error()?;
 
             let public_keys = serde_json::from_str::<Vec<&str>>(&public_keys)
@@ -311,18 +320,16 @@ pub unsafe extern "C" fn nt_keystore_encrypt(
                 panic!()
             };
 
-            let data = serde_json::to_string(&data)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(data)
+            serde_json::to_value(data).handle_error()
         }
 
         let result = internal_fn(&keystore, data, public_keys, algorithm, input)
             .await
             .match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -343,7 +350,7 @@ pub unsafe extern "C" fn nt_keystore_decrypt(
             keystore: &KeyStore,
             data: String,
             input: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let data = serde_json::from_str::<EncryptedData>(&data).handle_error()?;
 
             let data = if let Ok(input) = serde_json::from_str::<EncryptedKeyPassword>(&input) {
@@ -364,14 +371,16 @@ pub unsafe extern "C" fn nt_keystore_decrypt(
                 panic!()
             };
 
-            let data = base64::encode(&data).to_cstring_ptr() as u64;
+            let data = base64::encode(&data);
 
-            Ok(data)
+            serde_json::to_value(data).handle_error()
         }
 
         let result = internal_fn(&keystore, data, input).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -392,19 +401,21 @@ pub unsafe extern "C" fn nt_keystore_sign(
             keystore: &KeyStore,
             data: String,
             input: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let data = base64::decode(&data).handle_error()?;
 
             let signature = sign(keystore, &data, input).await?;
 
-            let signature = base64::encode(&signature).to_cstring_ptr() as u64;
+            let signature = base64::encode(&signature);
 
-            Ok(signature)
+            serde_json::to_value(signature).handle_error()
         }
 
         let result = internal_fn(&keystore, data, input).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -425,7 +436,7 @@ pub unsafe extern "C" fn nt_keystore_sign_data(
             keystore: &KeyStore,
             data: String,
             input: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let data = base64::decode(data).handle_error()?;
             let hash: [u8; 32] = sha2::Sha256::digest(&data).into();
 
@@ -441,16 +452,14 @@ pub unsafe extern "C" fn nt_keystore_sign_data(
                 },
             };
 
-            let signed_data = serde_json::to_string(&signed_data)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(signed_data)
+            serde_json::to_value(signed_data).handle_error()
         }
 
         let result = internal_fn(&keystore, data, input).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -471,7 +480,7 @@ pub unsafe extern "C" fn nt_keystore_sign_data_raw(
             keystore: &KeyStore,
             data: String,
             input: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let data = base64::decode(data).handle_error()?;
 
             let signature = sign(keystore, &data, input).await?;
@@ -485,16 +494,14 @@ pub unsafe extern "C" fn nt_keystore_sign_data_raw(
                 },
             };
 
-            let signed_data_raw = serde_json::to_string(&signed_data_raw)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(signed_data_raw)
+            serde_json::to_value(signed_data_raw).handle_error()
         }
 
         let result = internal_fn(&keystore, data, input).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -509,24 +516,22 @@ pub unsafe extern "C" fn nt_keystore_remove_key(
     let public_key = public_key.to_string_from_ptr();
 
     runtime!().spawn(async move {
-        async fn internal_fn(keystore: &KeyStore, public_key: String) -> Result<u64, String> {
+        async fn internal_fn(
+            keystore: &KeyStore,
+            public_key: String,
+        ) -> Result<serde_json::Value, String> {
             let public_key = parse_public_key(&public_key)?;
 
             let entry = keystore.remove_key(&public_key).await.handle_error()?;
 
-            let entry = entry
-                .as_ref()
-                .map(serde_json::to_string)
-                .transpose()
-                .handle_error()?
-                .to_optional_cstring_ptr() as u64;
-
-            Ok(entry)
+            serde_json::to_value(entry).handle_error()
         }
 
         let result = internal_fn(&keystore, public_key).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -541,7 +546,10 @@ pub unsafe extern "C" fn nt_keystore_remove_keys(
     let public_keys = public_keys.to_string_from_ptr();
 
     runtime!().spawn(async move {
-        async fn internal_fn(keystore: &KeyStore, public_keys: String) -> Result<u64, String> {
+        async fn internal_fn(
+            keystore: &KeyStore,
+            public_keys: String,
+        ) -> Result<serde_json::Value, String> {
             let public_keys = serde_json::from_str::<Vec<&str>>(&public_keys)
                 .handle_error()?
                 .into_iter()
@@ -550,16 +558,14 @@ pub unsafe extern "C" fn nt_keystore_remove_keys(
 
             let entries = keystore.remove_keys(&public_keys).await.handle_error()?;
 
-            let entries = serde_json::to_string(&entries)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(entries)
+            serde_json::to_value(entries).handle_error()
         }
 
         let result = internal_fn(&keystore, public_keys).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -568,15 +574,17 @@ pub unsafe extern "C" fn nt_keystore_clear(result_port: c_longlong, keystore: *m
     let keystore = keystore_from_ptr(keystore);
 
     runtime!().spawn(async move {
-        async fn internal_fn(keystore: &KeyStore) -> Result<u64, String> {
+        async fn internal_fn(keystore: &KeyStore) -> Result<serde_json::Value, String> {
             keystore.clear().await.handle_error()?;
 
-            Ok(u64::default())
+            Ok(serde_json::Value::Null)
         }
 
         let result = internal_fn(&keystore).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -585,26 +593,28 @@ pub unsafe extern "C" fn nt_keystore_reload(result_port: c_longlong, keystore: *
     let keystore = keystore_from_ptr(keystore);
 
     runtime!().spawn(async move {
-        async fn internal_fn(keystore: &KeyStore) -> Result<u64, String> {
+        async fn internal_fn(keystore: &KeyStore) -> Result<serde_json::Value, String> {
             keystore.reload().await.handle_error()?;
 
-            Ok(u64::default())
+            Ok(serde_json::Value::Null)
         }
 
         let result = internal_fn(&keystore).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nt_keystore_verify_data(data: *mut c_char) -> *mut c_void {
+pub unsafe extern "C" fn nt_keystore_verify_data(data: *mut c_char) -> *mut c_char {
     let data = data.to_string_from_ptr();
 
-    fn internal_fn(data: String) -> Result<u64, String> {
-        let is_valid = build_keystore()?.verify(&data).is_ok() as u64;
+    fn internal_fn(data: String) -> Result<serde_json::Value, String> {
+        let is_valid = build_keystore()?.verify(&data).is_ok();
 
-        Ok(is_valid)
+        serde_json::to_value(is_valid).handle_error()
     }
 
     internal_fn(data).match_result()
@@ -615,19 +625,23 @@ pub unsafe extern "C" fn nt_keystore_is_password_cached(
     keystore: *mut c_void,
     public_key: *mut c_char,
     duration: c_ulonglong,
-) -> *mut c_void {
+) -> *mut c_char {
     let keystore = keystore_from_ptr(keystore);
 
     let public_key = public_key.to_string_from_ptr();
 
-    fn internal_fn(keystore: &KeyStore, public_key: String, duration: u64) -> Result<u64, String> {
+    fn internal_fn(
+        keystore: &KeyStore,
+        public_key: String,
+        duration: u64,
+    ) -> Result<serde_json::Value, String> {
         let id = parse_public_key(&public_key)?.to_bytes();
 
         let duration = Duration::from_millis(duration);
 
-        let is_cached = keystore.is_password_cached(&id, duration) as u64;
+        let is_cached = keystore.is_password_cached(&id, duration);
 
-        Ok(is_cached)
+        serde_json::to_value(is_cached).handle_error()
     }
 
     internal_fn(&keystore, public_key, duration).match_result()

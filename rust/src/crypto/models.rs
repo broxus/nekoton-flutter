@@ -44,6 +44,7 @@ impl ToNekoton<crypto::SignedMessage> for SignedMessage {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SignedData {
     pub data_hash: String,
     pub signature: String,
@@ -52,6 +53,7 @@ pub struct SignedData {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SignedDataRaw {
     pub signature: String,
     pub signature_hex: String,

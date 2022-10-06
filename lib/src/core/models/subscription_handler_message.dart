@@ -10,5 +10,6 @@ class SubscriptionHandlerMessage with _$SubscriptionHandlerMessage {
     required String payload,
   }) = _SubscriptionHandlerMessage;
 
-  factory SubscriptionHandlerMessage.fromJson(Map<String, dynamic> json) => _$SubscriptionHandlerMessageFromJson(json);
+  factory SubscriptionHandlerMessage.fromJson(Map<String, dynamic> json) =>
+      _$SubscriptionHandlerMessageFromJson(json);
 }

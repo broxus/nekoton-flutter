@@ -18,17 +18,16 @@ ExecutionOutput runLocal({
   final inputStr = jsonEncode(input);
 
   final result = executeSync(
-    () => NekotonFlutter.bindings.nt_run_local(
-      accountStuffBoc.toNativeUtf8().cast<Char>(),
-      contractAbi.toNativeUtf8().cast<Char>(),
-      method.toNativeUtf8().cast<Char>(),
-      inputStr.toNativeUtf8().cast<Char>(),
-      responsible ? 1 : 0,
-    ),
+    () => NekotonFlutter.instance().bindings.nt_run_local(
+          accountStuffBoc.toNativeUtf8().cast<Char>(),
+          contractAbi.toNativeUtf8().cast<Char>(),
+          method.toNativeUtf8().cast<Char>(),
+          inputStr.toNativeUtf8().cast<Char>(),
+          responsible ? 1 : 0,
+        ),
   );
 
-  final string = cStringToDart(result);
-  final json = jsonDecode(string) as Map<String, dynamic>;
+  final json = result as Map<String, dynamic>;
   final executionOutput = ExecutionOutput.fromJson(json);
 
   return executionOutput;

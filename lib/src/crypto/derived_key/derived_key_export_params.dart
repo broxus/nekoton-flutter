@@ -17,5 +17,6 @@ class DerivedKeyExportParams with _$DerivedKeyExportParams implements ExportKeyI
     required Password password,
   }) = _DerivedKeyExportParams;
 
-  factory DerivedKeyExportParams.fromJson(Map<String, dynamic> json) => _$DerivedKeyExportParamsFromJson(json);
+  factory DerivedKeyExportParams.fromJson(Map<String, dynamic> json) =>
+      _$DerivedKeyExportParamsFromJson(json);
 }

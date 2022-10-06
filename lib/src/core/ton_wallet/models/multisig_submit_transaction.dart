@@ -17,5 +17,6 @@ class MultisigSubmitTransaction with _$MultisigSubmitTransaction {
     @HiveField(6) required String transId,
   }) = _MultisigSubmitTransaction;
 
-  factory MultisigSubmitTransaction.fromJson(Map<String, dynamic> json) => _$MultisigSubmitTransactionFromJson(json);
+  factory MultisigSubmitTransaction.fromJson(Map<String, dynamic> json) =>
+      _$MultisigSubmitTransactionFromJson(json);
 }

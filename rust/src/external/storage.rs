@@ -4,6 +4,7 @@ use std::{
     sync::Arc,
 };
 
+use allo_isolate::Isolate;
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use nekoton::external::Storage;
@@ -11,8 +12,8 @@ use pickledb::{PickleDb, PickleDbDumpPolicy, SerializationMethod};
 use tokio::sync::RwLock;
 
 use crate::{
-    models::{HandleError, MatchResult, ToOptionalCStringPtr},
-    runtime, send_to_result_port, ToStringFromPtr, RUNTIME,
+    models::{HandleError, MatchResult, PostWithResult, ToPtrAddress},
+    runtime, ToStringFromPtr, RUNTIME,
 };
 
 pub const NEKOTON_STORAGE_FILENAME: &str = "nekoton_storage.db";
@@ -71,10 +72,10 @@ impl Storage for StorageImpl {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nt_storage_create(dir: *mut c_char) -> *mut c_void {
+pub unsafe extern "C" fn nt_storage_create(dir: *mut c_char) -> *mut c_char {
     let dir = dir.to_string_from_ptr();
 
-    fn internal_fn(dir: String) -> Result<u64, String> {
+    fn internal_fn(dir: String) -> Result<serde_json::Value, String> {
         let db_path = Path::new(&dir).join(NEKOTON_STORAGE_FILENAME);
 
         let db = match PickleDb::load(
@@ -94,9 +95,9 @@ pub unsafe extern "C" fn nt_storage_create(dir: *mut c_char) -> *mut c_void {
 
         let storage = StorageImpl::new(db);
 
-        let ptr = Box::into_raw(Box::new(Arc::new(storage))) as u64;
+        let ptr = Box::into_raw(Box::new(Arc::new(storage)));
 
-        Ok(ptr)
+        serde_json::to_value(ptr.to_ptr_address()).handle_error()
     }
 
     internal_fn(dir).match_result()
@@ -113,19 +114,20 @@ pub unsafe extern "C" fn nt_storage_get(
     let key = key.to_string_from_ptr();
 
     runtime!().spawn(async move {
-        async fn internal_fn(storage: Arc<dyn Storage>, key: String) -> Result<u64, String> {
-            let value = storage
-                .get(&key)
-                .await
-                .handle_error()?
-                .to_optional_cstring_ptr() as u64;
+        async fn internal_fn(
+            storage: Arc<dyn Storage>,
+            key: String,
+        ) -> Result<serde_json::Value, String> {
+            let value = storage.get(&key).await.handle_error()?;
 
-            Ok(value)
+            serde_json::to_value(value).handle_error()
         }
 
         let result = internal_fn(storage, key).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -146,15 +148,17 @@ pub unsafe extern "C" fn nt_storage_set(
             storage: Arc<dyn Storage>,
             key: String,
             value: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             storage.set(&key, &value).await.handle_error()?;
 
-            Ok(u64::default())
+            Ok(serde_json::Value::Null)
         }
 
         let result = internal_fn(storage, key, value).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 

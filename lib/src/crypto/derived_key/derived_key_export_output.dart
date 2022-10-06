@@ -11,5 +11,6 @@ class DerivedKeyExportOutput with _$DerivedKeyExportOutput implements ExportKeyO
     required String phrase,
   }) = _DerivedKeyExportOutput;
 
-  factory DerivedKeyExportOutput.fromJson(Map<String, dynamic> json) => _$DerivedKeyExportOutputFromJson(json);
+  factory DerivedKeyExportOutput.fromJson(Map<String, dynamic> json) =>
+      _$DerivedKeyExportOutputFromJson(json);
 }

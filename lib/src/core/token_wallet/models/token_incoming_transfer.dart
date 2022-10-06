@@ -12,5 +12,6 @@ class TokenIncomingTransfer with _$TokenIncomingTransfer {
     @HiveField(1) required String senderAddress,
   }) = _TokenIncomingTransfer;
 
-  factory TokenIncomingTransfer.fromJson(Map<String, dynamic> json) => _$TokenIncomingTransferFromJson(json);
+  factory TokenIncomingTransfer.fromJson(Map<String, dynamic> json) =>
+      _$TokenIncomingTransferFromJson(json);
 }

@@ -15,14 +15,14 @@ String encodeInternalInput({
   final inputStr = jsonEncode(input);
 
   final result = executeSync(
-    () => NekotonFlutter.bindings.nt_encode_internal_input(
-      contractAbi.toNativeUtf8().cast<Char>(),
-      method.toNativeUtf8().cast<Char>(),
-      inputStr.toNativeUtf8().cast<Char>(),
-    ),
+    () => NekotonFlutter.instance().bindings.nt_encode_internal_input(
+          contractAbi.toNativeUtf8().cast<Char>(),
+          method.toNativeUtf8().cast<Char>(),
+          inputStr.toNativeUtf8().cast<Char>(),
+        ),
   );
 
-  final string = cStringToDart(result);
+  final encodedInput = result as String;
 
-  return string;
+  return encodedInput;
 }

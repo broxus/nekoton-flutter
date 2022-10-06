@@ -1,25 +1,22 @@
-import 'dart:ffi';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-import '../ffi_utils.dart';
-import 'execution_status.dart';
+import 'nekoton_exception.dart';
 
-class ExecutionResult extends Struct {
-  @Uint32()
-  external int statusCode;
+part 'execution_result.freezed.dart';
+part 'execution_result.g.dart';
 
-  @Uint64()
-  external int payload;
-}
+@Freezed(unionKey: 'type', unionValueCase: FreezedUnionCase.snake)
+class ExecutionResult with _$ExecutionResult {
+  const factory ExecutionResult.ok(dynamic data) = _ExecutionResultOk;
 
-extension Handle on ExecutionResult {
-  int handle() {
-    final status = ExecutionStatus.values[statusCode];
+  const factory ExecutionResult.err(String data) = _ExecutionResultErr;
 
-    switch (status) {
-      case ExecutionStatus.ok:
-        return payload;
-      case ExecutionStatus.err:
-        throw Exception(cStringToDart(payload));
-    }
-  }
+  const ExecutionResult._();
+
+  dynamic handle() => when(
+        ok: (data) => data,
+        err: (data) => throw NekotonException(data),
+      );
+
+  factory ExecutionResult.fromJson(Map<String, dynamic> json) => _$ExecutionResultFromJson(json);
 }

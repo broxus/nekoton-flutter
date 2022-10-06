@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:ffi';
 
 import 'package:ffi/ffi.dart';
@@ -16,16 +15,15 @@ Future<ExistingWalletInfo> getExistingWalletInfo({
   final transportType = transport.connectionData.type;
 
   final result = await executeAsync(
-    (port) => NekotonFlutter.bindings.nt_get_existing_wallet_info(
-      port,
-      ptr,
-      transportType.index,
-      address.toNativeUtf8().cast<Char>(),
-    ),
+    (port) => NekotonFlutter.instance().bindings.nt_get_existing_wallet_info(
+          port,
+          ptr,
+          transportType.index,
+          address.toNativeUtf8().cast<Char>(),
+        ),
   );
 
-  final string = cStringToDart(result);
-  final json = jsonDecode(string) as Map<String, dynamic>;
+  final json = result as Map<String, dynamic>;
   final existingWalletInfo = ExistingWalletInfo.fromJson(json);
 
   return existingWalletInfo;

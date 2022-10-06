@@ -7,9 +7,9 @@ import '../../ffi_utils.dart';
 
 bool verifyAccountsStorageData(String data) {
   final result = executeSync(
-    () => NekotonFlutter.bindings.nt_accounts_storage_verify_data(
-      data.toNativeUtf8().cast<Char>(),
-    ),
+    () => NekotonFlutter.instance().bindings.nt_accounts_storage_verify_data(
+          data.toNativeUtf8().cast<Char>(),
+        ),
   );
 
   final isValid = result != 0;

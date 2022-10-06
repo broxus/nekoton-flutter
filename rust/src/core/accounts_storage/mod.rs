@@ -5,6 +5,7 @@ use std::{
     sync::Arc,
 };
 
+use allo_isolate::Isolate;
 use nekoton::{
     core::accounts_storage::{AccountsStorage, ACCOUNTS_STORAGE_KEY},
     external::Storage,
@@ -13,8 +14,11 @@ use nekoton::{
 use crate::{
     core::accounts_storage::models::AccountToAdd,
     external::storage::storage_from_ptr,
-    models::{HandleError, MatchResult, ToNekoton, ToOptionalCStringPtr, ToSerializable},
-    parse_address, runtime, send_to_result_port, ToCStringPtr, ToStringFromPtr, RUNTIME,
+    models::{
+        HandleError, MatchResult, PostWithResult, ToCStringPtr, ToNekoton, ToPtrAddress,
+        ToSerializable,
+    },
+    parse_address, runtime, ToStringFromPtr, RUNTIME,
 };
 
 #[no_mangle]
@@ -27,17 +31,19 @@ pub unsafe extern "C" fn nt_accounts_storage_create(result_port: c_longlong, sto
     let storage = storage_from_ptr(storage);
 
     runtime!().spawn(async move {
-        async fn internal_fn(storage: Arc<dyn Storage>) -> Result<u64, String> {
+        async fn internal_fn(storage: Arc<dyn Storage>) -> Result<serde_json::Value, String> {
             let accounts_storage = AccountsStorage::load(storage).await.handle_error()?;
 
-            let ptr = Box::into_raw(Box::new(Arc::new(accounts_storage))) as u64;
+            let ptr = Box::into_raw(Box::new(Arc::new(accounts_storage)));
 
-            Ok(ptr)
+            serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
 
         let result = internal_fn(storage).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -49,7 +55,9 @@ pub unsafe extern "C" fn nt_accounts_storage_entries(
     let accounts_storage = accounts_storage_from_ptr(accounts_storage);
 
     runtime!().spawn(async move {
-        async fn internal_fn(accounts_storage: &AccountsStorage) -> Result<u64, String> {
+        async fn internal_fn(
+            accounts_storage: &AccountsStorage,
+        ) -> Result<serde_json::Value, String> {
             let entries = accounts_storage
                 .stored_data()
                 .await
@@ -59,16 +67,14 @@ pub unsafe extern "C" fn nt_accounts_storage_entries(
                 .map(|e| e.to_owned().to_serializable())
                 .collect::<Vec<_>>();
 
-            let entries = serde_json::to_string(&entries)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(entries)
+            serde_json::to_value(&entries).handle_error()
         }
 
         let result = internal_fn(&accounts_storage).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -86,7 +92,7 @@ pub unsafe extern "C" fn nt_accounts_storage_add_account(
         async fn internal_fn(
             accounts_storage: &AccountsStorage,
             new_account: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let new_account = serde_json::from_str::<AccountToAdd>(&new_account)
                 .handle_error()?
                 .to_nekoton();
@@ -97,18 +103,16 @@ pub unsafe extern "C" fn nt_accounts_storage_add_account(
                 .handle_error()?
                 .to_serializable();
 
-            let entry = serde_json::to_string(&entry)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(entry)
+            serde_json::to_value(&entry).handle_error()
         }
 
         let result = internal_fn(&accounts_storage, new_account)
             .await
             .match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -126,7 +130,7 @@ pub unsafe extern "C" fn nt_accounts_storage_add_accounts(
         async fn internal_fn(
             accounts_storage: &AccountsStorage,
             new_accounts: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let new_accounts = serde_json::from_str::<Vec<AccountToAdd>>(&new_accounts)
                 .handle_error()?
                 .into_iter()
@@ -141,18 +145,16 @@ pub unsafe extern "C" fn nt_accounts_storage_add_accounts(
                 .map(|e| e.to_serializable())
                 .collect::<Vec<_>>();
 
-            let entries = serde_json::to_string(&entries)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(entries)
+            serde_json::to_value(&entries).handle_error()
         }
 
         let result = internal_fn(&accounts_storage, new_accounts)
             .await
             .match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -173,25 +175,23 @@ pub unsafe extern "C" fn nt_accounts_storage_rename_account(
             accounts_storage: &AccountsStorage,
             account: String,
             name: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let entry = accounts_storage
                 .rename_account(&account, name)
                 .await
                 .handle_error()?
                 .to_serializable();
 
-            let entry = serde_json::to_string(&entry)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(entry)
+            serde_json::to_value(&entry).handle_error()
         }
 
         let result = internal_fn(&accounts_storage, account, name)
             .await
             .match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -215,7 +215,7 @@ pub unsafe extern "C" fn nt_accounts_storage_add_token_wallet(
             account: String,
             network_group: String,
             root_token_contract: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let root_token_contract = parse_address(&root_token_contract)?;
 
             let entry = accounts_storage
@@ -224,11 +224,7 @@ pub unsafe extern "C" fn nt_accounts_storage_add_token_wallet(
                 .handle_error()?
                 .to_serializable();
 
-            let entry = serde_json::to_string(&entry)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(entry)
+            serde_json::to_value(&entry).handle_error()
         }
 
         let result = internal_fn(
@@ -240,7 +236,9 @@ pub unsafe extern "C" fn nt_accounts_storage_add_token_wallet(
         .await
         .match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -264,7 +262,7 @@ pub unsafe extern "C" fn nt_accounts_storage_remove_token_wallet(
             account: String,
             network_group: String,
             root_token_contract: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let root_token_contract = parse_address(&root_token_contract)?;
 
             let entry = accounts_storage
@@ -273,11 +271,7 @@ pub unsafe extern "C" fn nt_accounts_storage_remove_token_wallet(
                 .handle_error()?
                 .to_serializable();
 
-            let entry = serde_json::to_string(&entry)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(entry)
+            serde_json::to_value(&entry).handle_error()
         }
 
         let result = internal_fn(
@@ -289,7 +283,9 @@ pub unsafe extern "C" fn nt_accounts_storage_remove_token_wallet(
         .await
         .match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -307,26 +303,21 @@ pub unsafe extern "C" fn nt_accounts_storage_remove_account(
         async fn internal_fn(
             accounts_storage: &AccountsStorage,
             account: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let entry = accounts_storage
                 .remove_account(&account)
                 .await
                 .handle_error()?
                 .map(|e| e.to_serializable());
 
-            let entry = entry
-                .as_ref()
-                .map(serde_json::to_string)
-                .transpose()
-                .handle_error()?
-                .to_optional_cstring_ptr() as u64;
-
-            Ok(entry)
+            serde_json::to_value(entry).handle_error()
         }
 
         let result = internal_fn(&accounts_storage, account).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -344,7 +335,7 @@ pub unsafe extern "C" fn nt_accounts_storage_remove_accounts(
         async fn internal_fn(
             accounts_storage: &AccountsStorage,
             accounts: String,
-        ) -> Result<u64, String> {
+        ) -> Result<serde_json::Value, String> {
             let accounts = serde_json::from_str::<Vec<&str>>(&accounts).handle_error()?;
 
             let entries = accounts_storage
@@ -355,18 +346,16 @@ pub unsafe extern "C" fn nt_accounts_storage_remove_accounts(
                 .map(|e| e.to_serializable())
                 .collect::<Vec<_>>();
 
-            let entries = serde_json::to_string(&entries)
-                .handle_error()?
-                .to_cstring_ptr() as u64;
-
-            Ok(entries)
+            serde_json::to_value(entries).handle_error()
         }
 
         let result = internal_fn(&accounts_storage, accounts)
             .await
             .match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -378,15 +367,19 @@ pub unsafe extern "C" fn nt_accounts_storage_clear(
     let accounts_storage = accounts_storage_from_ptr(accounts_storage);
 
     runtime!().spawn(async move {
-        async fn internal_fn(accounts_storage: &AccountsStorage) -> Result<u64, String> {
+        async fn internal_fn(
+            accounts_storage: &AccountsStorage,
+        ) -> Result<serde_json::Value, String> {
             accounts_storage.clear().await.handle_error()?;
 
-            Ok(u64::default())
+            Ok(serde_json::Value::Null)
         }
 
         let result = internal_fn(&accounts_storage).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
@@ -398,26 +391,30 @@ pub unsafe extern "C" fn nt_accounts_storage_reload(
     let accounts_storage = accounts_storage_from_ptr(accounts_storage);
 
     runtime!().spawn(async move {
-        async fn internal_fn(accounts_storage: &AccountsStorage) -> Result<u64, String> {
+        async fn internal_fn(
+            accounts_storage: &AccountsStorage,
+        ) -> Result<serde_json::Value, String> {
             accounts_storage.reload().await.handle_error()?;
 
-            Ok(u64::default())
+            Ok(serde_json::Value::Null)
         }
 
         let result = internal_fn(&accounts_storage).await.match_result();
 
-        send_to_result_port(result_port, result);
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
     });
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nt_accounts_storage_verify_data(data: *mut c_char) -> *mut c_void {
+pub unsafe extern "C" fn nt_accounts_storage_verify_data(data: *mut c_char) -> *mut c_char {
     let data = data.to_string_from_ptr();
 
-    fn internal_fn(data: String) -> Result<u64, String> {
-        let is_valid = AccountsStorage::verify(&data).is_ok() as u64;
+    fn internal_fn(data: String) -> Result<serde_json::Value, String> {
+        let is_valid = AccountsStorage::verify(&data).is_ok();
 
-        Ok(is_valid)
+        serde_json::to_value(is_valid).handle_error()
     }
 
     internal_fn(data).match_result()

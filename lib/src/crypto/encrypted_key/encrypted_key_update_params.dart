@@ -24,5 +24,6 @@ class EncryptedKeyUpdateParams with _$EncryptedKeyUpdateParams implements Update
     required Password newPassword,
   }) = _EncryptedKeyUpdateParamsChangePassword;
 
-  factory EncryptedKeyUpdateParams.fromJson(Map<String, dynamic> json) => _$EncryptedKeyUpdateParamsFromJson(json);
+  factory EncryptedKeyUpdateParams.fromJson(Map<String, dynamic> json) =>
+      _$EncryptedKeyUpdateParamsFromJson(json);
 }

@@ -16,13 +16,13 @@ String packIntoCell({
   final tokensStr = jsonEncode(tokens);
 
   final result = executeSync(
-    () => NekotonFlutter.bindings.nt_pack_into_cell(
-      paramsStr.toNativeUtf8().cast<Char>(),
-      tokensStr.toNativeUtf8().cast<Char>(),
-    ),
+    () => NekotonFlutter.instance().bindings.nt_pack_into_cell(
+          paramsStr.toNativeUtf8().cast<Char>(),
+          tokensStr.toNativeUtf8().cast<Char>(),
+        ),
   );
 
-  final string = cStringToDart(result);
+  final cell = result as String;
 
-  return string;
+  return cell;
 }

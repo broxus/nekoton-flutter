@@ -11,7 +11,8 @@ class PendingTransaction with _$PendingTransaction implements Comparable<Pending
     required int expireAt,
   }) = _PendingTransaction;
 
-  factory PendingTransaction.fromJson(Map<String, dynamic> json) => _$PendingTransactionFromJson(json);
+  factory PendingTransaction.fromJson(Map<String, dynamic> json) =>
+      _$PendingTransactionFromJson(json);
 
   const PendingTransaction._();
 

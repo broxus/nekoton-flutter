@@ -20,5 +20,6 @@ class EncryptedKeyCreateInput with _$EncryptedKeyCreateInput implements CreateKe
     required Password password,
   }) = _EncryptedKeyCreateInput;
 
-  factory EncryptedKeyCreateInput.fromJson(Map<String, dynamic> json) => _$EncryptedKeyCreateInputFromJson(json);
+  factory EncryptedKeyCreateInput.fromJson(Map<String, dynamic> json) =>
+      _$EncryptedKeyCreateInputFromJson(json);
 }

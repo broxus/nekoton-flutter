@@ -18,5 +18,6 @@ class TransferRecipient with _$TransferRecipient {
     @HiveField(0) required String address,
   }) = _TransferRecipientTokenWallet;
 
-  factory TransferRecipient.fromJson(Map<String, dynamic> json) => _$TransferRecipientFromJson(json);
+  factory TransferRecipient.fromJson(Map<String, dynamic> json) =>
+      _$TransferRecipientFromJson(json);
 }

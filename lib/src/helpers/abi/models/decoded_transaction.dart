@@ -13,5 +13,6 @@ class DecodedTransaction with _$DecodedTransaction {
     required TokensObject output,
   }) = _DecodedTransaction;
 
-  factory DecodedTransaction.fromJson(Map<String, dynamic> json) => _$DecodedTransactionFromJson(json);
+  factory DecodedTransaction.fromJson(Map<String, dynamic> json) =>
+      _$DecodedTransactionFromJson(json);
 }
