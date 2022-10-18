@@ -19,16 +19,16 @@ help: makefile
 ## init: Install missing dependencies.
 .PHONY: init
 init:
-	rustup override set nightly
-	@if [ $$(uname) == "Darwin" ] ; then cargo +nightly install cargo-lipo ; fi
+	rustup override set stable
+	@if [ $$(uname) == "Darwin" ] ; then cargo +stable install cargo-lipo ; fi
 	# rustup target add armv7-apple-ios armv7s-apple-ios i386-apple-ios ## deprecated
 	rustup target add aarch64-apple-ios x86_64-apple-ios --toolchain nightly
-	cargo +nightly install cargo-ndk
+	cargo +stable install cargo-ndk
 	rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android --toolchain nightly
 	rustup target add aarch64-apple-darwin x86_64-apple-darwin --toolchain nightly
 	rustup target add x86_64-pc-windows-gnu --toolchain nightly
 	rustup target add x86_64-unknown-linux-gnu --toolchain nightly
-	cargo +nightly install cbindgen
+	cargo +stable install cbindgen
 
 ## :
 
