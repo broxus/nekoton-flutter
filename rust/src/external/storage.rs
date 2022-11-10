@@ -55,7 +55,7 @@ impl Storage for StorageImpl {
                 }
 
                 bail!(ISOLATE_MESSAGE_POST_ERROR)
-            },
+            }
         }
     }
 
@@ -76,7 +76,7 @@ impl Storage for StorageImpl {
                 }
 
                 bail!(ISOLATE_MESSAGE_POST_ERROR)
-            },
+            }
         }
     }
 
@@ -105,7 +105,7 @@ impl Storage for StorageImpl {
                 }
 
                 bail!(ISOLATE_MESSAGE_POST_ERROR)
-            },
+            }
         }
     }
 
@@ -153,7 +153,7 @@ pub unsafe extern "C" fn nt_storage_create(
         remove_port,
         remove_unchecked_port,
     )
-    .match_result()
+        .match_result()
 }
 
 #[no_mangle]

@@ -20,6 +20,7 @@ pub enum WalletTypeDef {
     Multisig(MultisigType),
     WalletV3,
     HighloadWalletV2,
+    EverWallet,
 }
 
 #[derive(Serialize, Deserialize)]

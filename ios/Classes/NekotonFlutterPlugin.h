@@ -54,6 +54,8 @@ void nt_accounts_storage_reload(long long result_port, void *accounts_storage);
 
 char *nt_accounts_storage_verify_data(char *data);
 
+void *nt_accounts_storage_clone_ptr(void *ptr);
+
 void nt_accounts_storage_free_ptr(void *ptr);
 
 void nt_generic_contract_subscribe(long long result_port,
@@ -148,6 +150,10 @@ void nt_keystore_clear(long long result_port, void *keystore);
 void nt_keystore_reload(long long result_port, void *keystore);
 
 char *nt_keystore_verify_data(void *connection, char *signers, char *data);
+
+char *nt_keystore_verify_data(char *data);
+
+void *nt_keystore_clone_ptr(void *ptr);
 
 void nt_keystore_free_ptr(void *ptr);
 
@@ -332,6 +338,8 @@ char *nt_gql_connection_create(unsigned int is_local, long long port);
 
 void nt_gql_connection_free_ptr(void *ptr);
 
+char *nt_storage_create(char *dir);
+
 char *nt_jrpc_connection_create(long long port);
 
 void nt_jrpc_connection_free_ptr(void *ptr);
@@ -463,5 +471,7 @@ void nt_gql_transport_wait_for_next_block_id(long long result_port,
 void nt_gql_transport_free_ptr(void *ptr);
 
 char *nt_jrpc_transport_create(void *jrpc_connection);
+
+void *nt_jrpc_transport_clone_ptr(void *ptr);
 
 void nt_jrpc_transport_free_ptr(void *ptr);

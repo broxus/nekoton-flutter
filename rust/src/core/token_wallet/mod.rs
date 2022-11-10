@@ -265,7 +265,7 @@ pub unsafe extern "C" fn nt_token_wallet_prepare_transfer(
             };
 
             let internal_message = token_wallet
-                .prepare_transfer(destination, tokens, notify_receiver, payload)
+                .prepare_transfer(destination, tokens, notify_receiver, payload, 400000000)
                 .handle_error()?;
 
             serde_json::to_value(internal_message).handle_error()

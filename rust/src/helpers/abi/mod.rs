@@ -7,7 +7,6 @@ use std::{
     str::FromStr,
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
-    u64,
 };
 
 use nekoton::{
@@ -236,11 +235,17 @@ pub unsafe extern "C" fn nt_create_external_message_without_signature(
             .map_err(|e| format!("{}", e))?
             .as_millis() as u64;
 
-        let expire_at = ExpireAt::new_from_millis(Expiration::Timeout(timeout), time);
+        let expire_at = ExpireAt::new_from_millis(
+            Expiration::Timeout(timeout),
+            time.try_into().handle_error()?,
+        );
 
         let mut header = HashMap::with_capacity(3);
 
-        header.insert("time".to_string(), ton_abi::TokenValue::Time(time));
+        header.insert(
+            "time".to_string(),
+            ton_abi::TokenValue::Time(time.try_into().handle_error()?),
+        );
         header.insert(
             "expire".to_string(),
             ton_abi::TokenValue::Expire(expire_at.timestamp),
@@ -638,8 +643,9 @@ pub unsafe extern "C" fn nt_pack_into_cell(
         let params = parse_params_list(&params)?;
         let tokens = serde_json::from_str::<serde_json::Value>(&tokens).handle_error()?;
         let tokens = nekoton_abi::parse_abi_tokens(&params, tokens).handle_error()?;
+        let version = ton_abi::contract::AbiVersion { major: 2, minor: 2 };
 
-        let cell = nekoton_abi::pack_into_cell(&tokens).handle_error()?;
+        let cell = nekoton_abi::pack_into_cell(&tokens, version).handle_error()?;
         let bytes = ton_types::serialize_toc(&cell).handle_error()?;
 
         let bytes = base64::encode(&bytes);
@@ -668,8 +674,9 @@ pub unsafe extern "C" fn nt_unpack_from_cell(
         let params = parse_params_list(&params)?;
         let body = base64::decode(boc).handle_error()?;
         let cell = ton_types::deserialize_tree_of_cells(&mut body.as_slice()).handle_error()?;
+        let version = ton_abi::contract::AbiVersion { major: 2, minor: 2 };
 
-        let tokens = nekoton_abi::unpack_from_cell(&params, cell.into(), allow_partial)
+        let tokens = nekoton_abi::unpack_from_cell(&params, cell.into(), allow_partial, version)
             .handle_error()
             .and_then(|e| nekoton_abi::make_abi_tokens(&e).handle_error())?;
 

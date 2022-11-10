@@ -7,10 +7,10 @@ use std::{
 use allo_isolate::Isolate;
 use anyhow::{bail, Result};
 use async_trait::async_trait;
-use nekoton::external::GqlConnection;
 use tokio::sync::oneshot::{channel, Sender};
 
 use crate::{HandleError, MatchResult, ToPtrAddress, ToPtrFromAddress, ISOLATE_MESSAGE_POST_ERROR};
+use nekoton::external::{GqlConnection, GqlRequest};
 
 pub struct GqlConnectionImpl {
     is_local: bool,
@@ -32,11 +32,11 @@ impl GqlConnection for GqlConnectionImpl {
         self.is_local
     }
 
-    async fn post(&self, data: &str) -> Result<String> {
+    async fn post(&self, req: GqlRequest) -> Result<String> {
         let (tx, rx) = channel::<Result<String>>();
 
         let tx = Box::into_raw(Box::new(tx)).to_ptr_address();
-        let data = data.to_owned();
+        let data = req.data;
 
         let request = serde_json::to_string(&(tx.clone(), data))?;
 

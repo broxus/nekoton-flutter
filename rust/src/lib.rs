@@ -10,6 +10,7 @@ mod crypto;
 mod external;
 mod helpers;
 mod transport;
+mod models;
 
 use std::{
     ffi::{CStr, CString},
@@ -131,6 +132,9 @@ impl PostWithResult for Isolate {
             false => Err(ISOLATE_MESSAGE_POST_ERROR).handle_error(),
         }
     }
+}
+fn parse_hash(hash: &str) -> Result<ton_types::UInt256, String> {
+    ton_types::UInt256::from_str(hash).handle_error()
 }
 
 fn parse_public_key(public_key: &str) -> Result<ed25519_dalek::PublicKey, String> {

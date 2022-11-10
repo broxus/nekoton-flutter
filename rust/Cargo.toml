@@ -22,6 +22,10 @@ nekoton = { git = "https://github.com/broxus/nekoton.git", features = [
 ] }
 nekoton-abi = { git = "https://github.com/broxus/nekoton.git" }
 nekoton-utils = { git = "https://github.com/broxus/nekoton.git" }
+num-derive = "0.3.3"
+num-traits = "0.2.14"
+openssl = { version = "0.10.38", features = [ "vendored" ] }
+pickledb = "0.5.1"
 secstr = { version = "0.5.0", features = [ "serde" ] }
 serde = { version = "1.0.136", features = [ "derive" ] }
 serde_json = "1.0.79"

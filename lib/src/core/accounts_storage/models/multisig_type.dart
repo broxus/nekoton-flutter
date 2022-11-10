@@ -8,4 +8,5 @@ enum MultisigType {
   setcodeMultisigWallet24h,
   bridgeMultisigWallet,
   surfWallet,
+  multisig2,
 }

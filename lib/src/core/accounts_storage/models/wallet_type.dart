@@ -12,5 +12,7 @@ class WalletType with _$WalletType {
 
   const factory WalletType.highloadWalletV2() = _HighloadWalletV2;
 
+  const factory WalletType.everWallet() = _WalletTypeEverWallet;
+
   factory WalletType.fromJson(Map<String, dynamic> json) => _$WalletTypeFromJson(json);
 }

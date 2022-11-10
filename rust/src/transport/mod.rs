@@ -5,7 +5,6 @@ pub mod models;
 use std::{
     convert::TryFrom,
     os::raw::{c_char, c_longlong, c_uchar, c_void},
-    str::FromStr,
     sync::Arc,
 };
 
@@ -18,7 +17,7 @@ use nekoton_abi::TransactionId;
 use ton_block::Serializable;
 
 use crate::{
-    parse_address, runtime,
+    parse_address, runtime, parse_hash,
     transport::models::{
         AccountsList, FullContractState, RawContractStateHelper, TransactionsList, TransportType,
     },
@@ -299,6 +298,3 @@ pub unsafe fn match_transport(transport: *mut c_void, transport_type: &str) -> A
     }
 }
 
-fn parse_hash(hash: &str) -> Result<ton_types::UInt256, String> {
-    ton_types::UInt256::from_str(hash).handle_error()
-}
