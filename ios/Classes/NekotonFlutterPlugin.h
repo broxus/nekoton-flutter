@@ -151,8 +151,6 @@ void nt_keystore_reload(long long result_port, void *keystore);
 
 char *nt_keystore_verify_data(void *connection, char *signers, char *data);
 
-char *nt_keystore_verify_data(char *data);
-
 void *nt_keystore_clone_ptr(void *ptr);
 
 void nt_keystore_free_ptr(void *ptr);
@@ -337,8 +335,6 @@ void nt_external_resolve_request_with_unit(void *tx, char *err);
 char *nt_gql_connection_create(unsigned int is_local, long long port);
 
 void nt_gql_connection_free_ptr(void *ptr);
-
-char *nt_storage_create(char *dir);
 
 char *nt_jrpc_connection_create(long long port);
 
