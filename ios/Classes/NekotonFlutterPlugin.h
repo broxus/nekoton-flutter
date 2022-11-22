@@ -151,8 +151,6 @@ void nt_keystore_reload(long long result_port, void *keystore);
 
 char *nt_keystore_verify_data(void *connection, char *signers, char *data);
 
-char *nt_keystore_verify_data(char *data);
-
 void *nt_keystore_clone_ptr(void *ptr);
 
 void nt_keystore_free_ptr(void *ptr);
