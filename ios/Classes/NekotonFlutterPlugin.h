@@ -336,8 +336,6 @@ char *nt_gql_connection_create(unsigned int is_local, long long port);
 
 void nt_gql_connection_free_ptr(void *ptr);
 
-char *nt_storage_create(char *dir);
-
 char *nt_jrpc_connection_create(long long port);
 
 void nt_jrpc_connection_free_ptr(void *ptr);
