@@ -17,7 +17,7 @@ use nekoton_abi::TransactionId;
 use ton_block::Serializable;
 
 use crate::{
-    parse_address, runtime, parse_hash,
+    parse_address, parse_hash, runtime,
     transport::models::{
         AccountsList, FullContractState, RawContractStateHelper, TransactionsList, TransportType,
     },
@@ -297,4 +297,3 @@ pub unsafe fn match_transport(transport: *mut c_void, transport_type: &str) -> A
         },
     }
 }
-

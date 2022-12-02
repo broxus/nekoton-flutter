@@ -1053,6 +1053,29 @@ pub unsafe extern "C" fn nt_get_wallet_custodians(
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_ton_wallet_free_ptr(ptr: *mut c_void) {
+    if ptr.is_null() {
+        return;
+    }
     println!("nt_ton_wallet_free_ptr");
-    Box::from_raw(ptr as *mut Arc<RwLock<TonWallet>>);
+    Box::from_raw(ptr as *mut RwLock<TonWallet>);
+}
+
+#[cfg(test)]
+mod test {
+    use std::sync::{Arc, RwLock};
+
+    use nekoton::core::ton_wallet::TonWallet;
+
+    #[test]
+    fn ask_miri() {
+        let ptr = Box::into_raw(Box::new(RwLock::new(String::new())));
+
+        let ton_wallet = unsafe { &*(ptr as *mut RwLock<String>) };
+
+        let len = ton_wallet.read().unwrap().len();
+
+        unsafe {
+            Box::from_raw(ptr as *mut RwLock<String>);
+        }
+    }
 }

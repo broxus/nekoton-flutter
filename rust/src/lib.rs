@@ -9,8 +9,8 @@ mod core;
 mod crypto;
 mod external;
 mod helpers;
-mod transport;
 mod models;
+mod transport;
 
 use std::{
     ffi::{CStr, CString},
@@ -73,13 +73,11 @@ pub unsafe extern "C" fn nt_cstring_to_void_ptr(ptr: *mut c_char) -> *mut c_void
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_void_ptr_to_c_str(ptr: *mut c_void) -> *mut c_char {
-
     let string = (ptr as u64).to_string();
     let c_string = CString::new(string).unwrap();
 
     c_string.into_raw()
 }
-
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_free_cstring(ptr: *mut c_char) {

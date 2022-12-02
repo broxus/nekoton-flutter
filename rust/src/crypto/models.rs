@@ -4,8 +4,10 @@ use serde::{Deserialize, Serialize};
 use ton_block::Serializable;
 use ton_types::{Cell, UInt256};
 
-use crate::{HandleError};
-use crate::models::{ToNekoton, ToSerializable};
+use crate::{
+    models::{ToNekoton, ToSerializable},
+    HandleError,
+};
 
 #[derive(Serialize, Deserialize)]
 pub struct SignedMessage {

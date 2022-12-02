@@ -7,10 +7,10 @@ use std::{
 use allo_isolate::Isolate;
 use anyhow::{bail, Result};
 use async_trait::async_trait;
+use nekoton::external::{GqlConnection, GqlRequest};
 use tokio::sync::oneshot::{channel, Sender};
 
 use crate::{HandleError, MatchResult, ToPtrAddress, ToPtrFromAddress, ISOLATE_MESSAGE_POST_ERROR};
-use nekoton::external::{GqlConnection, GqlRequest};
 
 pub struct GqlConnectionImpl {
     is_local: bool,
