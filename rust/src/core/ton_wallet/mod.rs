@@ -106,6 +106,11 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe(
         .await
         .match_result();
 
+        android_logger::init_once(
+            android_logger::Config::default().with_min_level(log::Level::Trace),
+        );
+        log::trace!("nt_ton_wallet_subscribe {}", result.to_ptr_address());
+
         Isolate::new(result_port)
             .post_with_result(result.to_ptr_address())
             .unwrap();
@@ -238,6 +243,10 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe_by_existing(
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_ton_wallet_workchain(result_port: c_longlong, ton_wallet: *mut c_void) {
+    android_logger::init_once(
+        android_logger::Config::default().with_min_level(log::Level::Trace),
+    );
+    log::trace!("nt_ton_wallet_workchain {}", ton_wallet.to_ptr_address());
     let ton_wallet = &*(ton_wallet as *mut RwLock<TonWallet>);
 
     runtime!().spawn(async move {
@@ -259,6 +268,10 @@ pub unsafe extern "C" fn nt_ton_wallet_workchain(result_port: c_longlong, ton_wa
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_ton_wallet_address(result_port: c_longlong, ton_wallet: *mut c_void) {
+    android_logger::init_once(
+        android_logger::Config::default().with_min_level(log::Level::Trace),
+    );
+    log::trace!("nt_ton_wallet_address {}", ton_wallet.to_ptr_address());
     let ton_wallet = &*(ton_wallet as *mut RwLock<TonWallet>);
 
     runtime!().spawn(async move {
@@ -1053,6 +1066,10 @@ pub unsafe extern "C" fn nt_get_wallet_custodians(
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_ton_wallet_free_ptr(ptr: *mut c_void) {
+    android_logger::init_once(
+        android_logger::Config::default().with_min_level(log::Level::Trace),
+    );
+    log::trace!("nt_ton_wallet_free_ptr {}", ptr.to_ptr_address());
     println!("nt_ton_wallet_free_ptr");
     Box::from_raw(ptr as *mut Arc<RwLock<TonWallet>>);
 }

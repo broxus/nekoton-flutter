@@ -51,10 +51,10 @@ target/universal/release/libnekoton_flutter.a: $(SOURCES)
 	@echo "[DONE] $@"
 
 ## android: Compile the android targets (arm64, armv7 and i686)
-android: target/aarch64-linux-android/release/libnekoton_flutter.so \
-	target/armv7-linux-androideabi/release/libnekoton_flutter.so \
-	target/i686-linux-android/release/libnekoton_flutter.so \
-	target/x86_64-linux-android/release/libnekoton_flutter.so
+android: target/aarch64-linux-android/release/libnekoton_flutter.so
+#	target/armv7-linux-androideabi/release/libnekoton_flutter.so \
+#	target/i686-linux-android/release/libnekoton_flutter.so \
+#	target/x86_64-linux-android/release/libnekoton_flutter.so
 
 target/aarch64-linux-android/release/libnekoton_flutter.so: $(SOURCES)
 	cargo ndk --target arm64-v8a --output-dir ../android/src/main/jniLibs build --release

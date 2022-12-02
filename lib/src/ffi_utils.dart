@@ -10,6 +10,9 @@ import 'package:nekoton_flutter/src/models/execution_result.dart';
 Pointer<Void> toPtrFromAddress(String address) =>
     NekotonFlutter.instance().bindings.nt_cstring_to_void_ptr(address.toNativeUtf8().cast<Char>());
 
+String toAddressFromPtr(Pointer<Void> ptr) =>
+    NekotonFlutter.instance().bindings.nt_void_ptr_to_c_str(ptr).cast<Utf8>().toDartString();
+
 dynamic executeSync(Pointer<Char> Function() function) {
   final ptr = function();
   final string = ptr.cast<Utf8>().toDartString();
