@@ -72,6 +72,16 @@ pub unsafe extern "C" fn nt_cstring_to_void_ptr(ptr: *mut c_char) -> *mut c_void
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn nt_void_ptr_to_c_str(ptr: *mut c_void) -> *mut c_char {
+
+    let string = (ptr as u64).to_string();
+    let c_string = CString::new(string).unwrap();
+
+    c_string.into_raw()
+}
+
+
+#[no_mangle]
 pub unsafe extern "C" fn nt_free_cstring(ptr: *mut c_char) {
     ptr.to_string_from_ptr();
 }
@@ -151,7 +161,7 @@ pub trait ToPtrAddress {
 
 impl<T> ToPtrAddress for *mut T {
     fn to_ptr_address(self) -> String {
-        (self as usize).to_string()
+        (self as u64).to_string()
     }
 }
 
@@ -161,7 +171,7 @@ pub trait ToPtrFromAddress {
 
 impl ToPtrFromAddress for String {
     fn to_ptr_from_address<T>(self) -> *mut T {
-        self.parse::<usize>().unwrap() as *mut T
+        self.parse::<u64>().unwrap() as *mut T
     }
 }
 
