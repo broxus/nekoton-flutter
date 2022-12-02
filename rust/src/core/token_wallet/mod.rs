@@ -491,5 +491,5 @@ pub unsafe extern "C" fn nt_get_token_root_details_from_token_wallet(
 #[no_mangle]
 pub unsafe extern "C" fn nt_token_wallet_free_ptr(ptr: *mut c_void) {
     println!("nt_token_wallet_free_ptr");
-    Box::from_raw(ptr as *mut Arc<RwLock<TokenWallet>>);
+    Box::from_raw(ptr as *mut RwLock<TokenWallet>);
 }
