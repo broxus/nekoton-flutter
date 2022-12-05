@@ -510,7 +510,7 @@ class TonWallet implements Finalizable {
     onMessageSentStream = _onMessageSentPort.cast<String>().map((e) {
       final json = jsonDecode(e) as List<dynamic>;
 
-      final pendingTransactionJson = json.last as Map<String, dynamic>;
+      final pendingTransactionJson = json.first as Map<String, dynamic>;
       final pendingTransaction = PendingTransaction.fromJson(pendingTransactionJson);
       final transactionJson = json.last as Map<String, dynamic>?;
       final transaction = transactionJson != null ? Transaction.fromJson(transactionJson) : null;
