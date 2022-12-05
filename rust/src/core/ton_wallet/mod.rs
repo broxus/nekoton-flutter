@@ -89,7 +89,10 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe(
             .handle_error()?;
 
             let ptr = Box::into_raw(Box::new(RwLock::new(ton_wallet)));
-
+            android_logger::init_once(
+                android_logger::Config::default().with_min_level(log::Level::Trace),
+            );
+            log::trace!("nt_ton_wallet_subscribe after init {}", ptr.to_ptr_address());
             serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
 
@@ -105,11 +108,6 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe(
         )
         .await
         .match_result();
-
-        android_logger::init_once(
-            android_logger::Config::default().with_min_level(log::Level::Trace),
-        );
-        log::trace!("nt_ton_wallet_subscribe {}", result.to_ptr_address());
 
         Isolate::new(result_port)
             .post_with_result(result.to_ptr_address())
