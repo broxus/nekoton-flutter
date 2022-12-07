@@ -22,9 +22,9 @@ use tokio::sync::RwLock;
 use ton_block::{Block, Deserializable};
 
 use crate::{
-    clock, core::token_wallet::handler::TokenWalletSubscriptionHandlerImpl, parse_address, runtime,
-    transport::match_transport, HandleError, MatchResult, PostWithResult, ToOptionalStringFromPtr,
-    ToPtrAddress, ToStringFromPtr, CLOCK, RUNTIME,
+    clock, core::token_wallet::handler::TokenWalletSubscriptionHandlerImpl, ffi_box, parse_address,
+    runtime, transport::match_transport, HandleError, MatchResult, PostWithResult,
+    ToOptionalStringFromPtr, ToPtrAddress, ToStringFromPtr, CLOCK, RUNTIME,
 };
 
 #[no_mangle]
@@ -65,7 +65,7 @@ pub unsafe extern "C" fn nt_token_wallet_subscribe(
                     .await
                     .handle_error()?;
 
-            let ptr = Box::into_raw(Box::new(RwLock::new(token_wallet)));
+            let ptr = token_wallet_new(Arc::new(RwLock::new(token_wallet)));
 
             serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
@@ -88,7 +88,7 @@ pub unsafe extern "C" fn nt_token_wallet_subscribe(
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_token_wallet_owner(result_port: c_longlong, token_wallet: *mut c_void) {
-    let token_wallet = &*(token_wallet as *mut RwLock<TokenWallet>);
+    let token_wallet = token_wallet_from_native_ptr(token_wallet);
 
     runtime!().spawn(async move {
         fn internal_fn(token_wallet: &TokenWallet) -> Result<serde_json::Value, String> {
@@ -112,7 +112,7 @@ pub unsafe extern "C" fn nt_token_wallet_address(
     result_port: c_longlong,
     token_wallet: *mut c_void,
 ) {
-    let token_wallet = &*(token_wallet as *mut RwLock<TokenWallet>);
+    let token_wallet = token_wallet_from_native_ptr(token_wallet);
 
     runtime!().spawn(async move {
         fn internal_fn(token_wallet: &TokenWallet) -> Result<serde_json::Value, String> {
@@ -136,7 +136,7 @@ pub unsafe extern "C" fn nt_token_wallet_symbol(
     result_port: c_longlong,
     token_wallet: *mut c_void,
 ) {
-    let token_wallet = &*(token_wallet as *mut RwLock<TokenWallet>);
+    let token_wallet = token_wallet_from_native_ptr(token_wallet);
 
     runtime!().spawn(async move {
         fn internal_fn(token_wallet: &TokenWallet) -> Result<serde_json::Value, String> {
@@ -160,7 +160,7 @@ pub unsafe extern "C" fn nt_token_wallet_version(
     result_port: c_longlong,
     token_wallet: *mut c_void,
 ) {
-    let token_wallet = &*(token_wallet as *mut RwLock<TokenWallet>);
+    let token_wallet = token_wallet_from_native_ptr(token_wallet);
 
     runtime!().spawn(async move {
         fn internal_fn(token_wallet: &TokenWallet) -> Result<serde_json::Value, String> {
@@ -184,7 +184,7 @@ pub unsafe extern "C" fn nt_token_wallet_balance(
     result_port: c_longlong,
     token_wallet: *mut c_void,
 ) {
-    let token_wallet = &*(token_wallet as *mut RwLock<TokenWallet>);
+    let token_wallet = token_wallet_from_native_ptr(token_wallet);
 
     runtime!().spawn(async move {
         fn internal_fn(token_wallet: &TokenWallet) -> Result<serde_json::Value, String> {
@@ -208,7 +208,7 @@ pub unsafe extern "C" fn nt_token_wallet_contract_state(
     result_port: c_longlong,
     token_wallet: *mut c_void,
 ) {
-    let token_wallet = &*(token_wallet as *mut RwLock<TokenWallet>);
+    let token_wallet = token_wallet_from_native_ptr(token_wallet);
 
     runtime!().spawn(async move {
         fn internal_fn(token_wallet: &TokenWallet) -> Result<serde_json::Value, String> {
@@ -236,7 +236,7 @@ pub unsafe extern "C" fn nt_token_wallet_prepare_transfer(
     notify_receiver: c_uint,
     payload: *mut c_char,
 ) {
-    let token_wallet = &*(token_wallet as *mut RwLock<TokenWallet>);
+    let token_wallet = token_wallet_from_native_ptr(token_wallet);
 
     let destination = destination.to_string_from_ptr();
     let tokens = tokens.to_string_from_ptr();
@@ -288,7 +288,7 @@ pub unsafe extern "C" fn nt_token_wallet_refresh(
     result_port: c_longlong,
     token_wallet: *mut c_void,
 ) {
-    let token_wallet = &*(token_wallet as *mut RwLock<TokenWallet>);
+    let token_wallet = token_wallet_from_native_ptr(token_wallet);
 
     runtime!().spawn(async move {
         async fn internal_fn(token_wallet: &mut TokenWallet) -> Result<serde_json::Value, String> {
@@ -313,7 +313,7 @@ pub unsafe extern "C" fn nt_token_wallet_preload_transactions(
     token_wallet: *mut c_void,
     from_lt: *mut c_char,
 ) {
-    let token_wallet = &*(token_wallet as *mut RwLock<TokenWallet>);
+    let token_wallet = token_wallet_from_native_ptr(token_wallet);
 
     let from_lt = from_lt.to_string_from_ptr();
 
@@ -348,7 +348,7 @@ pub unsafe extern "C" fn nt_token_wallet_handle_block(
     token_wallet: *mut c_void,
     block: *mut c_char,
 ) {
-    let token_wallet = &*(token_wallet as *mut RwLock<TokenWallet>);
+    let token_wallet = token_wallet_from_native_ptr(token_wallet);
 
     let block = block.to_string_from_ptr();
 
@@ -488,8 +488,4 @@ pub unsafe extern "C" fn nt_get_token_root_details_from_token_wallet(
     });
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn nt_token_wallet_free_ptr(ptr: *mut c_void) {
-    println!("nt_token_wallet_free_ptr");
-    Box::from_raw(ptr as *mut RwLock<TokenWallet>);
-}
+ffi_box!(token_wallet, Arc<RwLock<TokenWallet>>);

@@ -1,3 +1,4 @@
+#![deny(clippy::as_ptr_cast_mut, clippy::ptr_as_ptr,clippy::borrow_as_ptr)]
 #![allow(
     clippy::missing_safety_doc,
     clippy::too_many_arguments,
@@ -35,7 +36,7 @@ use ton_block::MsgAddressInt;
 pub const ISOLATE_MESSAGE_POST_ERROR: &str = "Message was not posted successfully";
 
 lazy_static! {
-    static ref RUNTIME: io::Result<Runtime> = Builder::new_multi_thread()
+    static ref RUNTIME: io::Result<Runtime> = Builder::new_current_thread()
         .enable_all()
         .thread_name("nekoton_flutter")
         .build();
@@ -81,6 +82,10 @@ pub unsafe extern "C" fn nt_void_ptr_to_c_str(ptr: *mut c_void) -> *mut c_char {
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_free_cstring(ptr: *mut c_char) {
+    if (ptr as u64) < 65536 {
+        log::error!("nt_free_cstring: ptr is null");
+        panic!("nt_free_cstring: ptr is null");
+    }
     ptr.to_string_from_ptr();
 }
 
@@ -141,12 +146,13 @@ impl PostWithResult for Isolate {
         }
     }
 }
+
 fn parse_hash(hash: &str) -> Result<ton_types::UInt256, String> {
     ton_types::UInt256::from_str(hash).handle_error()
 }
 
 fn parse_public_key(public_key: &str) -> Result<ed25519_dalek::PublicKey, String> {
-    ed25519_dalek::PublicKey::from_bytes(&hex::decode(&public_key).handle_error()?).handle_error()
+    ed25519_dalek::PublicKey::from_bytes(&hex::decode(public_key).handle_error()?).handle_error()
 }
 
 fn parse_address(address: &str) -> Result<MsgAddressInt, String> {
@@ -169,7 +175,12 @@ pub trait ToPtrFromAddress {
 
 impl ToPtrFromAddress for String {
     fn to_ptr_from_address<T>(self) -> *mut T {
-        self.parse::<u64>().unwrap() as *mut T
+        let address = u64::from_str(&self).unwrap();
+        if address < 65536 {
+            panic!("Invalid address");
+        }
+
+        address as *mut T
     }
 }
 
@@ -202,6 +213,113 @@ impl ToOptionalStringFromPtr for *mut c_char {
         match !self.is_null() {
             true => Some(self.to_string_from_ptr()),
             false => None,
+        }
+    }
+}
+
+/// creates ffi constructor and destructor for the given type
+/// exmaple:
+/// ```ignore
+/// ffi_constructor_and_destructor!(Arc, wallet: TONWallet);
+///
+/// // will create:
+/// fn wallet_new(wallet: TONWallet) -> *mut c_void
+/// {
+///   Box::into_raw(Box::new(Arc::new(wallet))) as *mut c_void
+/// }
+///
+/// fn nt_wallet_free_ptr(wallet: *mut c_void){
+///  let _ = unsafe { Box::from_raw(wallet as *mut Arc<TONWallet>) };
+/// }
+/// ```
+#[macro_export]
+macro_rules! ffi_box {
+    ($name:ident, $type:ty) => {
+         ::paste::paste! {
+            /// creates new ffi object of type $type
+            #[allow(clippy::disallowed_methods,clippy::ptr_as_ptr,dead_code)]
+            pub  fn [< $name _new >](data: $type) -> *mut std::ffi::c_void {
+                Box::into_raw(Box::new(data)) as *mut std::ffi::c_void
+            }
+
+            #[no_mangle]
+            #[allow(clippy::disallowed_methods,clippy::ptr_as_ptr,dead_code)]
+            pub unsafe extern "C" fn [< nt_ $name _free_ptr >](ptr: *mut std::ffi::c_void) {
+                 #[allow(clippy::disallowed-methods)]
+                 if (ptr as u64) < 65536 {
+                     log::error!(concat!("nt_", stringify!($name), "_free_ptr: ptr is null"));
+                     panic!(concat!("nt_", stringify!($name), "_free_ptr: ptr is null"));
+                 }
+                let _ = unsafe { Box::from_raw(ptr as *mut $type) };
+            }
+
+             /// creates new ffi object of type $type
+             /// SAFETY: ptr must be valid pointer to $type
+             /// Panics if ptr < 65536
+            #[allow(clippy::disallowed_methods,clippy::ptr_as_ptr,dead_code)]
+            pub unsafe fn [< $name _from_native_ptr >]<'b>(ptr: *mut std::ffi::c_void) -> &'b $type {
+                 if (ptr as u64) < 65536 {
+                    log::error!(concat!("nt_", stringify!($name), "_from_native_ptr: ptr is null"));
+                    panic!(concat!("nt_", stringify!($name), "_from_native_ptr: ptr is null"));
+                }
+                &*(ptr as *const $type)
+            }
+
+            #[allow(clippy::disallowed_methods,clippy::ptr_as_ptr,dead_code)]
+            pub unsafe fn [< $name _from_native_ptr_opt >]<'b>(ptr: *mut std::ffi::c_void) -> Option<&'b $type> {
+                (ptr as *const $type).as_ref()
+            }
+
+            /// creates new ffi object of type $type
+            /// SAFETY: ptr must be valid pointer to $type
+            /// Panics if ptr < 65536
+            #[allow(clippy::disallowed_methods,clippy::ptr_as_ptr,dead_code)]
+            pub unsafe fn [< $name _from_native_ptr_mut >]<'b>(ptr: *mut std::ffi::c_void) -> &'b mut $type {
+                 if (ptr as u64) < 65536 {
+                    log::error!(concat!("nt_", stringify!($name), "_from_native_ptr: ptr is null"));
+                    panic!(concat!("nt_", stringify!($name), "_from_native_ptr: ptr is null"));
+                }
+                &mut *(ptr as *mut $type)
+            }
+
+
+            /// creates new ffi object of type $type
+            /// SAFETY: ptr must be valid pointer to $type
+            /// Panics if ptr < 65536
+            #[allow(clippy::disallowed_methods,clippy::ptr_as_ptr,dead_code)]
+            pub unsafe fn [< $name _from_native_ptr_owned >]<'b>(ptr: *mut std::ffi::c_void) -> Box<$type> {
+                if (ptr as u64) < 65536 {
+                    log::error!(concat!("nt_", stringify!($name), "_from_native_ptr: ptr is null"));
+                    panic!(concat!("nt_", stringify!($name), "_from_native_ptr: ptr is null"));
+                }
+                Box::from_raw(ptr as *mut $type)
+            }
+         }
+    };
+}
+
+ffi_box!(channel_err, tokio::sync::oneshot::Sender<Result<String>>);
+ffi_box!(channel_option, tokio::sync::oneshot::Sender<Option<String>>);
+ffi_box!(
+    channel_result_option,
+    tokio::sync::oneshot::Sender<Result<Option<String>>>
+);
+ffi_box!(
+    channel_result_unit,
+    tokio::sync::oneshot::Sender<Result<()>>
+);
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn test_ffi() {
+        ffi_box!(test, String);
+
+        let ptr = test_new("test".to_owned());
+        let s = unsafe { test_from_native_ptr(ptr) };
+        println!("{}", s.len());
+        unsafe {
+            nt_test_free_ptr(ptr);
         }
     }
 }

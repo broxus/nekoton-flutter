@@ -28,7 +28,8 @@ use crate::{
         handler::TonWalletSubscriptionHandlerImpl,
         models::{ExistingWalletInfoHelper, WalletTypeHelper},
     },
-    parse_address, parse_public_key, runtime,
+    crypto::unsigned_message_new,
+    ffi_box, parse_address, parse_public_key, runtime,
     transport::{match_transport, models::RawContractStateHelper},
     HandleError, MatchResult, PostWithResult, ToOptionalStringFromPtr, ToPtrAddress,
     ToStringFromPtr, CLOCK, RUNTIME,
@@ -51,7 +52,7 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe(
     let public_key = public_key.to_string_from_ptr();
     let contract = contract.to_string_from_ptr();
 
-    let transport = match_transport(transport, &transport_type);
+    let transport = match_transport(transport, &transport_type); // todo: can be reason of crash
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -88,8 +89,7 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe(
             .await
             .handle_error()?;
 
-            let ptr = Box::into_raw(Box::new(RwLock::new(ton_wallet)));
-
+            let ptr = ton_wallet_new(Arc::new(RwLock::new(ton_wallet)));
             serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
 
@@ -155,7 +155,7 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe_by_address(
                 .await
                 .handle_error()?;
 
-            let ptr = Box::into_raw(Box::new(RwLock::new(ton_wallet)));
+            let ptr = ton_wallet_new(Arc::new(RwLock::new(ton_wallet)));
 
             serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
@@ -219,7 +219,7 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe_by_existing(
                     .await
                     .handle_error()?;
 
-            let ptr = Box::into_raw(Box::new(RwLock::new(ton_wallet)));
+            let ptr = ton_wallet_new(Arc::new(RwLock::new(ton_wallet)));
 
             serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
@@ -243,11 +243,10 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe_by_existing(
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_ton_wallet_workchain(result_port: c_longlong, ton_wallet: *mut c_void) {
-    android_logger::init_once(
-        android_logger::Config::default().with_min_level(log::Level::Trace),
-    );
+    log_panics::init();
+    android_logger::init_once(android_logger::Config::default().with_min_level(log::Level::Trace));
     log::trace!("nt_ton_wallet_workchain {}", ton_wallet.to_ptr_address());
-    let ton_wallet = &*(ton_wallet as *mut RwLock<TonWallet>);
+    let ton_wallet = ton_wallet_from_native_ptr(ton_wallet);
 
     runtime!().spawn(async move {
         fn internal_fn(ton_wallet: &TonWallet) -> Result<serde_json::Value, String> {
@@ -268,11 +267,10 @@ pub unsafe extern "C" fn nt_ton_wallet_workchain(result_port: c_longlong, ton_wa
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_ton_wallet_address(result_port: c_longlong, ton_wallet: *mut c_void) {
-    android_logger::init_once(
-        android_logger::Config::default().with_min_level(log::Level::Trace),
-    );
+    log_panics::init();
+    android_logger::init_once(android_logger::Config::default().with_min_level(log::Level::Trace));
     log::trace!("nt_ton_wallet_address {}", ton_wallet.to_ptr_address());
-    let ton_wallet = &*(ton_wallet as *mut RwLock<TonWallet>);
+    let ton_wallet = ton_wallet_from_native_ptr(ton_wallet);
 
     runtime!().spawn(async move {
         fn internal_fn(ton_wallet: &TonWallet) -> Result<serde_json::Value, String> {
@@ -296,7 +294,7 @@ pub unsafe extern "C" fn nt_ton_wallet_public_key(
     result_port: c_longlong,
     ton_wallet: *mut c_void,
 ) {
-    let ton_wallet = &*(ton_wallet as *mut RwLock<TonWallet>);
+    let ton_wallet = ton_wallet_from_native_ptr(ton_wallet);
 
     runtime!().spawn(async move {
         fn internal_fn(ton_wallet: &TonWallet) -> Result<serde_json::Value, String> {
@@ -322,7 +320,7 @@ pub unsafe extern "C" fn nt_ton_wallet_wallet_type(
     result_port: c_longlong,
     ton_wallet: *mut c_void,
 ) {
-    let ton_wallet = &*(ton_wallet as *mut RwLock<TonWallet>);
+    let ton_wallet = ton_wallet_from_native_ptr(ton_wallet);
 
     runtime!().spawn(async move {
         fn internal_fn(ton_wallet: &TonWallet) -> Result<serde_json::Value, String> {
@@ -346,7 +344,7 @@ pub unsafe extern "C" fn nt_ton_wallet_contract_state(
     result_port: c_longlong,
     ton_wallet: *mut c_void,
 ) {
-    let ton_wallet = &*(ton_wallet as *mut RwLock<TonWallet>);
+    let ton_wallet = ton_wallet_from_native_ptr(ton_wallet);
 
     runtime!().spawn(async move {
         fn internal_fn(ton_wallet: &TonWallet) -> Result<serde_json::Value, String> {
@@ -370,7 +368,7 @@ pub unsafe extern "C" fn nt_ton_wallet_pending_transactions(
     result_port: c_longlong,
     ton_wallet: *mut c_void,
 ) {
-    let ton_wallet = &*(ton_wallet as *mut RwLock<TonWallet>);
+    let ton_wallet = ton_wallet_from_native_ptr(ton_wallet);
 
     runtime!().spawn(async move {
         fn internal_fn(ton_wallet: &TonWallet) -> Result<serde_json::Value, String> {
@@ -394,7 +392,7 @@ pub unsafe extern "C" fn nt_ton_wallet_polling_method(
     result_port: c_longlong,
     ton_wallet: *mut c_void,
 ) {
-    let ton_wallet = &*(ton_wallet as *mut RwLock<TonWallet>);
+    let ton_wallet = ton_wallet_from_native_ptr(ton_wallet);
 
     runtime!().spawn(async move {
         fn internal_fn(ton_wallet: &TonWallet) -> Result<serde_json::Value, String> {
@@ -415,7 +413,7 @@ pub unsafe extern "C" fn nt_ton_wallet_polling_method(
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_ton_wallet_details(result_port: c_longlong, ton_wallet: *mut c_void) {
-    let ton_wallet = &*(ton_wallet as *mut RwLock<TonWallet>);
+    let ton_wallet = ton_wallet_from_native_ptr(ton_wallet);
 
     runtime!().spawn(async move {
         fn internal_fn(ton_wallet: &TonWallet) -> Result<serde_json::Value, String> {
@@ -439,7 +437,7 @@ pub unsafe extern "C" fn nt_ton_wallet_unconfirmed_transactions(
     result_port: c_longlong,
     ton_wallet: *mut c_void,
 ) {
-    let ton_wallet = &*(ton_wallet as *mut RwLock<TonWallet>);
+    let ton_wallet = ton_wallet_from_native_ptr(ton_wallet);
 
     runtime!().spawn(async move {
         fn internal_fn(ton_wallet: &TonWallet) -> Result<serde_json::Value, String> {
@@ -463,7 +461,7 @@ pub unsafe extern "C" fn nt_ton_wallet_custodians(
     result_port: c_longlong,
     ton_wallet: *mut c_void,
 ) {
-    let ton_wallet = &*(ton_wallet as *mut RwLock<TonWallet>);
+    let ton_wallet = ton_wallet_from_native_ptr(ton_wallet);
 
     runtime!().spawn(async move {
         fn internal_fn(ton_wallet: &TonWallet) -> Result<serde_json::Value, String> {
@@ -491,7 +489,7 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_deploy(
     ton_wallet: *mut c_void,
     expiration: *mut c_char,
 ) {
-    let ton_wallet = &*(ton_wallet as *mut RwLock<TonWallet>);
+    let ton_wallet = ton_wallet_from_native_ptr(ton_wallet);
 
     let expiration = expiration.to_string_from_ptr();
 
@@ -504,7 +502,7 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_deploy(
 
             let unsigned_message = ton_wallet.prepare_deploy(expiration).handle_error()?;
 
-            let ptr = Box::into_raw(Box::new(RwLock::new(unsigned_message)));
+            let ptr = unsigned_message_new(Arc::new(RwLock::new(unsigned_message)));
 
             serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
@@ -527,7 +525,7 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_deploy_with_multiple_owners(
     custodians: *mut c_char,
     req_confirms: c_uchar,
 ) {
-    let ton_wallet = &*(ton_wallet as *mut RwLock<TonWallet>);
+    let ton_wallet = ton_wallet_from_native_ptr(ton_wallet);
 
     let expiration = expiration.to_string_from_ptr();
     let custodians = custodians.to_string_from_ptr();
@@ -551,7 +549,7 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_deploy_with_multiple_owners(
                 .prepare_deploy_with_multiple_owners(expiration, &custodians, req_confirms, None)
                 .handle_error()?;
 
-            let ptr = Box::into_raw(Box::new(RwLock::new(unsigned_message)));
+            let ptr = unsigned_message_new(Arc::new(RwLock::new(unsigned_message)));
 
             serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
@@ -578,7 +576,7 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_transfer(
     body: *mut c_char,
     expiration: *mut c_char,
 ) {
-    let ton_wallet = &*(ton_wallet as *mut RwLock<TonWallet>);
+    let ton_wallet = ton_wallet_from_native_ptr(ton_wallet);
 
     let contract_state = contract_state.to_string_from_ptr();
     let public_key = public_key.to_string_from_ptr();
@@ -604,7 +602,7 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_transfer(
 
             let current_state = match contract_state {
                 nekoton::transport::models::RawContractState::NotExists => {
-                    return Err("Not exists").handle_error()
+                    return Err("Not exists").handle_error();
                 },
                 nekoton::transport::models::RawContractState::Exists(contract) => contract.account,
             };
@@ -642,7 +640,7 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_transfer(
                 TransferAction::Sign(unsigned_message) => unsigned_message,
             };
 
-            let ptr = Box::into_raw(Box::new(RwLock::new(unsigned_message)));
+            let ptr = unsigned_message_new(Arc::new(RwLock::new(unsigned_message)));
 
             serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
@@ -676,7 +674,7 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_confirm_transaction(
     transaction_id: *mut c_char,
     expiration: *mut c_char,
 ) {
-    let ton_wallet = &*(ton_wallet as *mut RwLock<TonWallet>);
+    let ton_wallet = ton_wallet_from_native_ptr(ton_wallet);
 
     let contract_state = contract_state.to_string_from_ptr();
     let public_key = public_key.to_string_from_ptr();
@@ -697,7 +695,7 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_confirm_transaction(
 
             let current_state = match contract_state {
                 nekoton::transport::models::RawContractState::NotExists => {
-                    return Err("Not exists").handle_error()
+                    return Err("Not exists").handle_error();
                 },
                 nekoton::transport::models::RawContractState::Exists(contract) => contract.account,
             };
@@ -717,7 +715,7 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_confirm_transaction(
                 )
                 .handle_error()?;
 
-            let ptr = Box::into_raw(Box::new(RwLock::new(unsigned_message)));
+            let ptr = unsigned_message_new(Arc::new(RwLock::new(unsigned_message)));
 
             serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
@@ -745,7 +743,7 @@ pub unsafe extern "C" fn nt_ton_wallet_estimate_fees(
     ton_wallet: *mut c_void,
     signed_message: *mut c_char,
 ) {
-    let ton_wallet = &*(ton_wallet as *mut RwLock<TonWallet>);
+    let ton_wallet = ton_wallet_from_native_ptr(ton_wallet);
 
     let signed_message = signed_message.to_string_from_ptr();
 
@@ -785,7 +783,7 @@ pub unsafe extern "C" fn nt_ton_wallet_send(
     ton_wallet: *mut c_void,
     signed_message: *mut c_char,
 ) {
-    let ton_wallet = &*(ton_wallet as *mut RwLock<TonWallet>);
+    let ton_wallet = ton_wallet_from_native_ptr(ton_wallet);
 
     let signed_message = signed_message.to_string_from_ptr();
 
@@ -819,7 +817,7 @@ pub unsafe extern "C" fn nt_ton_wallet_send(
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_ton_wallet_refresh(result_port: c_longlong, ton_wallet: *mut c_void) {
-    let ton_wallet = &*(ton_wallet as *mut RwLock<TonWallet>);
+    let ton_wallet = ton_wallet_from_native_ptr(ton_wallet);
 
     runtime!().spawn(async move {
         async fn internal_fn(ton_wallet: &mut TonWallet) -> Result<serde_json::Value, String> {
@@ -844,7 +842,7 @@ pub unsafe extern "C" fn nt_ton_wallet_preload_transactions(
     ton_wallet: *mut c_void,
     from_lt: *mut c_char,
 ) {
-    let ton_wallet = &*(ton_wallet as *mut RwLock<TonWallet>);
+    let ton_wallet = ton_wallet_from_native_ptr(ton_wallet);
 
     let from_lt = from_lt.to_string_from_ptr();
 
@@ -879,7 +877,7 @@ pub unsafe extern "C" fn nt_ton_wallet_handle_block(
     ton_wallet: *mut c_void,
     block: *mut c_char,
 ) {
-    let ton_wallet = &*(ton_wallet as *mut RwLock<TonWallet>);
+    let ton_wallet = ton_wallet_from_native_ptr(ton_wallet);
 
     let block = block.to_string_from_ptr();
 
@@ -1064,15 +1062,7 @@ pub unsafe extern "C" fn nt_get_wallet_custodians(
     });
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn nt_ton_wallet_free_ptr(ptr: *mut c_void) {
-    android_logger::init_once(
-        android_logger::Config::default().with_min_level(log::Level::Trace),
-    );
-    log::trace!("nt_ton_wallet_free_ptr {}", ptr.to_ptr_address());
-    println!("nt_ton_wallet_free_ptr");
-    Box::from_raw(ptr as *mut RwLock<TonWallet>);
-}
+ffi_box!(ton_wallet, Arc<RwLock<TonWallet>>);
 
 #[cfg(test)]
 mod test {

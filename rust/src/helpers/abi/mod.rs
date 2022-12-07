@@ -18,10 +18,12 @@ use nekoton::{
     crypto::SignedMessage,
 };
 use nekoton_abi::{guess_method_by_input, insert_state_init_data, FunctionExt, MethodName};
+use tokio::sync::RwLock;
 use ton_block::{Deserializable, Serializable};
 
 use crate::{
     clock,
+    crypto::unsigned_message_new,
     helpers::{
         abi::models::{
             AbiParam, DecodedEvent, DecodedInput, DecodedOutput, DecodedTransaction,
@@ -126,8 +128,9 @@ pub unsafe extern "C" fn nt_get_expected_address(
 
         let params = contract_abi
             .data
-            .iter()
-            .map(|(_, v)| v.value.to_owned())
+            .values()
+            .cloned()
+            .map(|v| v.value)
             .collect::<Vec<_>>();
 
         let init_data = serde_json::from_str::<serde_json::Value>(&init_data).handle_error()?;
@@ -186,7 +189,7 @@ pub unsafe extern "C" fn nt_encode_internal_input(
 
         let body = ton_types::serialize_toc(&body).handle_error()?;
 
-        let body = base64::encode(&body);
+        let body = base64::encode(body);
 
         serde_json::to_value(body).handle_error()
     }
@@ -235,17 +238,11 @@ pub unsafe extern "C" fn nt_create_external_message_without_signature(
             .map_err(|e| format!("{}", e))?
             .as_millis() as u64;
 
-        let expire_at = ExpireAt::new_from_millis(
-            Expiration::Timeout(timeout),
-            time.try_into().handle_error()?,
-        );
+        let expire_at = ExpireAt::new_from_millis(Expiration::Timeout(timeout), time);
 
         let mut header = HashMap::with_capacity(3);
 
-        header.insert(
-            "time".to_string(),
-            ton_abi::TokenValue::Time(time.try_into().handle_error()?),
-        );
+        header.insert("time".to_string(), ton_abi::TokenValue::Time(time));
         header.insert(
             "expire".to_string(),
             ton_abi::TokenValue::Expire(expire_at.timestamp),
@@ -340,8 +337,7 @@ pub unsafe extern "C" fn nt_create_external_message(
         )
         .handle_error()?;
 
-        let ptr = Box::into_raw(Box::new(Arc::new(unsigned_message)));
-
+        let ptr = unsigned_message_new(Arc::new(RwLock::new(unsigned_message)));
         serde_json::to_value(ptr.to_ptr_address()).handle_error()
     }
 
@@ -648,7 +644,7 @@ pub unsafe extern "C" fn nt_pack_into_cell(
         let cell = nekoton_abi::pack_into_cell(&tokens, version).handle_error()?;
         let bytes = ton_types::serialize_toc(&cell).handle_error()?;
 
-        let bytes = base64::encode(&bytes);
+        let bytes = base64::encode(bytes);
 
         serde_json::to_value(bytes).handle_error()
     }
@@ -740,6 +736,7 @@ fn parse_param(param: &AbiParam) -> Result<ton_abi::Param, AbiError> {
     Ok(ton_abi::Param { name, kind })
 }
 
+#[allow(clippy::disallowed_methods)]
 fn parse_param_type(kind: &str) -> Result<ton_abi::ParamType, AbiError> {
     if let Some(']') = kind.chars().last() {
         let num: String = kind
