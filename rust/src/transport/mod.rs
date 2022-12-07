@@ -25,6 +25,7 @@ use crate::{
     HandleError, MatchResult, PostWithResult, ToOptionalStringFromPtr, ToPtrAddress,
     ToStringFromPtr, RUNTIME,
 };
+pub use gql_transport::{gql_connection_new};
 
 mod gql_transport;
 mod jrpc_transport;

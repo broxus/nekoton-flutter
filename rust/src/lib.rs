@@ -1,4 +1,4 @@
-#![deny(clippy::as_ptr_cast_mut, clippy::ptr_as_ptr,clippy::borrow_as_ptr)]
+#![warn(clippy::as_ptr_cast_mut, clippy::ptr_as_ptr,clippy::borrow_as_ptr)]
 #![allow(
     clippy::missing_safety_doc,
     clippy::too_many_arguments,

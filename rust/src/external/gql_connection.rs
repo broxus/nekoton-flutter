@@ -1,4 +1,5 @@
 use std::os::raw::{c_char, c_longlong, c_uint};
+use std::sync::Arc;
 
 use allo_isolate::Isolate;
 use anyhow::{bail, Result};
@@ -7,9 +8,10 @@ use nekoton::external::{GqlConnection, GqlRequest};
 use tokio::sync::oneshot::channel;
 
 use crate::{
-    channel_err_new, ffi_box, nt_channel_err_free_ptr, HandleError, MatchResult, ToPtrAddress,
+    channel_err_new, nt_channel_err_free_ptr, HandleError, MatchResult, ToPtrAddress,
     ToPtrFromAddress, ISOLATE_MESSAGE_POST_ERROR,
 };
+use crate::transport::gql_connection_new;
 
 pub struct GqlConnectionImpl {
     is_local: bool,
@@ -62,12 +64,10 @@ pub unsafe extern "C" fn nt_gql_connection_create(
     fn internal_fn(is_local: bool, port: i64) -> Result<serde_json::Value, String> {
         let gql_connection = GqlConnectionImpl::new(is_local, port);
 
-        let ptr = gql_connection_new(gql_connection);
+        let ptr = gql_connection_new(Arc::new(gql_connection));
 
         serde_json::to_value(ptr.to_ptr_address()).handle_error()
     }
 
     internal_fn(is_local, port).match_result()
 }
-
-ffi_box!(gql_connection, GqlConnectionImpl);

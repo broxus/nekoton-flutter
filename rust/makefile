@@ -19,16 +19,14 @@ help: makefile
 ## init: Install missing dependencies.
 .PHONY: init
 init:
-	rustup override set stable
-	@if [ $$(uname) == "Darwin" ] ; then cargo +stable install cargo-lipo ; fi
+	@if [ $$(uname) == "Darwin" ] ; then cargo nightly install cargo-lipo ; fi
 	# rustup target add armv7-apple-ios armv7s-apple-ios i386-apple-ios ## deprecated
 	rustup target add aarch64-apple-ios x86_64-apple-ios --toolchain nightly
-	cargo +stable install cargo-ndk
+	cargo install cargo-ndk
 	rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android --toolchain nightly
 	rustup target add aarch64-apple-darwin x86_64-apple-darwin --toolchain nightly
 	rustup target add x86_64-pc-windows-gnu --toolchain nightly
 	rustup target add x86_64-unknown-linux-gnu --toolchain nightly
-	cargo +stable install cbindgen
 
 ## :
 
@@ -37,14 +35,14 @@ init:
 # ##############################################################################
 
 ## all: Compile iOS, Android and bindings targets
-all: ios android bindings
+all: ios android
 
 ## ios: Compile the iOS universal library
 ios: target/universal/release/libnekoton_flutter.a
 
 target/universal/release/libnekoton_flutter.a: $(SOURCES)
 	@if [ $$(uname) == "Darwin" ] ; then \
-		cargo lipo --release ; \
+		cargo +nightly lipo --release ; \
 		cp $@ ../ios/libnekoton_flutter.a ; \
 		else echo "Skipping iOS compilation on $$(uname)" ; \
 	fi
@@ -57,19 +55,19 @@ android: target/aarch64-linux-android/release/libnekoton_flutter.so
 #	target/x86_64-linux-android/release/libnekoton_flutter.so
 
 target/aarch64-linux-android/release/libnekoton_flutter.so: $(SOURCES)
-	cargo ndk --target arm64-v8a --output-dir ../android/src/main/jniLibs build --release
+	cargo +nightly ndk --target arm64-v8a --output-dir ../android/src/main/jniLibs build --release
 	@echo "[DONE] $@"
 
 target/armv7-linux-androideabi/release/libnekoton_flutter.so: $(SOURCES)
-	cargo ndk --target armeabi-v7a --output-dir ../android/src/main/jniLibs build --release
+	cargo +nightly ndk --target armeabi-v7a --output-dir ../android/src/main/jniLibs build --release
 	@echo "[DONE] $@"
 
 target/i686-linux-android/release/libnekoton_flutter.so: $(SOURCES)
-	cargo ndk --target x86 --output-dir ../android/src/main/jniLibs build --release
+	cargo +nightly ndk --target x86 --output-dir ../android/src/main/jniLibs build --release
 	@echo "[DONE] $@"
 
 target/x86_64-linux-android/release/libnekoton_flutter.so: $(SOURCES)
-	cargo ndk --target x86_64 --output-dir ../android/src/main/jniLibs build --release
+	cargo +nightly ndk --target x86_64 --output-dir ../android/src/main/jniLibs build --release
 	@echo "[DONE] $@"
 
 ## macos: Compile the macOS libraries
@@ -111,11 +109,11 @@ target/x86_64-unknown-linux-gnu/release/libnekoton_flutter.so: $(SOURCES)
 	@echo "[DONE] $@"
 
 ## bindings: Generate the .h file for iOS
-bindings: target/bindings.h
-
-target/bindings.h: $(SOURCES)
-	cbindgen src/lib.rs -c cbindgen.toml > $@
-	@echo "[DONE] $@"
+#bindings: target/bindings.h
+#
+#target/bindings.h: $(SOURCES)
+#	cbindgen src/lib.rs -c cbindgen.toml > $@
+#	@echo "[DONE] $@"
 
 ## :
 
