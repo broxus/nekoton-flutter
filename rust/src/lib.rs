@@ -1,9 +1,9 @@
-#![warn(clippy::as_ptr_cast_mut, clippy::ptr_as_ptr,clippy::borrow_as_ptr)]
+#![warn(clippy::as_ptr_cast_mut, clippy::ptr_as_ptr, clippy::borrow_as_ptr)]
 #![allow(
-    clippy::missing_safety_doc,
-    clippy::too_many_arguments,
-    clippy::large_enum_variant,
-    clippy::borrowed_box
+clippy::missing_safety_doc,
+clippy::too_many_arguments,
+clippy::large_enum_variant,
+clippy::borrowed_box
 )]
 
 mod core;
@@ -36,7 +36,7 @@ use ton_block::MsgAddressInt;
 pub const ISOLATE_MESSAGE_POST_ERROR: &str = "Message was not posted successfully";
 
 lazy_static! {
-    static ref RUNTIME: io::Result<Runtime> = Builder::new_current_thread()
+    static ref RUNTIME: io::Result<Runtime> = Builder::new_multi_thread()
         .enable_all()
         .thread_name("nekoton_flutter")
         .build();
@@ -92,8 +92,8 @@ pub unsafe extern "C" fn nt_free_cstring(ptr: *mut c_char) {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase", tag = "type", content = "data")]
 pub enum ExecutionResult<T>
-where
-    T: Serialize,
+    where
+        T: Serialize,
 {
     Ok(T),
     Err(String),
@@ -104,8 +104,8 @@ pub trait MatchResult {
 }
 
 impl<T> MatchResult for Result<T, String>
-where
-    T: Serialize,
+    where
+        T: Serialize,
 {
     fn match_result(self) -> *mut c_char {
         let result = match self {
@@ -124,8 +124,8 @@ pub trait HandleError {
 }
 
 impl<T, E> HandleError for Result<T, E>
-where
-    E: ToString,
+    where
+        E: ToString,
 {
     type Output = T;
 
@@ -267,7 +267,11 @@ macro_rules! ffi_box {
 
             #[allow(clippy::disallowed_methods,clippy::ptr_as_ptr,dead_code)]
             pub unsafe fn [< $name _from_native_ptr_opt >]<'b>(ptr: *mut std::ffi::c_void) -> Option<&'b $type> {
-                (ptr as *const $type).as_ref()
+                if ptr.is_null() {
+                    None
+                } else {
+                    Some(&*(ptr as *const $type))
+                }
             }
 
             /// creates new ffi object of type $type

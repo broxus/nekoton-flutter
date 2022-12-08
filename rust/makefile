@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 PROJECTNAME=$(shell basename $(shell dirname "$(PWD)"))
 SOURCES=$(sort $(wildcard ./src/*.rs ./src/**/*.rs))
-
+CARGO_TERM_COLOR=always
 SHELL := /bin/bash
 
 # ##############################################################################
@@ -49,10 +49,10 @@ target/universal/release/libnekoton_flutter.a: $(SOURCES)
 	@echo "[DONE] $@"
 
 ## android: Compile the android targets (arm64, armv7 and i686)
-android: target/aarch64-linux-android/release/libnekoton_flutter.so
-#	target/armv7-linux-androideabi/release/libnekoton_flutter.so \
-#	target/i686-linux-android/release/libnekoton_flutter.so \
-#	target/x86_64-linux-android/release/libnekoton_flutter.so
+android: target/aarch64-linux-android/release/libnekoton_flutter.so \
+	target/armv7-linux-androideabi/release/libnekoton_flutter.so \
+	target/i686-linux-android/release/libnekoton_flutter.so \
+	target/x86_64-linux-android/release/libnekoton_flutter.so
 
 target/aarch64-linux-android/release/libnekoton_flutter.so: $(SOURCES)
 	cargo +nightly ndk --target arm64-v8a --output-dir ../android/src/main/jniLibs build --release
@@ -107,15 +107,6 @@ target/x86_64-unknown-linux-gnu/release/libnekoton_flutter.so: $(SOURCES)
 	cargo build --target x86_64-unknown-linux-gnu --release ; \
 	cp $@ ../linux/include/libnekoton_flutter.so ; \
 	@echo "[DONE] $@"
-
-## bindings: Generate the .h file for iOS
-#bindings: target/bindings.h
-#
-#target/bindings.h: $(SOURCES)
-#	cbindgen src/lib.rs -c cbindgen.toml > $@
-#	@echo "[DONE] $@"
-
-## :
 
 # ##############################################################################
 # # OTHER

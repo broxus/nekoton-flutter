@@ -814,6 +814,7 @@ dependencies = [
  "nekoton-utils",
  "openssl",
  "paste",
+ "pickledb",
  "secstr",
  "serde",
  "serde_json",
@@ -931,6 +932,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "578ede34cf02f8924ab9447f50c28075b4d3e5b269972345e7e0372b38c6cdcd"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "num_cpus"
+version = "1.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f6058e64324c71e02bc2b150e4f3bc8286db6c83092132ffa3f6b1eab0f9def5"
+dependencies = [
+ "hermit-abi",
+ "libc",
 ]
 
 [[package]]
@@ -1053,6 +1064,16 @@ dependencies = [
  "hmac 0.11.0",
  "password-hash",
  "sha2",
+]
+
+[[package]]
+name = "pickledb"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c53a5ade47760e8cc4986bdc5e72daeffaaaee64cbc374f9cfe0a00c1cd87b1f"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1435,6 +1456,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d76ce4a75fb488c605c54bf610f221cea8b0dafb53333c1a67e8ee199dcd2ae3"
 dependencies = [
  "autocfg",
+ "num_cpus",
  "pin-project-lite",
 ]
 
