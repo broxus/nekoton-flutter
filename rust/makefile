@@ -19,7 +19,7 @@ help: makefile
 ## init: Install missing dependencies.
 .PHONY: init
 init:
-	@if [ $$(uname) == "Darwin" ] ; then cargo nightly install cargo-lipo ; fi
+	@if [ $$(uname) == "Darwin" ] ; then cargo +nightly install cargo-lipo ; fi
 	# rustup target add armv7-apple-ios armv7s-apple-ios i386-apple-ios ## deprecated
 	rustup target add aarch64-apple-ios x86_64-apple-ios --toolchain nightly
 	cargo install cargo-ndk

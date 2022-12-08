@@ -54,7 +54,7 @@ ffigen:
     - "/opt/homebrew/opt/llvm"
   headers:
     entry-points:
-      - "rust/target/bindings.h"
+      - "rust/gen/bindings.h"
   functions:
     symbol-address:
       include:
