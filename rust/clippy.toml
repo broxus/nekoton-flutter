@@ -1,0 +1,5 @@
+disallowed-methods = [
+    # fully qualified function/method name:
+    "std::boxed::Box::new",
+    "std::boxed::Box::from_raw",
+]

@@ -131,7 +131,7 @@ pub unsafe extern "C" fn nt_merge_tvc(code: *mut c_char, data: *mut c_char) -> *
         let cell = state_init.serialize().handle_error()?;
         let bytes = ton_types::serialize_toc(&cell).handle_error()?;
 
-        serde_json::to_value(base64::encode(&bytes)).handle_error()
+        serde_json::to_value(base64::encode(bytes)).handle_error()
     }
 
     internal_fn(code, data).match_result()

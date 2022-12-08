@@ -6,17 +6,18 @@ use std::{
 use nekoton::transport::jrpc::JrpcTransport;
 
 use crate::{
-    external::jrpc_connection::JrpcConnectionImpl, HandleError, MatchResult, ToPtrAddress,
+    external::jrpc_connection::{jrpc_connection_from_native_ptr, JrpcConnectionImpl},
+    ffi_box, HandleError, MatchResult, ToPtrAddress,
 };
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_jrpc_transport_create(jrpc_connection: *mut c_void) -> *mut c_char {
-    let jrpc_connection = (&*(jrpc_connection as *mut Arc<JrpcConnectionImpl>)).clone();
+    let jrpc_connection = jrpc_connection_from_native_ptr(jrpc_connection).clone();
 
     fn internal_fn(jrpc_connection: Arc<JrpcConnectionImpl>) -> Result<serde_json::Value, String> {
         let jrpc_transport = JrpcTransport::new(jrpc_connection);
 
-        let ptr = Box::into_raw(Box::new(Arc::new(jrpc_transport)));
+        let ptr = jrpc_transport_new(Arc::new(jrpc_transport));
 
         serde_json::to_value(ptr.to_ptr_address()).handle_error()
     }
@@ -24,8 +25,4 @@ pub unsafe extern "C" fn nt_jrpc_transport_create(jrpc_connection: *mut c_void) 
     internal_fn(jrpc_connection).match_result()
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn nt_jrpc_transport_free_ptr(ptr: *mut c_void) {
-    println!("nt_jrpc_transport_free_ptr");
-    Box::from_raw(ptr as *mut Arc<JrpcTransport>);
-}
+ffi_box!(jrpc_transport, Arc<JrpcTransport>);

@@ -15,9 +15,9 @@ use tokio::sync::RwLock;
 use ton_block::{Block, Deserializable};
 
 use crate::{
-    clock, core::generic_contract::handler::GenericContractSubscriptionHandlerImpl, parse_address,
-    runtime, transport::match_transport, HandleError, MatchResult, PostWithResult, ToPtrAddress,
-    ToStringFromPtr, CLOCK, RUNTIME,
+    clock, core::generic_contract::handler::GenericContractSubscriptionHandlerImpl, ffi_box,
+    parse_address, runtime, transport::match_transport, HandleError, MatchResult, PostWithResult,
+    ToPtrAddress, ToStringFromPtr, CLOCK, RUNTIME,
 };
 
 #[no_mangle]
@@ -67,7 +67,8 @@ pub unsafe extern "C" fn nt_generic_contract_subscribe(
             .await
             .handle_error()?;
 
-            let ptr = Box::into_raw(Box::new(Arc::new(RwLock::new(generic_contract))));
+            let ptr = Arc::new(RwLock::new(generic_contract));
+            let ptr = generic_contract_new(ptr);
 
             serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
@@ -95,7 +96,7 @@ pub unsafe extern "C" fn nt_generic_contract_address(
     result_port: c_longlong,
     generic_contract: *mut c_void,
 ) {
-    let generic_contract = &*(generic_contract as *mut RwLock<GenericContract>);
+    let generic_contract = generic_contract_from_native_ptr(generic_contract);
 
     runtime!().spawn(async move {
         fn internal_fn(generic_contract: &GenericContract) -> Result<serde_json::Value, String> {
@@ -119,7 +120,7 @@ pub unsafe extern "C" fn nt_generic_contract_contract_state(
     result_port: c_longlong,
     generic_contract: *mut c_void,
 ) {
-    let generic_contract = &*(generic_contract as *mut RwLock<GenericContract>);
+    let generic_contract = generic_contract_from_native_ptr(generic_contract);
 
     runtime!().spawn(async move {
         fn internal_fn(generic_contract: &GenericContract) -> Result<serde_json::Value, String> {
@@ -143,7 +144,7 @@ pub unsafe extern "C" fn nt_generic_contract_pending_transactions(
     result_port: c_longlong,
     generic_contract: *mut c_void,
 ) {
-    let generic_contract = &*(generic_contract as *mut RwLock<GenericContract>);
+    let generic_contract = generic_contract_from_native_ptr(generic_contract);
 
     runtime!().spawn(async move {
         fn internal_fn(generic_contract: &GenericContract) -> Result<serde_json::Value, String> {
@@ -167,7 +168,7 @@ pub unsafe extern "C" fn nt_generic_contract_polling_method(
     result_port: c_longlong,
     generic_contract: *mut c_void,
 ) {
-    let generic_contract = &*(generic_contract as *mut RwLock<GenericContract>);
+    let generic_contract = generic_contract_from_native_ptr(generic_contract);
 
     runtime!().spawn(async move {
         fn internal_fn(generic_contract: &GenericContract) -> Result<serde_json::Value, String> {
@@ -192,7 +193,7 @@ pub unsafe extern "C" fn nt_generic_contract_estimate_fees(
     generic_contract: *mut c_void,
     signed_message: *mut c_char,
 ) {
-    let generic_contract = &*(generic_contract as *mut RwLock<GenericContract>);
+    let generic_contract = generic_contract_from_native_ptr(generic_contract);
 
     let signed_message = signed_message.to_string_from_ptr();
 
@@ -232,7 +233,7 @@ pub unsafe extern "C" fn nt_generic_contract_send(
     generic_contract: *mut c_void,
     signed_message: *mut c_char,
 ) {
-    let generic_contract = &*(generic_contract as *mut RwLock<GenericContract>);
+    let generic_contract = generic_contract_from_native_ptr(generic_contract);
 
     let signed_message = signed_message.to_string_from_ptr();
 
@@ -271,7 +272,7 @@ pub unsafe extern "C" fn nt_generic_contract_execute_transaction_locally(
     signed_message: *mut c_char,
     options: *mut c_char,
 ) {
-    let generic_contract = &*(generic_contract as *mut RwLock<GenericContract>);
+    let generic_contract = generic_contract_from_native_ptr(generic_contract);
 
     let signed_message = signed_message.to_string_from_ptr();
     let options = options.to_string_from_ptr();
@@ -314,7 +315,7 @@ pub unsafe extern "C" fn nt_generic_contract_refresh(
     result_port: c_longlong,
     generic_contract: *mut c_void,
 ) {
-    let generic_contract = &*(generic_contract as *mut RwLock<GenericContract>);
+    let generic_contract = generic_contract_from_native_ptr(generic_contract);
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -341,7 +342,7 @@ pub unsafe extern "C" fn nt_generic_contract_preload_transactions(
     generic_contract: *mut c_void,
     from_lt: *mut c_char,
 ) {
-    let generic_contract = &*(generic_contract as *mut RwLock<GenericContract>);
+    let generic_contract = generic_contract_from_native_ptr(generic_contract);
 
     let from_lt = from_lt.to_string_from_ptr();
 
@@ -378,7 +379,7 @@ pub unsafe extern "C" fn nt_generic_contract_handle_block(
     generic_contract: *mut c_void,
     block: *mut c_char,
 ) {
-    let generic_contract = &*(generic_contract as *mut RwLock<GenericContract>);
+    let generic_contract = generic_contract_from_native_ptr(generic_contract);
 
     let block = block.to_string_from_ptr();
 
@@ -406,8 +407,4 @@ pub unsafe extern "C" fn nt_generic_contract_handle_block(
     });
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn nt_generic_contract_free_ptr(ptr: *mut c_void) {
-    println!("nt_generic_contract_free_ptr");
-    Box::from_raw(ptr as *mut Arc<RwLock<GenericContract>>);
-}
+ffi_box!(generic_contract, Arc<RwLock<GenericContract>>);

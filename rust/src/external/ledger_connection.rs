@@ -1,5 +1,5 @@
 use std::{
-    os::raw::{c_char, c_longlong, c_void},
+    os::raw::{c_char, c_longlong},
     sync::Arc,
 };
 
@@ -7,9 +7,12 @@ use allo_isolate::Isolate;
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use nekoton::external::{LedgerConnection, LedgerSignatureContext};
-use tokio::sync::oneshot::{channel, Sender};
+use tokio::sync::oneshot::channel;
 
-use crate::{HandleError, MatchResult, ToPtrAddress, ToPtrFromAddress, ISOLATE_MESSAGE_POST_ERROR};
+use crate::{
+    channel_err_new, ffi_box, nt_channel_err_free_ptr, HandleError, MatchResult, ToPtrAddress,
+    ToPtrFromAddress, ISOLATE_MESSAGE_POST_ERROR,
+};
 
 pub struct LedgerConnectionImpl {
     get_public_key_port: Isolate,
@@ -33,7 +36,7 @@ impl LedgerConnection for LedgerConnectionImpl {
     ) -> Result<[u8; ed25519_dalek::PUBLIC_KEY_LENGTH]> {
         let (tx, rx) = channel::<Result<String>>();
 
-        let tx = Box::into_raw(Box::new(tx)).to_ptr_address();
+        let tx = channel_err_new(tx).to_ptr_address();
 
         let request = serde_json::to_string(&(tx.clone(), account_id))?;
 
@@ -42,12 +45,10 @@ impl LedgerConnection for LedgerConnectionImpl {
                 .await
                 .unwrap()
                 .map(|e| -> [u8; ed25519_dalek::PUBLIC_KEY_LENGTH] {
-                    hex::decode(&e).unwrap().as_slice().try_into().unwrap()
+                    hex::decode(e).unwrap().as_slice().try_into().unwrap()
                 }),
             false => {
-                unsafe {
-                    Box::from_raw(tx.to_ptr_from_address::<Sender<Result<String>>>());
-                }
+                unsafe { nt_channel_err_free_ptr(tx.to_ptr_from_address()) }
 
                 bail!(ISOLATE_MESSAGE_POST_ERROR)
             },
@@ -62,7 +63,7 @@ impl LedgerConnection for LedgerConnectionImpl {
     ) -> Result<[u8; ed25519_dalek::SIGNATURE_LENGTH]> {
         let (tx, rx) = channel::<Result<String>>();
 
-        let tx = Box::into_raw(Box::new(tx)).to_ptr_address();
+        let tx = channel_err_new(tx).to_ptr_address();
         let message = message.to_owned();
         let context = context.to_owned();
 
@@ -73,12 +74,10 @@ impl LedgerConnection for LedgerConnectionImpl {
                 .await
                 .unwrap()
                 .map(|e| -> [u8; ed25519_dalek::SIGNATURE_LENGTH] {
-                    hex::decode(&e).unwrap().as_slice().try_into().unwrap()
+                    hex::decode(e).unwrap().as_slice().try_into().unwrap()
                 }),
             false => {
-                unsafe {
-                    Box::from_raw(tx.to_ptr_from_address::<Sender<Result<String>>>());
-                }
+                unsafe { nt_channel_err_free_ptr(tx.to_ptr_from_address()) }
 
                 bail!(ISOLATE_MESSAGE_POST_ERROR)
             },
@@ -94,16 +93,11 @@ pub unsafe extern "C" fn nt_ledger_connection_create(
     fn internal_fn(get_public_key_port: i64, sign_port: i64) -> Result<serde_json::Value, String> {
         let ledger_connection = LedgerConnectionImpl::new(get_public_key_port, sign_port);
 
-        let ptr = Box::into_raw(Box::new(Arc::new(ledger_connection)));
-
+        let ptr = ledger_connection_new(Arc::new(ledger_connection));
         serde_json::to_value(ptr.to_ptr_address()).handle_error()
     }
 
     internal_fn(get_public_key_port, sign_port).match_result()
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn nt_ledger_connection_free_ptr(ptr: *mut c_void) {
-    println!("nt_ledger_connection_free_ptr");
-    Box::from_raw(ptr as *mut Arc<LedgerConnectionImpl>);
-}
+ffi_box!(ledger_connection, Arc<LedgerConnectionImpl>);

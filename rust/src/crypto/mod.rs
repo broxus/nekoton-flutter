@@ -3,8 +3,10 @@ pub mod encrypted_key;
 pub mod ledger_key;
 mod mnemonic;
 pub mod models;
-
-use std::os::raw::{c_char, c_longlong, c_void};
+use std::{
+    os::raw::{c_char, c_longlong, c_void},
+    sync::Arc,
+};
 
 use allo_isolate::Isolate;
 use ed25519_dalek::Verifier;
@@ -12,8 +14,8 @@ use nekoton::crypto::UnsignedMessage;
 use tokio::sync::RwLock;
 
 use crate::{
-    clock, parse_public_key, runtime, HandleError, MatchResult, PostWithResult, ToPtrAddress,
-    ToStringFromPtr, CLOCK, RUNTIME,
+    clock, ffi_box, parse_public_key, runtime, HandleError, MatchResult, PostWithResult,
+    ToPtrAddress, ToStringFromPtr, CLOCK, RUNTIME,
 };
 
 #[no_mangle]
@@ -21,7 +23,7 @@ pub unsafe extern "C" fn nt_unsigned_message_refresh_timeout(
     result_port: c_longlong,
     unsigned_message: *mut c_void,
 ) {
-    let unsigned_message = &*(unsigned_message as *mut RwLock<Box<dyn UnsignedMessage>>);
+    let unsigned_message = unsigned_message_from_native_ptr(unsigned_message).clone();
 
     runtime!().spawn(async move {
         fn internal_fn(
@@ -47,7 +49,7 @@ pub unsafe extern "C" fn nt_unsigned_message_expire_at(
     result_port: c_longlong,
     unsigned_message: *mut c_void,
 ) {
-    let unsigned_message = &*(unsigned_message as *mut RwLock<Box<dyn UnsignedMessage>>);
+    let unsigned_message = unsigned_message_from_native_ptr(unsigned_message).clone();
 
     runtime!().spawn(async move {
         fn internal_fn(
@@ -73,7 +75,7 @@ pub unsafe extern "C" fn nt_unsigned_message_hash(
     result_port: c_longlong,
     unsigned_message: *mut c_void,
 ) {
-    let unsigned_message = &*(unsigned_message as *mut RwLock<Box<dyn UnsignedMessage>>);
+    let unsigned_message = unsigned_message_from_native_ptr(unsigned_message);
 
     runtime!().spawn(async move {
         fn internal_fn(
@@ -81,7 +83,7 @@ pub unsafe extern "C" fn nt_unsigned_message_hash(
         ) -> Result<serde_json::Value, String> {
             let hash = unsigned_message.hash();
 
-            let hash = base64::encode(&hash);
+            let hash = base64::encode(hash);
 
             serde_json::to_value(hash).handle_error()
         }
@@ -102,7 +104,7 @@ pub unsafe extern "C" fn nt_unsigned_message_sign(
     unsigned_message: *mut c_void,
     signature: *mut c_char,
 ) {
-    let unsigned_message = &*(unsigned_message as *mut RwLock<Box<dyn UnsignedMessage>>);
+    let unsigned_message = unsigned_message_from_native_ptr(unsigned_message);
 
     let signature = signature.to_string_from_ptr();
 
@@ -111,7 +113,7 @@ pub unsafe extern "C" fn nt_unsigned_message_sign(
             unsigned_message: &Box<dyn UnsignedMessage>,
             signature: String,
         ) -> Result<serde_json::Value, String> {
-            let signature: [u8; ed25519_dalek::SIGNATURE_LENGTH] = base64::decode(&signature)
+            let signature: [u8; ed25519_dalek::SIGNATURE_LENGTH] = base64::decode(signature)
                 .handle_error()?
                 .as_slice()
                 .try_into()
@@ -130,12 +132,6 @@ pub unsafe extern "C" fn nt_unsigned_message_sign(
             .post_with_result(result.to_ptr_address())
             .unwrap();
     });
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn nt_unsigned_message_free_ptr(ptr: *mut c_void) {
-    println!("nt_unsigned_message_free_ptr");
-    Box::from_raw(ptr as *mut RwLock<Box<dyn UnsignedMessage>>);
 }
 
 #[no_mangle]
@@ -187,3 +183,5 @@ pub unsafe extern "C" fn nt_verify_signature(
 
     internal_fn(public_key, data_hash, signature).match_result()
 }
+
+ffi_box!(unsigned_message, Arc<RwLock<Box<dyn UnsignedMessage>>>);

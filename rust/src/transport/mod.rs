@@ -1,7 +1,3 @@
-mod gql_transport;
-mod jrpc_transport;
-pub mod models;
-
 use std::{
     convert::TryFrom,
     os::raw::{c_char, c_longlong, c_uchar, c_void},
@@ -11,19 +7,29 @@ use std::{
 use allo_isolate::Isolate;
 use nekoton::{
     core::models::{Transaction, TransactionsBatchInfo, TransactionsBatchType},
-    transport::{gql::GqlTransport, jrpc::JrpcTransport, models::RawContractState, Transport},
+    transport::{models::RawContractState, Transport},
 };
 use nekoton_abi::TransactionId;
 use ton_block::Serializable;
 
 use crate::{
     parse_address, parse_hash, runtime,
-    transport::models::{
-        AccountsList, FullContractState, RawContractStateHelper, TransactionsList, TransportType,
+    transport::{
+        gql_transport::gql_transport_from_native_ptr,
+        jrpc_transport::jrpc_transport_from_native_ptr,
+        models::{
+            AccountsList, FullContractState, RawContractStateHelper, TransactionsList,
+            TransportType,
+        },
     },
     HandleError, MatchResult, PostWithResult, ToOptionalStringFromPtr, ToPtrAddress,
     ToStringFromPtr, RUNTIME,
 };
+pub use gql_transport::{gql_connection_new};
+
+mod gql_transport;
+mod jrpc_transport;
+pub mod models;
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_transport_get_contract_state(
@@ -213,7 +219,7 @@ pub unsafe extern "C" fn nt_transport_get_transactions(
                 .collect::<Vec<_>>();
 
             let continuation = raw_transactions.last().and_then(|e| {
-                (e.data.prev_trans_lt != 0).then(|| TransactionId {
+                (e.data.prev_trans_lt != 0).then_some(TransactionId {
                     lt: e.data.prev_trans_lt,
                     hash: e.data.prev_trans_hash,
                 })
@@ -290,10 +296,10 @@ pub unsafe fn match_transport(transport: *mut c_void, transport_type: &str) -> A
 
     match transport_type {
         TransportType::Jrpc => {
-            (&*(transport as *mut Arc<JrpcTransport>)).clone() as Arc<dyn Transport>
+            jrpc_transport_from_native_ptr(transport).clone() as Arc<dyn Transport>
         },
         TransportType::Gql => {
-            (&*(transport as *mut Arc<GqlTransport>)).clone() as Arc<dyn Transport>
+            gql_transport_from_native_ptr(transport).clone() as Arc<dyn Transport>
         },
     }
 }

@@ -1,5 +1,5 @@
 use std::{
-    os::raw::{c_char, c_longlong, c_void},
+    os::raw::{c_char, c_longlong},
     sync::Arc,
 };
 
@@ -7,9 +7,13 @@ use allo_isolate::Isolate;
 use anyhow::{bail, Result};
 use async_trait::async_trait;
 use nekoton::external::Storage;
-use tokio::sync::oneshot::{channel, Sender};
+use tokio::sync::oneshot::channel;
 
-use crate::{HandleError, MatchResult, ToPtrAddress, ToPtrFromAddress, ISOLATE_MESSAGE_POST_ERROR};
+use crate::{
+    channel_result_option_new, channel_result_unit_new, ffi_box, nt_channel_result_option_free_ptr,
+    nt_channel_result_unit_free_ptr, HandleError, MatchResult, ToPtrAddress, ToPtrFromAddress,
+    ISOLATE_MESSAGE_POST_ERROR,
+};
 
 pub struct StorageImpl {
     get_port: Isolate,
@@ -42,7 +46,7 @@ impl Storage for StorageImpl {
     async fn get(&self, key: &str) -> Result<Option<String>> {
         let (tx, rx) = channel::<Result<Option<String>>>();
 
-        let tx = Box::into_raw(Box::new(tx)).to_ptr_address();
+        let tx = channel_result_option_new(tx).to_ptr_address();
         let key = key.to_owned();
 
         let request = serde_json::to_string(&(tx.clone(), key))?;
@@ -51,7 +55,7 @@ impl Storage for StorageImpl {
             true => rx.await.unwrap(),
             false => {
                 unsafe {
-                    Box::from_raw(tx.to_ptr_from_address::<Sender<Result<Option<String>>>>());
+                    nt_channel_result_option_free_ptr(tx.to_ptr_from_address());
                 }
 
                 bail!(ISOLATE_MESSAGE_POST_ERROR)
@@ -62,7 +66,7 @@ impl Storage for StorageImpl {
     async fn set(&self, key: &str, value: &str) -> Result<()> {
         let (tx, rx) = channel::<Result<()>>();
 
-        let tx = Box::into_raw(Box::new(tx)).to_ptr_address();
+        let tx = channel_result_unit_new(tx).to_ptr_address();
         let key = key.to_owned();
         let value = value.to_owned();
 
@@ -72,7 +76,7 @@ impl Storage for StorageImpl {
             true => rx.await.unwrap(),
             false => {
                 unsafe {
-                    Box::from_raw(tx.to_ptr_from_address::<Sender<Result<()>>>());
+                    nt_channel_result_unit_free_ptr(tx.to_ptr_from_address());
                 }
 
                 bail!(ISOLATE_MESSAGE_POST_ERROR)
@@ -92,7 +96,7 @@ impl Storage for StorageImpl {
     async fn remove(&self, key: &str) -> Result<()> {
         let (tx, rx) = channel::<Result<()>>();
 
-        let tx = Box::into_raw(Box::new(tx)).to_ptr_address();
+        let tx = channel_result_unit_new(tx).to_ptr_address();
         let key = key.to_owned();
 
         let request = serde_json::to_string(&(tx.clone(), key))?;
@@ -101,7 +105,7 @@ impl Storage for StorageImpl {
             true => rx.await.unwrap(),
             false => {
                 unsafe {
-                    Box::from_raw(tx.to_ptr_from_address::<Sender<Result<()>>>());
+                    nt_channel_result_unit_free_ptr(tx.to_ptr_from_address());
                 }
 
                 bail!(ISOLATE_MESSAGE_POST_ERROR)
@@ -141,8 +145,7 @@ pub unsafe extern "C" fn nt_storage_create(
             remove_unchecked_port,
         );
 
-        let ptr = Box::into_raw(Box::new(Arc::new(storage)));
-
+        let ptr = storage_new(Arc::new(storage));
         serde_json::to_value(ptr.to_ptr_address()).handle_error()
     }
 
@@ -156,8 +159,4 @@ pub unsafe extern "C" fn nt_storage_create(
     .match_result()
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn nt_storage_free_ptr(ptr: *mut c_void) {
-    println!("nt_storage_free_ptr");
-    Box::from_raw(ptr as *mut Arc<StorageImpl>);
-}
+ffi_box!(storage, Arc<StorageImpl>);

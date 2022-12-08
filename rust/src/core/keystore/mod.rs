@@ -28,8 +28,11 @@ use crate::{
         ledger_key::LEDGER_KEY_SIGNER_NAME,
         models::{SignatureParts, SignedData, SignedDataRaw},
     },
-    external::{ledger_connection::LedgerConnectionImpl, storage::StorageImpl},
-    parse_public_key, runtime, HandleError, MatchResult, PostWithResult, ToPtrAddress,
+    external::{
+        ledger_connection::{ledger_connection_from_native_ptr_opt, LedgerConnectionImpl},
+        storage::StorageImpl,
+    },
+    ffi_box, parse_public_key, runtime, HandleError, MatchResult, PostWithResult, ToPtrAddress,
     ToStringFromPtr, RUNTIME,
 };
 
@@ -40,12 +43,8 @@ pub unsafe extern "C" fn nt_keystore_create(
     connection: *mut c_void,
     signers: *mut c_char,
 ) {
-    let storage = (&*(storage as *mut Arc<StorageImpl>)).clone();
-    let connection = if !connection.is_null() {
-        Some((&*(connection as *mut Arc<LedgerConnectionImpl>)).clone())
-    } else {
-        None
-    };
+    let storage = storage_impl_from_native_ptr(storage).clone();
+    let connection = ledger_connection_from_native_ptr_opt(connection).cloned();
 
     let signers = signers.to_string_from_ptr();
 
@@ -61,7 +60,7 @@ pub unsafe extern "C" fn nt_keystore_create(
 
             let keystore = keystore_builder.load(storage).await.handle_error()?;
 
-            let ptr = Box::into_raw(Box::new(keystore));
+            let ptr = keystore_new(keystore);
 
             serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
@@ -78,7 +77,7 @@ pub unsafe extern "C" fn nt_keystore_create(
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_keystore_entries(result_port: c_longlong, keystore: *mut c_void) {
-    let keystore = &*(keystore as *mut KeyStore);
+    let keystore = keystore_from_native_ptr(keystore);
 
     runtime!().spawn(async move {
         async fn internal_fn(keystore: &KeyStore) -> Result<serde_json::Value, String> {
@@ -102,7 +101,7 @@ pub unsafe extern "C" fn nt_keystore_add_key(
     signer: *mut c_char,
     input: *mut c_char,
 ) {
-    let keystore = &*(keystore as *mut KeyStore);
+    let keystore = keystore_from_native_ptr(keystore);
 
     let signer = signer.to_string_from_ptr();
     let input = input.to_string_from_ptr();
@@ -162,7 +161,7 @@ pub unsafe extern "C" fn nt_keystore_add_keys(
     signer: *mut c_char,
     input: *mut c_char,
 ) {
-    let keystore = &*(keystore as *mut KeyStore);
+    let keystore = keystore_from_native_ptr(keystore);
 
     let signer = signer.to_string_from_ptr();
     let input = input.to_string_from_ptr();
@@ -226,7 +225,7 @@ pub unsafe extern "C" fn nt_keystore_update_key(
     signer: *mut c_char,
     input: *mut c_char,
 ) {
-    let keystore = &*(keystore as *mut KeyStore);
+    let keystore = keystore_from_native_ptr(keystore);
 
     let signer = signer.to_string_from_ptr();
     let input = input.to_string_from_ptr();
@@ -282,7 +281,7 @@ pub unsafe extern "C" fn nt_keystore_export_key(
     signer: *mut c_char,
     input: *mut c_char,
 ) {
-    let keystore = &*(keystore as *mut KeyStore);
+    let keystore = keystore_from_native_ptr(keystore);
 
     let signer = signer.to_string_from_ptr();
     let input = input.to_string_from_ptr();
@@ -332,7 +331,7 @@ pub unsafe extern "C" fn nt_keystore_get_public_keys(
     signer: *mut c_char,
     input: *mut c_char,
 ) {
-    let keystore = &*(keystore as *mut KeyStore);
+    let keystore = keystore_from_native_ptr(keystore);
 
     let signer = signer.to_string_from_ptr();
     let input = input.to_string_from_ptr();
@@ -405,7 +404,7 @@ pub unsafe extern "C" fn nt_keystore_encrypt(
     algorithm: *mut c_char,
     input: *mut c_char,
 ) {
-    let keystore = &*(keystore as *mut KeyStore);
+    let keystore = keystore_from_native_ptr(keystore);
 
     let signer = signer.to_string_from_ptr();
     let data = data.to_string_from_ptr();
@@ -479,7 +478,7 @@ pub unsafe extern "C" fn nt_keystore_decrypt(
     data: *mut c_char,
     input: *mut c_char,
 ) {
-    let keystore = &*(keystore as *mut KeyStore);
+    let keystore = keystore_from_native_ptr(keystore);
 
     let signer = signer.to_string_from_ptr();
     let data = data.to_string_from_ptr();
@@ -519,7 +518,7 @@ pub unsafe extern "C" fn nt_keystore_decrypt(
                 panic!()
             };
 
-            let data = base64::encode(&data);
+            let data = base64::encode(data);
 
             serde_json::to_value(data).handle_error()
         }
@@ -542,7 +541,7 @@ pub unsafe extern "C" fn nt_keystore_sign(
     data: *mut c_char,
     input: *mut c_char,
 ) {
-    let keystore = &*(keystore as *mut KeyStore);
+    let keystore = keystore_from_native_ptr(keystore);
 
     let signer = signer.to_string_from_ptr();
     let data = data.to_string_from_ptr();
@@ -559,7 +558,7 @@ pub unsafe extern "C" fn nt_keystore_sign(
 
             let signature = sign(keystore, signer, &data, input).await?;
 
-            let signature = base64::encode(&signature);
+            let signature = base64::encode(signature);
 
             serde_json::to_value(signature).handle_error()
         }
@@ -582,7 +581,7 @@ pub unsafe extern "C" fn nt_keystore_sign_data(
     data: *mut c_char,
     input: *mut c_char,
 ) {
-    let keystore = &*(keystore as *mut KeyStore);
+    let keystore = keystore_from_native_ptr(keystore);
 
     let signer = signer.to_string_from_ptr();
     let data = data.to_string_from_ptr();
@@ -602,8 +601,8 @@ pub unsafe extern "C" fn nt_keystore_sign_data(
 
             let signed_data = SignedData {
                 data_hash: hex::encode(hash),
-                signature: base64::encode(&signature),
-                signature_hex: hex::encode(&signature),
+                signature: base64::encode(signature),
+                signature_hex: hex::encode(signature),
                 signature_parts: SignatureParts {
                     high: format!("0x{}", hex::encode(&signature[..32])),
                     low: format!("0x{}", hex::encode(&signature[32..])),
@@ -631,7 +630,7 @@ pub unsafe extern "C" fn nt_keystore_sign_data_raw(
     data: *mut c_char,
     input: *mut c_char,
 ) {
-    let keystore = &*(keystore as *mut KeyStore);
+    let keystore = keystore_from_native_ptr(keystore);
 
     let signer = signer.to_string_from_ptr();
     let data = data.to_string_from_ptr();
@@ -649,8 +648,8 @@ pub unsafe extern "C" fn nt_keystore_sign_data_raw(
             let signature = sign(keystore, signer, &data, input).await?;
 
             let signed_data_raw = SignedDataRaw {
-                signature: base64::encode(&signature),
-                signature_hex: hex::encode(&signature),
+                signature: base64::encode(signature),
+                signature_hex: hex::encode(signature),
                 signature_parts: SignatureParts {
                     high: format!("0x{}", hex::encode(&signature[..32])),
                     low: format!("0x{}", hex::encode(&signature[32..])),
@@ -676,7 +675,7 @@ pub unsafe extern "C" fn nt_keystore_remove_key(
     keystore: *mut c_void,
     public_key: *mut c_char,
 ) {
-    let keystore = &*(keystore as *mut KeyStore);
+    let keystore = keystore_from_native_ptr(keystore);
 
     let public_key = public_key.to_string_from_ptr();
 
@@ -706,7 +705,7 @@ pub unsafe extern "C" fn nt_keystore_remove_keys(
     keystore: *mut c_void,
     public_keys: *mut c_char,
 ) {
-    let keystore = &*(keystore as *mut KeyStore);
+    let keystore = keystore_from_native_ptr(keystore);
 
     let public_keys = public_keys.to_string_from_ptr();
 
@@ -740,7 +739,7 @@ pub unsafe extern "C" fn nt_keystore_is_password_cached(
     public_key: *mut c_char,
     duration: c_ulonglong,
 ) -> *mut c_char {
-    let keystore = &*(keystore as *mut KeyStore);
+    let keystore = keystore_from_native_ptr(keystore);
 
     let public_key = public_key.to_string_from_ptr();
 
@@ -763,7 +762,7 @@ pub unsafe extern "C" fn nt_keystore_is_password_cached(
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_keystore_clear(result_port: c_longlong, keystore: *mut c_void) {
-    let keystore = &*(keystore as *mut KeyStore);
+    let keystore = keystore_from_native_ptr(keystore);
 
     runtime!().spawn(async move {
         async fn internal_fn(keystore: &KeyStore) -> Result<serde_json::Value, String> {
@@ -782,7 +781,7 @@ pub unsafe extern "C" fn nt_keystore_clear(result_port: c_longlong, keystore: *m
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_keystore_reload(result_port: c_longlong, keystore: *mut c_void) {
-    let keystore = &*(keystore as *mut KeyStore);
+    let keystore = keystore_from_native_ptr(keystore);
 
     runtime!().spawn(async move {
         async fn internal_fn(keystore: &KeyStore) -> Result<serde_json::Value, String> {
@@ -805,12 +804,7 @@ pub unsafe extern "C" fn nt_keystore_verify_data(
     signers: *mut c_char,
     data: *mut c_char,
 ) -> *mut c_char {
-    let connection = if !connection.is_null() {
-        Some((&*(connection as *mut Arc<LedgerConnectionImpl>)).clone())
-    } else {
-        None
-    };
-
+    let connection = ledger_connection_from_native_ptr_opt(connection).cloned();
     let signers = signers.to_string_from_ptr();
     let data = data.to_string_from_ptr();
 
@@ -893,8 +887,5 @@ fn map_keystore_builder(
     Ok(keystore_builder)
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn nt_keystore_free_ptr(ptr: *mut c_void) {
-    println!("nt_keystore_free_ptr");
-    Box::from_raw(ptr as *mut KeyStore);
-}
+ffi_box!(keystore, KeyStore);
+ffi_box!(storage_impl, Arc<StorageImpl>);

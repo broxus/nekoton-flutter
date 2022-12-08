@@ -5,10 +5,12 @@ pub mod storage;
 
 use std::os::raw::{c_char, c_void};
 
-use anyhow::{anyhow, Result};
-use tokio::sync::oneshot::Sender;
+use anyhow::anyhow;
 
-use crate::ToOptionalStringFromPtr;
+use crate::{
+    channel_err_from_native_ptr_owned, channel_result_option_from_native_ptr_owned,
+    channel_result_unit_from_native_ptr_owned, ToOptionalStringFromPtr,
+};
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_external_resolve_request_with_string(
@@ -16,7 +18,7 @@ pub unsafe extern "C" fn nt_external_resolve_request_with_string(
     ok: *mut c_char,
     err: *mut c_char,
 ) {
-    let tx = Box::from_raw(tx as *mut Sender<Result<String>>);
+    let tx = channel_err_from_native_ptr_owned(tx);
 
     let ok = ok.to_optional_string_from_ptr();
     let err = err.to_optional_string_from_ptr();
@@ -38,7 +40,7 @@ pub unsafe extern "C" fn nt_external_resolve_request_with_optional_string(
     ok: *mut c_char,
     err: *mut c_char,
 ) {
-    let tx = Box::from_raw(tx as *mut Sender<Result<Option<String>>>);
+    let tx = channel_result_option_from_native_ptr_owned(tx);
 
     let ok = ok.to_optional_string_from_ptr();
     let err = err.to_optional_string_from_ptr();
@@ -56,7 +58,7 @@ pub unsafe extern "C" fn nt_external_resolve_request_with_optional_string(
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_external_resolve_request_with_unit(tx: *mut c_void, err: *mut c_char) {
-    let tx = Box::from_raw(tx as *mut Sender<Result<()>>);
+    let tx = channel_result_unit_from_native_ptr_owned(tx);
 
     let err = err.to_optional_string_from_ptr();
 

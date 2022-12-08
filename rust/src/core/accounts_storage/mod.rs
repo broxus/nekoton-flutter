@@ -1,5 +1,3 @@
-mod models;
-
 use std::{
     os::raw::{c_char, c_longlong, c_void},
     sync::Arc,
@@ -9,22 +7,25 @@ use allo_isolate::Isolate;
 use nekoton::{core::accounts_storage::AccountsStorage, external::Storage};
 
 use crate::{
-    core::accounts_storage::models::{AccountToAddHelper, AssetsListHelper},
-    external::storage::StorageImpl,
-    parse_address, runtime, HandleError, MatchResult, PostWithResult, ToPtrAddress,
+    core::{
+        accounts_storage::models::{AccountToAddHelper, AssetsListHelper},
+        keystore::storage_impl_from_native_ptr,
+    },
+    ffi_box, parse_address, runtime, HandleError, MatchResult, PostWithResult, ToPtrAddress,
     ToStringFromPtr, RUNTIME,
 };
 
+mod models;
+
 #[no_mangle]
 pub unsafe extern "C" fn nt_accounts_storage_create(result_port: c_longlong, storage: *mut c_void) {
-    let storage = (&*(storage as *mut Arc<StorageImpl>)).clone();
+    let storage = storage_impl_from_native_ptr(storage).clone();
 
     runtime!().spawn(async move {
         async fn internal_fn(storage: Arc<dyn Storage>) -> Result<serde_json::Value, String> {
             let accounts_storage = AccountsStorage::load(storage).await.handle_error()?;
 
-            let ptr = Box::into_raw(Box::new(accounts_storage));
-
+            let ptr = accounts_storage_new(accounts_storage);
             serde_json::to_value(ptr.to_ptr_address()).handle_error()
         }
 
@@ -41,7 +42,7 @@ pub unsafe extern "C" fn nt_accounts_storage_entries(
     result_port: c_longlong,
     accounts_storage: *mut c_void,
 ) {
-    let accounts_storage = &*(accounts_storage as *mut AccountsStorage);
+    let accounts_storage = accounts_storage_from_native_ptr(accounts_storage);
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -74,7 +75,7 @@ pub unsafe extern "C" fn nt_accounts_storage_add_account(
     accounts_storage: *mut c_void,
     new_account: *mut c_char,
 ) {
-    let accounts_storage = &*(accounts_storage as *mut AccountsStorage);
+    let accounts_storage = accounts_storage_from_native_ptr(accounts_storage);
 
     let new_account = new_account.to_string_from_ptr();
 
@@ -111,7 +112,7 @@ pub unsafe extern "C" fn nt_accounts_storage_add_accounts(
     accounts_storage: *mut c_void,
     new_accounts: *mut c_char,
 ) {
-    let accounts_storage = &*(accounts_storage as *mut AccountsStorage);
+    let accounts_storage = accounts_storage_from_native_ptr(accounts_storage);
 
     let new_accounts = new_accounts.to_string_from_ptr();
 
@@ -154,7 +155,7 @@ pub unsafe extern "C" fn nt_accounts_storage_rename_account(
     account: *mut c_char,
     name: *mut c_char,
 ) {
-    let accounts_storage = &*(accounts_storage as *mut AccountsStorage);
+    let accounts_storage = accounts_storage_from_native_ptr(accounts_storage);
 
     let account = account.to_string_from_ptr();
     let name = name.to_string_from_ptr();
@@ -191,7 +192,7 @@ pub unsafe extern "C" fn nt_accounts_storage_add_token_wallet(
     network_group: *mut c_char,
     root_token_contract: *mut c_char,
 ) {
-    let accounts_storage = &*(accounts_storage as *mut AccountsStorage);
+    let accounts_storage = accounts_storage_from_native_ptr(accounts_storage);
 
     let account = account.to_string_from_ptr();
     let network_group = network_group.to_string_from_ptr();
@@ -237,7 +238,7 @@ pub unsafe extern "C" fn nt_accounts_storage_remove_token_wallet(
     network_group: *mut c_char,
     root_token_contract: *mut c_char,
 ) {
-    let accounts_storage = &*(accounts_storage as *mut AccountsStorage);
+    let accounts_storage = accounts_storage_from_native_ptr(accounts_storage);
 
     let account = account.to_string_from_ptr();
     let network_group = network_group.to_string_from_ptr();
@@ -281,7 +282,7 @@ pub unsafe extern "C" fn nt_accounts_storage_remove_account(
     accounts_storage: *mut c_void,
     account: *mut c_char,
 ) {
-    let accounts_storage = &*(accounts_storage as *mut AccountsStorage);
+    let accounts_storage = accounts_storage_from_native_ptr(accounts_storage);
 
     let account = account.to_string_from_ptr();
 
@@ -313,7 +314,7 @@ pub unsafe extern "C" fn nt_accounts_storage_remove_accounts(
     accounts_storage: *mut c_void,
     accounts: *mut c_char,
 ) {
-    let accounts_storage = &*(accounts_storage as *mut AccountsStorage);
+    let accounts_storage = accounts_storage_from_native_ptr(accounts_storage);
 
     let accounts = accounts.to_string_from_ptr();
 
@@ -348,7 +349,7 @@ pub unsafe extern "C" fn nt_accounts_storage_clear(
     result_port: c_longlong,
     accounts_storage: *mut c_void,
 ) {
-    let accounts_storage = &*(accounts_storage as *mut AccountsStorage);
+    let accounts_storage = accounts_storage_from_native_ptr(accounts_storage);
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -372,7 +373,7 @@ pub unsafe extern "C" fn nt_accounts_storage_reload(
     result_port: c_longlong,
     accounts_storage: *mut c_void,
 ) {
-    let accounts_storage = &*(accounts_storage as *mut AccountsStorage);
+    let accounts_storage = accounts_storage_from_native_ptr(accounts_storage);
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -404,8 +405,4 @@ pub unsafe extern "C" fn nt_accounts_storage_verify_data(data: *mut c_char) -> *
     internal_fn(data).match_result()
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn nt_accounts_storage_free_ptr(ptr: *mut c_void) {
-    println!("nt_accounts_storage_free_ptr");
-    Box::from_raw(ptr as *mut AccountsStorage);
-}
+ffi_box!(accounts_storage, AccountsStorage);
