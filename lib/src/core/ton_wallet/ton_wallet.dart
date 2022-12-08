@@ -417,7 +417,6 @@ class TonWallet implements Finalizable {
   }
 
   Future<void> dispose() async {
-    print('TON WALLET DISPOSE: ${toAddressFromPtr(_ptr)}');
     _onMessageSentPort.close();
     _onMessageExpiredPort.close();
     _onStateChangedPort.close();
@@ -557,7 +556,6 @@ class TonWallet implements Finalizable {
     }).asBroadcastStream(onCancel: (subscription) => subscription.cancel());
 
     _ptr = toPtrFromAddress(await subscribe() as String);
-    print('TON WALLET SUBSCRIBE: ${toAddressFromPtr(_ptr)}');
 
     _nativeFinalizer.attach(this, _ptr);
 
