@@ -26,7 +26,7 @@ use allo_isolate::{
     ffi::{DartCObject, DartPort},
     IntoDart, Isolate,
 };
-use anyhow::Result;
+use anyhow::{Context, Result};
 use lazy_static::lazy_static;
 use nekoton_utils::SimpleClock;
 use serde::Serialize;
@@ -151,8 +151,8 @@ fn parse_hash(hash: &str) -> Result<ton_types::UInt256, String> {
     ton_types::UInt256::from_str(hash).handle_error()
 }
 
-fn parse_public_key(public_key: &str) -> Result<ed25519_dalek::PublicKey, String> {
-    ed25519_dalek::PublicKey::from_bytes(&hex::decode(public_key).handle_error()?).handle_error()
+fn parse_public_key(public_key: &str) -> Result<ed25519_dalek::PublicKey, anyhow::Error> {
+    Ok(ed25519_dalek::PublicKey::from_bytes(&hex::decode(public_key).context("Bad hex data")?)?)
 }
 
 fn parse_address(address: &str) -> Result<MsgAddressInt, String> {

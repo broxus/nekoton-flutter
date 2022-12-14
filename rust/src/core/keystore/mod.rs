@@ -3,8 +3,10 @@ use std::{
     sync::Arc,
     time::Duration,
 };
+use std::str::FromStr;
 
 use allo_isolate::Isolate;
+use anyhow::Context;
 use nekoton::{
     core::keystore::{KeyStore, KeyStoreBuilder},
     crypto::{
@@ -427,24 +429,24 @@ pub unsafe extern "C" fn nt_keystore_encrypt(
                 .handle_error()?
                 .into_iter()
                 .map(parse_public_key)
-                .collect::<Result<Vec<_>, String>>()?;
+                .collect::<Result<Vec<_>, anyhow::Error>>().context("Bad keys").handle_error()?;
 
-            let algorithm =
-                serde_json::from_str::<EncryptionAlgorithm>(&algorithm).handle_error()?;
+            let algorithm = EncryptionAlgorithm::from_str(&algorithm).context("Bad algorythm").
+                handle_error()?;
 
             let data = if signer == ENCRYPTED_KEY_SIGNER_NAME {
-                let input = serde_json::from_str::<EncryptedKeyPassword>(&input).handle_error()?;
+                let input = serde_json::from_str::<EncryptedKeyPassword>(&input).context("Invalid EncryptedKeyPassword").handle_error()?;
 
                 keystore
                     .encrypt::<EncryptedKeySigner>(&data, &public_keys, algorithm, input)
-                    .await
+                    .await.context("Failed to encrypt")
                     .handle_error()?
             } else if signer == DERIVED_KEY_SIGNER_NAME {
-                let input = serde_json::from_str::<DerivedKeySignParams>(&input).handle_error()?;
+                let input = serde_json::from_str::<DerivedKeySignParams>(&input).context("Invalid DerivedKeySignParams").handle_error()?;
 
                 keystore
                     .encrypt::<DerivedKeySigner>(&data, &public_keys, algorithm, input)
-                    .await
+                    .await.context("DerivedKeySigner encrypt fail")
                     .handle_error()?
             } else if signer == LEDGER_KEY_SIGNER_NAME {
                 let input = serde_json::from_str::<LedgerSignInput>(&input).handle_error()?;
@@ -684,7 +686,7 @@ pub unsafe extern "C" fn nt_keystore_remove_key(
             keystore: &KeyStore,
             public_key: String,
         ) -> Result<serde_json::Value, String> {
-            let public_key = parse_public_key(&public_key)?;
+            let public_key = parse_public_key(&public_key).map_err(|e| e.to_string())?;
 
             let entry = keystore.remove_key(&public_key).await.handle_error()?;
 
@@ -714,11 +716,11 @@ pub unsafe extern "C" fn nt_keystore_remove_keys(
             keystore: &KeyStore,
             public_keys: String,
         ) -> Result<serde_json::Value, String> {
-            let public_keys = serde_json::from_str::<Vec<&str>>(&public_keys)
+            let public_keys = serde_json::from_str::<Vec<&str>>(&public_keys).context("invalid pubkeys")
                 .handle_error()?
                 .into_iter()
                 .map(parse_public_key)
-                .collect::<Result<Vec<_>, String>>()?;
+                .collect::<Result<Vec<_>, anyhow::Error>>().handle_error()?;
 
             let entries = keystore.remove_keys(&public_keys).await.handle_error()?;
 
@@ -748,7 +750,7 @@ pub unsafe extern "C" fn nt_keystore_is_password_cached(
         public_key: String,
         duration: u64,
     ) -> Result<serde_json::Value, String> {
-        let id = parse_public_key(&public_key)?.to_bytes();
+        let id = parse_public_key(&public_key).handle_error()?.to_bytes();
 
         let duration = Duration::from_millis(duration);
 

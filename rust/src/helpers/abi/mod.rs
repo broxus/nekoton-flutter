@@ -40,7 +40,7 @@ pub unsafe extern "C" fn nt_check_public_key(public_key: *mut c_char) -> *mut c_
     let public_key = public_key.to_string_from_ptr();
 
     fn internal_fn(public_key: String) -> Result<serde_json::Value, String> {
-        parse_public_key(&public_key)?;
+        parse_public_key(&public_key).handle_error()?;
 
         Ok(serde_json::Value::Null)
     }
@@ -124,7 +124,7 @@ pub unsafe extern "C" fn nt_get_expected_address(
     ) -> Result<serde_json::Value, String> {
         let mut state_init = ton_block::StateInit::construct_from_base64(&tvc).handle_error()?;
         let contract_abi = parse_contract_abi(&contract_abi)?;
-        let public_key = public_key.as_deref().map(parse_public_key).transpose()?;
+        let public_key = public_key.as_deref().map(parse_public_key).transpose().handle_error()?;
 
         let params = contract_abi
             .data
@@ -315,7 +315,7 @@ pub unsafe extern "C" fn nt_create_external_message(
         let input = serde_json::from_str::<serde_json::Value>(&input).handle_error()?;
         let input = nekoton_abi::parse_abi_tokens(&method.inputs, input).handle_error()?;
 
-        let public_key = parse_public_key(&public_key)?;
+        let public_key = parse_public_key(&public_key).handle_error()?;
 
         let mut message =
             ton_block::Message::with_ext_in_header(ton_block::ExternalInboundMessageHeader {

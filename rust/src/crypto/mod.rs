@@ -149,7 +149,7 @@ pub unsafe extern "C" fn nt_verify_signature(
         data_hash: String,
         signature: String,
     ) -> Result<serde_json::Value, String> {
-        let public_key = parse_public_key(&public_key)?;
+        let public_key = parse_public_key(&public_key).handle_error()?;
 
         let data_hash = match hex::decode(&data_hash) {
             Ok(data_hash) => data_hash,

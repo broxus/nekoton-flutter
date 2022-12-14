@@ -65,7 +65,7 @@ pub unsafe extern "C" fn nt_ton_wallet_subscribe(
             public_key: String,
             contract: String,
         ) -> Result<serde_json::Value, String> {
-            let public_key = parse_public_key(&public_key)?;
+            let public_key = parse_public_key(&public_key).handle_error()?;
 
             let contract = serde_json::from_str::<WalletTypeHelper>(&contract)
                 .map(|WalletTypeHelper(wallet_type)| wallet_type)
@@ -536,7 +536,7 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_deploy_with_multiple_owners(
                 .handle_error()?
                 .into_iter()
                 .map(parse_public_key)
-                .collect::<Result<Vec<_>, String>>()?;
+                .collect::<Result<Vec<_>, anyhow::Error>>().handle_error()?;
 
             let unsigned_message = ton_wallet
                 .prepare_deploy_with_multiple_owners(expiration, &custodians, req_confirms, None)
@@ -600,7 +600,7 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_transfer(
                 nekoton::transport::models::RawContractState::Exists(contract) => contract.account,
             };
 
-            let public_key = parse_public_key(&public_key)?;
+            let public_key = parse_public_key(&public_key).handle_error()?;
 
             let destination = parse_address(&destination)?;
 
@@ -693,7 +693,7 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_confirm_transaction(
                 nekoton::transport::models::RawContractState::Exists(contract) => contract.account,
             };
 
-            let public_key = parse_public_key(&public_key)?;
+            let public_key = parse_public_key(&public_key).handle_error()?;
 
             let transaction_id = transaction_id.parse::<u64>().handle_error()?;
 
@@ -918,7 +918,7 @@ pub unsafe extern "C" fn nt_find_existing_wallets(
             workchain_id: i8,
             wallet_types: String,
         ) -> Result<serde_json::Value, String> {
-            let public_key = parse_public_key(&public_key)?;
+            let public_key = parse_public_key(&public_key).handle_error()?;
 
             let wallet_types = serde_json::from_str::<Vec<WalletTypeHelper>>(&wallet_types)
                 .handle_error()?
