@@ -20,4 +20,5 @@ enum MultisigType {
   surfWallet,
   @HiveField(6)
   multisig2,
+  multisig2_1,
 }
