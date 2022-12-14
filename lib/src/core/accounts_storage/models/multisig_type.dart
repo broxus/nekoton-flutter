@@ -9,4 +9,5 @@ enum MultisigType {
   bridgeMultisigWallet,
   surfWallet,
   multisig2,
+  multisig2_1,
 }
