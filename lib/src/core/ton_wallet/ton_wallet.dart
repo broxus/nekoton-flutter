@@ -22,7 +22,6 @@ import 'package:nekoton_flutter/src/crypto/models/signed_message.dart';
 import 'package:nekoton_flutter/src/crypto/unsigned_message.dart';
 import 'package:nekoton_flutter/src/ffi_utils.dart';
 import 'package:nekoton_flutter/src/transport/transport.dart';
-import 'package:rxdart/rxdart.dart';
 import 'package:tuple/tuple.dart';
 
 final _nativeFinalizer =
@@ -50,7 +49,9 @@ class TonWallet implements Finalizable {
   late List<PendingTransaction> _pendingTransactions;
   late PollingMethod _pollingMethod;
   late List<MultisigPendingTransaction> _unconfirmedTransactions;
-  final _custodiansController = StreamController<List<String>?>.broadcast();
+
+  /// Triggers subscribers when [_updateData] completes
+  final _fieldsUpdateController = StreamController<void>.broadcast();
   late List<String>? _custodians;
 
   TonWallet._(this._transport);
@@ -236,7 +237,7 @@ class TonWallet implements Finalizable {
 
   List<String>? get custodians => _custodians;
 
-  Stream<List<String>?> get custodiansStream => _custodiansController.stream.startWith(custodians);
+  Stream<void> get fieldUpdatesController => _fieldsUpdateController.stream;
 
   Future<List<String>?> get __custodians async {
     final result = await executeAsync(
@@ -425,7 +426,7 @@ class TonWallet implements Finalizable {
     _onMessageExpiredPort.close();
     _onStateChangedPort.close();
     _onTransactionsFoundPort.close();
-    _custodiansController.close();
+    _fieldsUpdateController.close();
   }
 
   Future<void> _subscribe({
@@ -509,7 +510,8 @@ class TonWallet implements Finalizable {
     _pollingMethod = await __pollingMethod;
     _unconfirmedTransactions = await __unconfirmedTransactions;
     _custodians = await __custodians;
-    _custodiansController.add(_custodians);
+
+    _fieldsUpdateController.add(null);
   }
 
   Future<void> _initialize(Future<dynamic> Function() subscribe) async {
