@@ -536,7 +536,8 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_deploy_with_multiple_owners(
                 .handle_error()?
                 .into_iter()
                 .map(parse_public_key)
-                .collect::<Result<Vec<_>, anyhow::Error>>().handle_error()?;
+                .collect::<Result<Vec<_>, anyhow::Error>>()
+                .handle_error()?;
 
             let unsigned_message = ton_wallet
                 .prepare_deploy_with_multiple_owners(expiration, &custodians, req_confirms, None)
@@ -1058,21 +1059,18 @@ pub unsafe extern "C" fn nt_get_wallet_custodians(
 ffi_box!(ton_wallet, Arc<RwLock<TonWallet>>);
 
 #[cfg(test)]
+#[allow(clippy::disallowed_methods)]
 mod test {
-    use std::sync::{Arc, RwLock};
-
-    use nekoton::core::ton_wallet::TonWallet;
+    use std::sync::RwLock;
 
     #[test]
     fn ask_miri() {
         let ptr = Box::into_raw(Box::new(RwLock::new(String::new())));
 
-        let ton_wallet = unsafe { &*(ptr as *mut RwLock<String>) };
+        let ton_wallet = unsafe { &*ptr };
 
-        let len = ton_wallet.read().unwrap().len();
+        _ = ton_wallet.read().unwrap().len();
 
-        unsafe {
-            Box::from_raw(ptr as *mut RwLock<String>);
-        }
+        drop(unsafe { Box::from_raw(ptr) })
     }
 }
