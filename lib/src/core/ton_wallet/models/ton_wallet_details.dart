@@ -12,6 +12,7 @@ class TonWalletDetails with _$TonWalletDetails {
     required bool supportsPayload,
     required bool supportsMultipleOwners,
     required int expirationTime,
+    required int? requiredConfirmations,
   }) = _TonWalletDetails;
 
   factory TonWalletDetails.fromJson(Map<String, dynamic> json) => _$TonWalletDetailsFromJson(json);
