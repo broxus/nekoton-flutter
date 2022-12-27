@@ -31,7 +31,9 @@ pub unsafe extern "C" fn nt_external_resolve_request_with_string(
         },
     };
 
-    tx.send(result).unwrap();
+    if let Err(e) = tx.send(result) {
+        log::error!("channel closed: {:?}", e);
+    }
 }
 
 #[no_mangle]
@@ -53,7 +55,9 @@ pub unsafe extern "C" fn nt_external_resolve_request_with_optional_string(
         },
     };
 
-    tx.send(result).unwrap();
+    if let Err(e) = tx.send(result) {
+        log::error!("channel closed: {:?}", e);
+    }
 }
 
 #[no_mangle]
@@ -67,5 +71,7 @@ pub unsafe extern "C" fn nt_external_resolve_request_with_unit(tx: *mut c_void, 
         None => Ok(()),
     };
 
-    tx.send(result).unwrap();
+    if let Err(e) = tx.send(result) {
+        log::error!("channel closed: {:?}", e);
+    }
 }
