@@ -124,7 +124,11 @@ pub unsafe extern "C" fn nt_get_expected_address(
     ) -> Result<serde_json::Value, String> {
         let mut state_init = ton_block::StateInit::construct_from_base64(&tvc).handle_error()?;
         let contract_abi = parse_contract_abi(&contract_abi)?;
-        let public_key = public_key.as_deref().map(parse_public_key).transpose().handle_error()?;
+        let public_key = public_key
+            .as_deref()
+            .map(parse_public_key)
+            .transpose()
+            .handle_error()?;
 
         let params = contract_abi
             .data
@@ -235,7 +239,7 @@ pub unsafe extern "C" fn nt_create_external_message_without_signature(
 
         let time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map_err(|e| format!("{}", e))?
+            .map_err(|e| e.to_string())?
             .as_millis() as u64;
 
         let expire_at = ExpireAt::new_from_millis(Expiration::Timeout(timeout), time);

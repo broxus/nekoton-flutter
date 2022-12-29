@@ -83,12 +83,54 @@ pub unsafe extern "C" fn nt_repack_address(address: *mut c_char) -> *mut c_char 
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_extract_public_key(boc: *mut c_char) -> *mut c_char {
+    use nekoton::core::ton_wallet::{highload_wallet_v2, wallet_v3};
+
     let boc = boc.to_string_from_ptr();
 
     fn internal_fn(boc: String) -> Result<serde_json::Value, String> {
-        let public_key = parse_account_stuff(&boc)
-            .and_then(|e| nekoton_abi::extract_public_key(&e).handle_error())
-            .map(hex::encode)?;
+        let public_key = parse_account_stuff(&boc).and_then(|account_stuff| {
+            let state_init = match &account_stuff.storage.state {
+                ton_block::AccountState::AccountActive { state_init, .. } => state_init,
+                _ => return Err(nekoton_abi::ExtractionError::AccountIsNotActive).handle_error(),
+            };
+            let data = match &state_init.data {
+                Some(data) => data,
+                None => {
+                    return Err(nekoton_abi::ExtractionError::AccountDataNotFound).handle_error()
+                },
+            };
+
+            if let Some(code) = &state_init.code {
+                let code_hash = code.repr_hash();
+                if wallet_v3::is_wallet_v3(&code_hash) {
+                    return wallet_v3::InitData::try_from(data).handle_error().and_then(
+                        |init_data| {
+                            ed25519_dalek::PublicKey::from_bytes(init_data.public_key.as_slice())
+                                .map(hex::encode)
+                                .handle_error()
+                        },
+                    );
+                } else if highload_wallet_v2::is_highload_wallet_v2(&code_hash) {
+                    return highload_wallet_v2::InitData::try_from(data)
+                        .handle_error()
+                        .and_then(|init_data| {
+                            ed25519_dalek::PublicKey::from_bytes(init_data.public_key.as_slice())
+                                .map(hex::encode)
+                                .handle_error()
+                        });
+                }
+            }
+
+            let data = ton_types::SliceData::from(data)
+                .get_next_bytes(32)
+                .map_err(|_| nekoton_abi::ExtractionError::CellUnderflow)
+                .handle_error()?;
+
+            ed25519_dalek::PublicKey::from_bytes(&data)
+                .map(hex::encode)
+                .map_err(|_| nekoton_abi::ExtractionError::InvalidPublicKey)
+                .handle_error()
+        })?;
 
         serde_json::to_value(public_key).handle_error()
     }
