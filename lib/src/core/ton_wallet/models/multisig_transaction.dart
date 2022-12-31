@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:nekoton_flutter/src/core/ton_wallet/models/multisig_confirm_transaction.dart';
 import 'package:nekoton_flutter/src/core/ton_wallet/models/multisig_send_transaction.dart';
 import 'package:nekoton_flutter/src/core/ton_wallet/models/multisig_submit_transaction.dart';
