@@ -11,10 +11,8 @@ analyzer:
   language:
     strict-inference: true
   exclude:
-    - lib/**.g.dart
     - lib/**.gen.dart
     - lib/**.gr.dart
-    - lib/**.freezed.dart
     - lib/**.config.dart
     - lib/**.ffigen.dart
   errors:

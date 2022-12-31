@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:nekoton_flutter/src/core/token_wallet/models/token_incoming_transfer.dart';
 import 'package:nekoton_flutter/src/core/token_wallet/models/token_outgoing_transfer.dart';
 import 'package:nekoton_flutter/src/core/token_wallet/models/token_swap_back.dart';

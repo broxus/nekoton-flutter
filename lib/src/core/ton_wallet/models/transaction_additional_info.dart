@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:nekoton_flutter/src/core/ton_wallet/models/de_pool_on_round_complete_notification.dart';
 import 'package:nekoton_flutter/src/core/ton_wallet/models/de_pool_receive_answer_notification.dart';
 import 'package:nekoton_flutter/src/core/ton_wallet/models/token_wallet_deployed_notification.dart';
