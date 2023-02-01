@@ -16,14 +16,14 @@ use crate::{
 
 pub struct LedgerConnectionImpl {
     get_public_key_port: Isolate,
-    sign_port: Isolate,
+    _sign_port: Isolate,
 }
 
 impl LedgerConnectionImpl {
     pub fn new(get_public_key_port: i64, sign_port: i64) -> Self {
         Self {
             get_public_key_port: Isolate::new(get_public_key_port),
-            sign_port: Isolate::new(sign_port),
+           _sign_port: Isolate::new(sign_port),
         }
     }
 }
@@ -51,37 +51,28 @@ impl LedgerConnection for LedgerConnectionImpl {
                 unsafe { nt_channel_err_free_ptr(tx.to_ptr_from_address()) }
 
                 bail!(ISOLATE_MESSAGE_POST_ERROR)
-            },
+            }
         }
     }
 
     async fn sign(
         &self,
-        account: u16,
-        message: &[u8],
-        context: &Option<LedgerSignatureContext>,
+        _account: u16,
+        _signature_id: Option<i32>,
+        _message: &[u8],
     ) -> Result<[u8; ed25519_dalek::SIGNATURE_LENGTH]> {
-        let (tx, rx) = channel::<Result<String>>();
+        todo!()
+    }
 
-        let tx = channel_err_new(tx).to_ptr_address();
-        let message = message.to_owned();
-        let context = context.to_owned();
-
-        let request = serde_json::to_string(&(tx.clone(), account, message, context))?;
-
-        match self.sign_port.post(request) {
-            true => rx
-                .await
-                .unwrap()
-                .map(|e| -> [u8; ed25519_dalek::SIGNATURE_LENGTH] {
-                    hex::decode(e).unwrap().as_slice().try_into().unwrap()
-                }),
-            false => {
-                unsafe { nt_channel_err_free_ptr(tx.to_ptr_from_address()) }
-
-                bail!(ISOLATE_MESSAGE_POST_ERROR)
-            },
-        }
+    async fn sign_transaction(
+        &self,
+        _account: u16,
+        _wallet: u16,
+        _signature_id: Option<i32>,
+        _message: &[u8],
+        _context: &LedgerSignatureContext,
+    ) -> Result<[u8; ed25519_dalek::SIGNATURE_LENGTH]> {
+        todo!()
     }
 }
 

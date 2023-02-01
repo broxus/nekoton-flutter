@@ -128,19 +128,26 @@ void nt_keystore_decrypt(long long result_port,
                          char *data,
                          char *input);
 
-void nt_keystore_sign(long long result_port, void *keystore, char *signer, char *data, char *input);
+void nt_keystore_sign(long long result_port,
+                      void *keystore,
+                      char *signer,
+                      char *data,
+                      char *input,
+                      char *signature_id);
 
 void nt_keystore_sign_data(long long result_port,
                            void *keystore,
                            char *signer,
                            char *data,
-                           char *input);
+                           char *input,
+                           char *signature_id);
 
 void nt_keystore_sign_data_raw(long long result_port,
                                void *keystore,
                                char *signer,
                                char *data,
-                               char *input);
+                               char *input,
+                               char *signature_id);
 
 void nt_keystore_remove_key(long long result_port, void *keystore, char *public_key);
 
@@ -450,6 +457,8 @@ void nt_transport_get_transaction(long long result_port,
                                   void *transport,
                                   char *transport_type,
                                   char *hash);
+
+void nt_transport_get_signature_id(long long result_port, void *transport, char *transport_type);
 
 char *nt_gql_transport_create(void *gql_connection);
 

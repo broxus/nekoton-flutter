@@ -10,21 +10,17 @@ use nekoton::{
     transport::{models::RawContractState, Transport},
 };
 use nekoton_abi::TransactionId;
+use nekoton_utils::SimpleClock;
 use ton_block::Serializable;
 
-use crate::{
-    parse_address, parse_hash, runtime,
-    transport::{
-        gql_transport::gql_transport_from_native_ptr,
-        jrpc_transport::jrpc_transport_from_native_ptr,
-        models::{
-            AccountsList, FullContractState, RawContractStateHelper, TransactionsList,
-            TransportType,
-        },
+use crate::{parse_address, parse_hash, runtime, transport::{
+    gql_transport::gql_transport_from_native_ptr,
+    jrpc_transport::jrpc_transport_from_native_ptr,
+    models::{
+        AccountsList, FullContractState, RawContractStateHelper, TransactionsList,
+        TransportType,
     },
-    HandleError, MatchResult, PostWithResult, ToOptionalStringFromPtr, ToPtrAddress,
-    ToStringFromPtr, RUNTIME,
-};
+}, HandleError, MatchResult, PostWithResult, ToOptionalStringFromPtr, ToPtrAddress, ToStringFromPtr, RUNTIME };
 pub use gql_transport::{gql_connection_new};
 
 mod gql_transport;
@@ -114,7 +110,7 @@ pub unsafe extern "C" fn nt_transport_get_full_contract_state(
                         code_hash: None,
                         boc,
                     })
-                },
+                }
                 RawContractState::NotExists => None,
             };
 
@@ -291,15 +287,39 @@ pub unsafe extern "C" fn nt_transport_get_transaction(
     });
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn nt_transport_get_signature_id(
+    result_port: c_longlong,
+    transport: *mut c_void,
+    transport_type: *mut c_char,
+) {
+    let transport_type = transport_type.to_string_from_ptr();
+    let transport = match_transport(transport, &transport_type);
+
+    runtime!().spawn(async move {
+        async fn internal_fn(
+            transport: Arc<dyn Transport>,
+        ) -> Result<serde_json::Value, String> {
+            let capabilities = transport.get_capabilities(&SimpleClock).await.handle_error()?;
+            serde_json::to_value(capabilities.global_id).handle_error()
+        }
+
+        let result = internal_fn(transport).await.match_result();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
+    });
+}
+
 pub unsafe fn match_transport(transport: *mut c_void, transport_type: &str) -> Arc<dyn Transport> {
     let transport_type = serde_json::from_str::<TransportType>(transport_type).unwrap();
 
     match transport_type {
         TransportType::Jrpc => {
             jrpc_transport_from_native_ptr(transport).clone() as Arc<dyn Transport>
-        },
+        }
         TransportType::Gql => {
             gql_transport_from_native_ptr(transport).clone() as Arc<dyn Transport>
-        },
+        }
     }
 }

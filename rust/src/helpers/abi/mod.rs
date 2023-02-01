@@ -235,7 +235,7 @@ pub unsafe extern "C" fn nt_create_external_message_without_signature(
 
         let time = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .map_err(|e| format!("{}", e))?
+            .map_err(|e| format!("{e}"))?
             .as_millis() as u64;
 
         let expire_at = ExpireAt::new_from_millis(Expiration::Timeout(timeout), time);
