@@ -125,7 +125,7 @@ abstract class Transport {
     return transaction;
   }
 
-  Future<int?> getSignatureId() async {
+  Future<String> getSignatureId() async {
     final transportTypeStr = jsonEncode(type.toString());
 
     final result = await executeAsync(
@@ -135,7 +135,7 @@ abstract class Transport {
             transportTypeStr.toNativeUtf8().cast<Char>(),
           ),
     );
-    final value = result as int?;
+    final value = result as String;
     return value;
   }
 
