@@ -266,6 +266,7 @@ class Keystore implements Finalizable {
   Future<String> sign({
     required String data,
     required SignInput input,
+    required String signatureId,
   }) async {
     final signer = input.toSigner();
     final inputStr = jsonEncode(input);
@@ -277,6 +278,7 @@ class Keystore implements Finalizable {
             signer.toNativeUtf8().cast<Char>(),
             data.toNativeUtf8().cast<Char>(),
             inputStr.toNativeUtf8().cast<Char>(),
+            signatureId.toNativeUtf8().cast<Char>(),
           ),
     );
 
@@ -288,6 +290,7 @@ class Keystore implements Finalizable {
   Future<SignedData> signData({
     required String data,
     required SignInput input,
+    required String signatureId,
   }) async {
     final signer = input.toSigner();
     final inputStr = jsonEncode(input);
@@ -299,6 +302,7 @@ class Keystore implements Finalizable {
             signer.toNativeUtf8().cast<Char>(),
             data.toNativeUtf8().cast<Char>(),
             inputStr.toNativeUtf8().cast<Char>(),
+            signatureId.toNativeUtf8().cast<Char>(),
           ),
     );
 
@@ -311,6 +315,7 @@ class Keystore implements Finalizable {
   Future<SignedDataRaw> signDataRaw({
     required String data,
     required SignInput input,
+    required String signatureId,
   }) async {
     final signer = input.toSigner();
     final inputStr = jsonEncode(input);
@@ -322,6 +327,7 @@ class Keystore implements Finalizable {
             signer.toNativeUtf8().cast<Char>(),
             data.toNativeUtf8().cast<Char>(),
             inputStr.toNativeUtf8().cast<Char>(),
+            signatureId.toNativeUtf8().cast<Char>(),
           ),
     );
 

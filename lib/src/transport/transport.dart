@@ -125,5 +125,19 @@ abstract class Transport {
     return transaction;
   }
 
+  Future<int?> getSignatureId() async {
+    final transportTypeStr = jsonEncode(type.toString());
+
+    final result = await executeAsync(
+      (port) => NekotonFlutter.instance().bindings.nt_transport_get_signature_id(
+            port,
+            ptr,
+            transportTypeStr.toNativeUtf8().cast<Char>(),
+          ),
+    );
+    final value = result as int?;
+    return value;
+  }
+
   Future<void> dispose();
 }
