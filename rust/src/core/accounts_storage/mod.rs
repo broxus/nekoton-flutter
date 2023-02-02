@@ -52,7 +52,10 @@ pub unsafe extern "C" fn nt_accounts_storage_entries(
                 .stored_data()
                 .await
                 .accounts()
-                .values().cloned()
+                .values()
+                .into_iter()
+                .cloned()
+                .map(AssetsListHelper)
                 .collect::<Vec<_>>();
 
             serde_json::to_value(entries).handle_error()
