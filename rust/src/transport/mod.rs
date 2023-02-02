@@ -20,7 +20,7 @@ use crate::{parse_address, parse_hash, runtime, transport::{
         AccountsList, FullContractState, RawContractStateHelper, TransactionsList,
         TransportType,
     },
-}, HandleError, MatchResult, PostWithResult, ToOptionalStringFromPtr, ToPtrAddress, ToStringFromPtr, RUNTIME };
+}, HandleError, MatchResult, PostWithResult, ToOptionalStringFromPtr, ToPtrAddress, ToStringFromPtr, RUNTIME};
 pub use gql_transport::{gql_connection_new};
 
 mod gql_transport;
@@ -300,8 +300,8 @@ pub unsafe extern "C" fn nt_transport_get_signature_id(
         async fn internal_fn(
             transport: Arc<dyn Transport>,
         ) -> Result<serde_json::Value, String> {
-            let capabilities = transport.get_capabilities(&SimpleClock).await.handle_error()?;
-            serde_json::to_value(capabilities.global_id).handle_error()
+            let id = transport.get_capabilities(&SimpleClock).await.handle_error()?.signature_id();
+            serde_json::to_value(id).handle_error()
         }
 
         let result = internal_fn(transport).await.match_result();

@@ -844,9 +844,9 @@ async fn sign(
     signer: String,
     data: &[u8],
     input: String,
-    signature_id: i32,
+    signature_id: Option<i32>,
 ) -> Result<Signature, String> {
-    let signature_id = Some(signature_id);
+    let signature_id = signature_id;
     if signer == ENCRYPTED_KEY_SIGNER_NAME {
         let input = serde_json::from_str::<EncryptedKeyPassword>(&input).handle_error()?;
 
