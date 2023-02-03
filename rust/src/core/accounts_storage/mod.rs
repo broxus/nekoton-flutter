@@ -37,6 +37,7 @@ pub unsafe extern "C" fn nt_accounts_storage_create(result_port: c_longlong, sto
     });
 }
 
+#[allow(clippy::useless_conversion)]
 #[no_mangle]
 pub unsafe extern "C" fn nt_accounts_storage_entries(
     result_port: c_longlong,

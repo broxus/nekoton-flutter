@@ -11,17 +11,19 @@ use nekoton::{
 };
 use nekoton_abi::TransactionId;
 use nekoton_utils::SimpleClock;
+use serde_json::Value;
 use ton_block::Serializable;
 
-use crate::{parse_address, parse_hash, runtime, transport::{
+pub use gql_transport::gql_connection_new;
+
+use crate::{HandleError, MatchResult, parse_address, parse_hash, PostWithResult, runtime, RUNTIME, ToOptionalStringFromPtr, ToPtrAddress, ToStringFromPtr, transport::{
     gql_transport::gql_transport_from_native_ptr,
     jrpc_transport::jrpc_transport_from_native_ptr,
     models::{
         AccountsList, FullContractState, RawContractStateHelper, TransactionsList,
         TransportType,
     },
-}, HandleError, MatchResult, PostWithResult, ToOptionalStringFromPtr, ToPtrAddress, ToStringFromPtr, RUNTIME};
-pub use gql_transport::{gql_connection_new};
+}};
 
 mod gql_transport;
 mod jrpc_transport;
@@ -299,14 +301,18 @@ pub unsafe extern "C" fn nt_transport_get_signature_id(
     runtime!().spawn(async move {
         async fn internal_fn(
             transport: Arc<dyn Transport>,
-        ) -> Result<serde_json::Value, String> {
+        ) -> Result<Value, String> {
             let id = transport.get_capabilities(&SimpleClock).await.handle_error()?.signature_id();
             serde_json::to_value(id).handle_error()
         }
 
-        let result = internal_fn(transport).await.match_result();
+        let result = match internal_fn(transport).await {
+            Ok(result) => serde_json::to_string(&result).unwrap(),
+            Err(err) => err
+        };
+
         Isolate::new(result_port)
-            .post_with_result(result.to_ptr_address())
+            .post_with_result(result)
             .unwrap();
     });
 }
