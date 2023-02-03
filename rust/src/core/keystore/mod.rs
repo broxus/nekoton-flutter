@@ -20,23 +20,18 @@ use nekoton::{
 };
 use sha2::Digest;
 
-use crate::{
-    crypto::{
-        derived_key::DERIVED_KEY_SIGNER_NAME,
-        encrypted_key::{
-            EncryptedKeyCreateInputHelper, EncryptedKeyExportOutputHelper,
-            ENCRYPTED_KEY_SIGNER_NAME,
-        },
-        ledger_key::LEDGER_KEY_SIGNER_NAME,
-        models::{SignatureParts, SignedData, SignedDataRaw},
+use crate::{crypto::{
+    derived_key::DERIVED_KEY_SIGNER_NAME,
+    encrypted_key::{
+        EncryptedKeyCreateInputHelper, EncryptedKeyExportOutputHelper,
+        ENCRYPTED_KEY_SIGNER_NAME,
     },
-    external::{
-        ledger_connection::{ledger_connection_from_native_ptr_opt, LedgerConnectionImpl},
-        storage::StorageImpl,
-    },
-    ffi_box, parse_public_key, runtime, HandleError, MatchResult, PostWithResult, ToPtrAddress,
-    ToStringFromPtr, RUNTIME,
-};
+    ledger_key::LEDGER_KEY_SIGNER_NAME,
+    models::{SignatureParts, SignedData, SignedDataRaw},
+}, external::{
+    ledger_connection::{ledger_connection_from_native_ptr_opt, LedgerConnectionImpl},
+    storage::StorageImpl,
+}, ffi_box, parse_public_key, runtime, HandleError, MatchResult, PostWithResult, ToPtrAddress, ToStringFromPtr, RUNTIME, ToOptionalStringFromPtr};
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_keystore_create(
@@ -549,7 +544,7 @@ pub unsafe extern "C" fn nt_keystore_sign(
     let signer = signer.to_string_from_ptr();
     let data = data.to_string_from_ptr();
     let input = input.to_string_from_ptr();
-    let signature_id = signature_id.to_string_from_ptr();
+    let signature_id = signature_id.to_optional_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -557,10 +552,10 @@ pub unsafe extern "C" fn nt_keystore_sign(
             signer: String,
             data: String,
             input: String,
-            signature_id: String,
+            signature_id: Option<String>,
         ) -> Result<serde_json::Value, String> {
             let data = base64::decode(&data).handle_error()?;
-            let signature_id = serde_json::from_str(&signature_id).handle_error()?;
+            let signature_id = signature_id.and_then(|x| x.parse().ok());
             let signature = sign(keystore, signer, &data, input, signature_id).await?;
 
             let signature = base64::encode(signature);
@@ -592,7 +587,7 @@ pub unsafe extern "C" fn nt_keystore_sign_data(
     let signer = signer.to_string_from_ptr();
     let data = data.to_string_from_ptr();
     let input = input.to_string_from_ptr();
-    let signature_id = signature_id.to_string_from_ptr();
+    let signature_id = signature_id.to_optional_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -600,11 +595,11 @@ pub unsafe extern "C" fn nt_keystore_sign_data(
             signer: String,
             data: String,
             input: String,
-            signature_id: String,
+            signature_id: Option<String>,
         ) -> Result<serde_json::Value, String> {
             let data = base64::decode(data).handle_error()?;
             let hash: [u8; 32] = sha2::Sha256::digest(&data).into();
-            let signature_id = serde_json::from_str(&signature_id).handle_error()?;
+            let signature_id = signature_id.and_then(|x|x.parse().ok());
 
             let signature = sign(keystore, signer, &hash, input, signature_id).await?;
 
@@ -645,7 +640,7 @@ pub unsafe extern "C" fn nt_keystore_sign_data_raw(
     let signer = signer.to_string_from_ptr();
     let data = data.to_string_from_ptr();
     let input = input.to_string_from_ptr();
-    let signature_id = signature_id.to_string_from_ptr();
+    let signature_id = signature_id.to_optional_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -653,10 +648,10 @@ pub unsafe extern "C" fn nt_keystore_sign_data_raw(
             signer: String,
             data: String,
             input: String,
-            signature_id: String,
+            signature_id: Option<String>,
         ) -> Result<serde_json::Value, String> {
             let data = base64::decode(data).handle_error()?;
-            let signature_id = serde_json::from_str(&signature_id).handle_error()?;
+            let signature_id = signature_id.and_then(|x| x.parse().ok());
 
 
             let signature = sign(keystore, signer, &data, input, signature_id).await?;
