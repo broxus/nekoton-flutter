@@ -1,4 +1,3 @@
-#![feature(core_ffi_c)]
 #![allow(
     clippy::missing_safety_doc,
     clippy::too_many_arguments,

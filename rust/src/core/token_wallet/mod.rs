@@ -70,8 +70,8 @@ pub unsafe extern "C" fn nt_token_wallet_subscribe(
                 root_token_contract,
                 handler,
             )
-            .await
-            .handle_error()?;
+                .await
+                .handle_error()?;
 
             let ptr = Box::into_raw(Box::new(Arc::new(RwLock::new(token_wallet))));
 
@@ -85,8 +85,8 @@ pub unsafe extern "C" fn nt_token_wallet_subscribe(
             owner,
             root_token_contract,
         )
-        .await
-        .match_result();
+            .await
+            .match_result();
 
         Isolate::new(result_port)
             .post_with_result(result.to_ptr_address())
@@ -243,6 +243,7 @@ pub unsafe extern "C" fn nt_token_wallet_prepare_transfer(
     tokens: *mut c_char,
     notify_receiver: c_uint,
     payload: *mut c_char,
+    attached_amount: *mut c_char,
 ) {
     let token_wallet = token_wallet_from_ptr(token_wallet);
 
@@ -250,6 +251,7 @@ pub unsafe extern "C" fn nt_token_wallet_prepare_transfer(
     let tokens = tokens.to_string_from_ptr();
     let notify_receiver = notify_receiver != 0;
     let payload = payload.to_optional_string_from_ptr();
+    let attached_amount = attached_amount.to_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -258,12 +260,14 @@ pub unsafe extern "C" fn nt_token_wallet_prepare_transfer(
             tokens: String,
             notify_receiver: bool,
             payload: Option<String>,
+            attached_amount: String,
         ) -> Result<serde_json::Value, String> {
             let destination = parse_address(&destination)?;
 
             let destination = TransferRecipient::OwnerWallet(destination);
 
             let tokens = BigUint::from_str(&tokens).handle_error()?;
+            let attached_amount = attached_amount.parse().handle_error()?;
 
             let payload = match payload {
                 Some(payload) => create_boc_or_comment_payload(&payload)
@@ -273,7 +277,7 @@ pub unsafe extern "C" fn nt_token_wallet_prepare_transfer(
             };
 
             let internal_message = token_wallet
-                .prepare_transfer(destination, tokens, notify_receiver, payload)
+                .prepare_transfer(destination, tokens, notify_receiver, payload, attached_amount)
                 .handle_error()
                 .map(|e| e.to_serializable())?;
 
@@ -282,7 +286,7 @@ pub unsafe extern "C" fn nt_token_wallet_prepare_transfer(
 
         let token_wallet = token_wallet.read().await;
 
-        let result = internal_fn(&token_wallet, destination, tokens, notify_receiver, payload)
+        let result = internal_fn(&token_wallet, destination, tokens, notify_receiver, payload, attached_amount)
             .await
             .match_result();
 
@@ -406,8 +410,8 @@ pub unsafe extern "C" fn nt_get_token_root_details(
                 transport.as_ref(),
                 &root_token_contract,
             )
-            .await
-            .handle_error()?;
+                .await
+                .handle_error()?;
 
             serde_json::to_value(token_root_details).handle_error()
         }
@@ -445,8 +449,8 @@ pub unsafe extern "C" fn nt_get_token_wallet_details(
                 transport.as_ref(),
                 &token_wallet,
             )
-            .await
-            .handle_error()?;
+                .await
+                .handle_error()?;
 
             serde_json::to_value(details).handle_error()
         }
@@ -482,8 +486,8 @@ pub unsafe extern "C" fn nt_get_token_root_details_from_token_wallet(
                 transport.as_ref(),
                 &token_wallet_address,
             )
-            .await
-            .handle_error()?;
+                .await
+                .handle_error()?;
 
             let details = (details.0.to_string(), details.1);
 

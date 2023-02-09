@@ -148,6 +148,15 @@ pub enum MultisigTransaction {
     Confirm {
         multisig_confirm_transaction: models::MultisigConfirmTransaction,
     },
+    SubmitUpdate {
+        multisig_submit_update_transaction: models::MultisigSubmitUpdate,
+    },
+    ConfirmUpdate {
+        multisig_confirm_update_transaction: models::MultisigConfirmUpdate,
+    },
+    ExecuteUpdate {
+        multisig_execute_update_transaction: models::MultisigExecuteUpdate,
+    },
 }
 
 impl ToSerializable<MultisigTransaction> for models::MultisigTransaction {
@@ -167,6 +176,15 @@ impl ToSerializable<MultisigTransaction> for models::MultisigTransaction {
                 MultisigTransaction::Confirm {
                     multisig_confirm_transaction,
                 }
+            }
+            models::MultisigTransaction::SubmitUpdate(multisig_submit_update_transaction) => {
+                MultisigTransaction::SubmitUpdate { multisig_submit_update_transaction }
+            }
+            models::MultisigTransaction::ConfirmUpdate(multisig_confirm_update_transaction) => {
+                MultisigTransaction::ConfirmUpdate { multisig_confirm_update_transaction }
+            }
+            models::MultisigTransaction::ExecuteUpdate(multisig_execute_update_transaction) => {
+                MultisigTransaction::ExecuteUpdate { multisig_execute_update_transaction }
             }
         }
     }

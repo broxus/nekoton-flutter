@@ -33,6 +33,7 @@ use crate::{
     },
     parse_public_key, runtime, ToStringFromPtr, RUNTIME,
 };
+use crate::models::ToOptionalStringFromPtr;
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_keystore_storage_key() -> *mut c_char {
@@ -390,28 +391,32 @@ pub unsafe extern "C" fn nt_keystore_sign(
     keystore: *mut c_void,
     data: *mut c_char,
     input: *mut c_char,
+    signature_id: *mut c_char,
 ) {
     let keystore = keystore_from_ptr(keystore);
 
     let data = data.to_string_from_ptr();
     let input = input.to_string_from_ptr();
+    let signature_id = signature_id.to_optional_string_from_ptr();
+
 
     runtime!().spawn(async move {
         async fn internal_fn(
             keystore: &KeyStore,
             data: String,
             input: String,
+            signature_id: Option<String>,
         ) -> Result<serde_json::Value, String> {
             let data = base64::decode(&data).handle_error()?;
-
-            let signature = sign(keystore, &data, input).await?;
+            let signature_id = signature_id.and_then(|x| x.parse().ok());
+            let signature = sign(keystore, &data, input, signature_id).await?;
 
             let signature = base64::encode(&signature);
 
             serde_json::to_value(signature).handle_error()
         }
 
-        let result = internal_fn(&keystore, data, input).await.match_result();
+        let result = internal_fn(&keystore, data, input, signature_id).await.match_result();
 
         Isolate::new(result_port)
             .post_with_result(result.to_ptr_address())
@@ -425,22 +430,27 @@ pub unsafe extern "C" fn nt_keystore_sign_data(
     keystore: *mut c_void,
     data: *mut c_char,
     input: *mut c_char,
+    signature_id: *mut c_char,
 ) {
     let keystore = keystore_from_ptr(keystore);
 
     let data = data.to_string_from_ptr();
     let input = input.to_string_from_ptr();
+    let signature_id = signature_id.to_optional_string_from_ptr();
+
 
     runtime!().spawn(async move {
         async fn internal_fn(
             keystore: &KeyStore,
             data: String,
             input: String,
+            signature_id: Option<String>,
         ) -> Result<serde_json::Value, String> {
             let data = base64::decode(data).handle_error()?;
             let hash: [u8; 32] = sha2::Sha256::digest(&data).into();
+            let signature_id = signature_id.and_then(|x| x.parse().ok());
 
-            let signature = sign(keystore, &hash, input).await?;
+            let signature = sign(keystore, &hash, input, signature_id).await?;
 
             let signed_data = SignedData {
                 data_hash: hex::encode(hash),
@@ -455,7 +465,7 @@ pub unsafe extern "C" fn nt_keystore_sign_data(
             serde_json::to_value(signed_data).handle_error()
         }
 
-        let result = internal_fn(&keystore, data, input).await.match_result();
+        let result = internal_fn(&keystore, data, input, signature_id).await.match_result();
 
         Isolate::new(result_port)
             .post_with_result(result.to_ptr_address())
@@ -469,21 +479,25 @@ pub unsafe extern "C" fn nt_keystore_sign_data_raw(
     keystore: *mut c_void,
     data: *mut c_char,
     input: *mut c_char,
+    signature_id: *mut c_char,
 ) {
     let keystore = keystore_from_ptr(keystore);
 
     let data = data.to_string_from_ptr();
     let input = input.to_string_from_ptr();
+    let signature_id = signature_id.to_optional_string_from_ptr();
 
     runtime!().spawn(async move {
         async fn internal_fn(
             keystore: &KeyStore,
             data: String,
             input: String,
+            signature_id: Option<String>,
         ) -> Result<serde_json::Value, String> {
             let data = base64::decode(data).handle_error()?;
+            let signature_id = signature_id.and_then(|x| x.parse().ok());
 
-            let signature = sign(keystore, &data, input).await?;
+            let signature = sign(keystore, &data, input, signature_id).await?;
 
             let signed_data_raw = SignedDataRaw {
                 signature: base64::encode(&signature),
@@ -497,7 +511,7 @@ pub unsafe extern "C" fn nt_keystore_sign_data_raw(
             serde_json::to_value(signed_data_raw).handle_error()
         }
 
-        let result = internal_fn(&keystore, data, input).await.match_result();
+        let result = internal_fn(&keystore, data, input, signature_id).await.match_result();
 
         Isolate::new(result_port)
             .post_with_result(result.to_ptr_address())
@@ -661,19 +675,19 @@ fn build_keystore() -> Result<KeyStoreBuilder, String> {
         .handle_error()
 }
 
-async fn sign(keystore: &KeyStore, data: &[u8], input: String) -> Result<Signature, String> {
+async fn sign(keystore: &KeyStore, data: &[u8], input: String, signature_id: Option<i32>) -> Result<Signature, String> {
     if let Ok(input) = serde_json::from_str::<EncryptedKeyPassword>(&input) {
         let input = input.to_nekoton();
 
         keystore
-            .sign::<EncryptedKeySigner>(data, input)
+            .sign::<EncryptedKeySigner>(data, signature_id, input)
             .await
             .handle_error()
     } else if let Ok(input) = serde_json::from_str::<DerivedKeySignParams>(&input) {
         let input = input.to_nekoton();
 
         keystore
-            .sign::<DerivedKeySigner>(data, input)
+            .sign::<DerivedKeySigner>(data, signature_id, input)
             .await
             .handle_error()
     } else {
