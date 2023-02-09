@@ -70,8 +70,8 @@ pub unsafe extern "C" fn nt_token_wallet_subscribe(
                 root_token_contract,
                 handler,
             )
-            .await
-            .handle_error()?;
+                .await
+                .handle_error()?;
 
             let ptr = Box::into_raw(Box::new(Arc::new(RwLock::new(token_wallet))));
 
@@ -85,8 +85,8 @@ pub unsafe extern "C" fn nt_token_wallet_subscribe(
             owner,
             root_token_contract,
         )
-        .await
-        .match_result();
+            .await
+            .match_result();
 
         Isolate::new(result_port)
             .post_with_result(result.to_ptr_address())
@@ -251,6 +251,7 @@ pub unsafe extern "C" fn nt_token_wallet_prepare_transfer(
     let notify_receiver = notify_receiver != 0;
     let payload = payload.to_optional_string_from_ptr();
 
+
     runtime!().spawn(async move {
         async fn internal_fn(
             token_wallet: &TokenWallet,
@@ -271,9 +272,10 @@ pub unsafe extern "C" fn nt_token_wallet_prepare_transfer(
                     .into_cell(),
                 None => ton_types::Cell::default(),
             };
+            const ATTACHED_AMOUNT: u64 = 400_000_000;
 
             let internal_message = token_wallet
-                .prepare_transfer(destination, tokens, notify_receiver, payload)
+                .prepare_transfer(destination, tokens, notify_receiver, payload, ATTACHED_AMOUNT)
                 .handle_error()
                 .map(|e| e.to_serializable())?;
 
@@ -406,8 +408,8 @@ pub unsafe extern "C" fn nt_get_token_root_details(
                 transport.as_ref(),
                 &root_token_contract,
             )
-            .await
-            .handle_error()?;
+                .await
+                .handle_error()?;
 
             serde_json::to_value(token_root_details).handle_error()
         }
@@ -445,8 +447,8 @@ pub unsafe extern "C" fn nt_get_token_wallet_details(
                 transport.as_ref(),
                 &token_wallet,
             )
-            .await
-            .handle_error()?;
+                .await
+                .handle_error()?;
 
             serde_json::to_value(details).handle_error()
         }
@@ -482,8 +484,8 @@ pub unsafe extern "C" fn nt_get_token_root_details_from_token_wallet(
                 transport.as_ref(),
                 &token_wallet_address,
             )
-            .await
-            .handle_error()?;
+                .await
+                .handle_error()?;
 
             let details = (details.0.to_string(), details.1);
 

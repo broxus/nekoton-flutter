@@ -14,6 +14,7 @@ use nekoton::{
     transport::{gql::GqlTransport, jrpc::JrpcTransport, models::RawContractState, Transport},
 };
 use nekoton_abi::TransactionId;
+use nekoton_utils::SimpleClock;
 use num_traits::FromPrimitive;
 use ton_block::Serializable;
 
@@ -283,6 +284,29 @@ pub unsafe extern "C" fn nt_transport_get_transaction(
 
         let result = internal_fn(transport, hash).await.match_result();
 
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
+    });
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nt_transport_get_signature_id(
+    result_port: c_longlong,
+    transport: *mut c_void,
+    transport_type: c_int,
+) {
+    let transport = match_transport(transport, transport_type);
+
+    runtime!().spawn(async move {
+        async fn internal_fn(
+            transport: Arc<dyn Transport>,
+        ) -> Result<serde_json::Value, String> {
+            let id = transport.get_capabilities(&SimpleClock).await.handle_error()?.signature_id();
+            serde_json::to_value(id).handle_error()
+        }
+
+        let result = internal_fn(transport).await.match_result();
         Isolate::new(result_port)
             .post_with_result(result.to_ptr_address())
             .unwrap();
