@@ -243,7 +243,6 @@ pub unsafe extern "C" fn nt_token_wallet_prepare_transfer(
     tokens: *mut c_char,
     notify_receiver: c_uint,
     payload: *mut c_char,
-    attached_amount: *mut c_char,
 ) {
     let token_wallet = token_wallet_from_ptr(token_wallet);
 
@@ -251,7 +250,7 @@ pub unsafe extern "C" fn nt_token_wallet_prepare_transfer(
     let tokens = tokens.to_string_from_ptr();
     let notify_receiver = notify_receiver != 0;
     let payload = payload.to_optional_string_from_ptr();
-    let attached_amount = attached_amount.to_string_from_ptr();
+
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -260,14 +259,12 @@ pub unsafe extern "C" fn nt_token_wallet_prepare_transfer(
             tokens: String,
             notify_receiver: bool,
             payload: Option<String>,
-            attached_amount: String,
         ) -> Result<serde_json::Value, String> {
             let destination = parse_address(&destination)?;
 
             let destination = TransferRecipient::OwnerWallet(destination);
 
             let tokens = BigUint::from_str(&tokens).handle_error()?;
-            let attached_amount = attached_amount.parse().handle_error()?;
 
             let payload = match payload {
                 Some(payload) => create_boc_or_comment_payload(&payload)
@@ -275,9 +272,10 @@ pub unsafe extern "C" fn nt_token_wallet_prepare_transfer(
                     .into_cell(),
                 None => ton_types::Cell::default(),
             };
+            const ATTACHED_AMOUNT: u64 = 400_000_000;
 
             let internal_message = token_wallet
-                .prepare_transfer(destination, tokens, notify_receiver, payload, attached_amount)
+                .prepare_transfer(destination, tokens, notify_receiver, payload, ATTACHED_AMOUNT)
                 .handle_error()
                 .map(|e| e.to_serializable())?;
 
@@ -286,7 +284,7 @@ pub unsafe extern "C" fn nt_token_wallet_prepare_transfer(
 
         let token_wallet = token_wallet.read().await;
 
-        let result = internal_fn(&token_wallet, destination, tokens, notify_receiver, payload, attached_amount)
+        let result = internal_fn(&token_wallet, destination, tokens, notify_receiver, payload)
             .await
             .match_result();
 
