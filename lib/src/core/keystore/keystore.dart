@@ -189,6 +189,7 @@ class Keystore implements Pointed {
   Future<String> sign({
     required String data,
     required SignInput input,
+    required String? signatureId,
   }) async {
     final ptr = await clonePtr();
     final inputStr = jsonEncode(input);
@@ -199,6 +200,7 @@ class Keystore implements Pointed {
             ptr,
             data.toNativeUtf8().cast<Char>(),
             inputStr.toNativeUtf8().cast<Char>(),
+            signatureId?.toNativeUtf8().cast<Char>() ?? nullptr,
           ),
     );
 
@@ -210,6 +212,7 @@ class Keystore implements Pointed {
   Future<SignedData> signData({
     required String data,
     required SignInput input,
+    required String? signatureId,
   }) async {
     final ptr = await clonePtr();
     final inputStr = jsonEncode(input);
@@ -220,6 +223,7 @@ class Keystore implements Pointed {
             ptr,
             data.toNativeUtf8().cast<Char>(),
             inputStr.toNativeUtf8().cast<Char>(),
+            signatureId?.toNativeUtf8().cast<Char>() ?? nullptr,
           ),
     );
 
@@ -232,6 +236,7 @@ class Keystore implements Pointed {
   Future<SignedDataRaw> signDataRaw({
     required String data,
     required SignInput input,
+    required String? signatureId,
   }) async {
     final ptr = await clonePtr();
     final inputStr = jsonEncode(input);
@@ -242,6 +247,7 @@ class Keystore implements Pointed {
             ptr,
             data.toNativeUtf8().cast<Char>(),
             inputStr.toNativeUtf8().cast<Char>(),
+            signatureId?.toNativeUtf8().cast<Char>() ?? nullptr,
           ),
     );
 

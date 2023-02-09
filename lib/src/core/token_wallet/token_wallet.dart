@@ -155,6 +155,7 @@ class TokenWallet extends ContractSubscription implements Pointed {
     required String destination,
     required String tokens,
     required bool notifyReceiver,
+    required String attachedAmount,
     String? payload,
   }) async {
     final ptr = await clonePtr();
@@ -167,6 +168,7 @@ class TokenWallet extends ContractSubscription implements Pointed {
             tokens.toNativeUtf8().cast<Char>(),
             notifyReceiver ? 1 : 0,
             payload?.toNativeUtf8().cast<Char>() ?? nullptr,
+            attachedAmount.toNativeUtf8().cast<Char>(),
           ),
     );
 
