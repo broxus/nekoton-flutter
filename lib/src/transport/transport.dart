@@ -120,4 +120,19 @@ abstract class Transport implements Pointed {
 
     return transaction;
   }
+
+  Future<String?> getSignatureId() async {
+    final ptr = await clonePtr();
+    final transportTypeStr = jsonEncode(connectionData.type.toString());
+
+    final result = await executeAsync(
+      (port) => NekotonFlutter.instance().bindings.nt_transport_get_signature_id(
+            port,
+            ptr,
+            transportTypeStr.toNativeUtf8().cast<Char>(),
+          ),
+    );
+    final value = result as String?;
+    return value;
+  }
 }
