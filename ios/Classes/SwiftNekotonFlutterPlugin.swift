@@ -89,11 +89,13 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
     nt_keystore_decrypt(0, nil, nil, nil, nil);
 
-    nt_keystore_sign(0, nil, nil, nil, nil);
+    nt_keystore_sign(0, nil, nil, nil, nil, nil);
 
-    nt_keystore_sign_data(0, nil, nil, nil, nil);
+    nt_keystore_sign_data(0, nil, nil, nil, nil, nil);
 
-    nt_keystore_sign_data_raw(0, nil, nil, nil, nil);
+    nt_keystore_sign_data_raw(0, nil, nil, nil, nil, nil);
+
+    nt_transport_get_signature_id(0, nil, nil);
 
     nt_keystore_remove_key(0, nil, nil);
 
