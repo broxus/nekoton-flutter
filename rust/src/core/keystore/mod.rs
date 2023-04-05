@@ -20,7 +20,7 @@ use crate::{
     core::keystore::models::KeySigner,
     crypto::{
         derived_key::{
-            DerivedKeyCreateInput, DerivedKeyExportParams, DerivedKeySignParams,
+            DerivedKeyCreateInput, DerivedKeyExportSeedParams, DerivedKeyPassword,
             DerivedKeyUpdateParams,
         },
         encrypted_key::{EncryptedKeyCreateInput, EncryptedKeyPassword, EncryptedKeyUpdateParams},
@@ -222,7 +222,7 @@ pub unsafe extern "C" fn nt_keystore_update_key(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn nt_keystore_export_key(
+pub unsafe extern "C" fn nt_keystore_export_seed(
     result_port: c_longlong,
     keystore: *mut c_void,
     input: *mut c_char,
@@ -240,19 +240,67 @@ pub unsafe extern "C" fn nt_keystore_export_key(
                 let input = input.to_nekoton();
 
                 let output = keystore
-                    .export_key::<EncryptedKeySigner>(input)
+                    .export_seed::<EncryptedKeySigner>(input)
                     .await
                     .handle_error()?
                     .to_serializable();
 
                 serde_json::to_value(output).handle_error()
-            } else if let Ok(input) = serde_json::from_str::<DerivedKeyExportParams>(&input) {
+            } else if let Ok(input) = serde_json::from_str::<DerivedKeyExportSeedParams>(&input) {
                 let input = input.to_nekoton();
 
                 let output = keystore
-                    .export_key::<DerivedKeySigner>(input)
+                    .export_seed::<DerivedKeySigner>(input)
                     .await
                     .handle_error()?;
+
+                serde_json::to_value(output).handle_error()
+            } else {
+                panic!()
+            }
+        }
+
+        let result = internal_fn(&keystore, input).await.match_result();
+
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
+    });
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nt_keystore_export_keypair(
+    result_port: c_longlong,
+    keystore: *mut c_void,
+    input: *mut c_char,
+) {
+    let keystore = keystore_from_ptr(keystore);
+
+    let input = input.to_string_from_ptr();
+
+    runtime!().spawn(async move {
+        async fn internal_fn(
+            keystore: &KeyStore,
+            input: String,
+        ) -> Result<serde_json::Value, String> {
+            if let Ok(input) = serde_json::from_str::<EncryptedKeyPassword>(&input) {
+                let input = input.to_nekoton();
+
+                let output = keystore
+                    .export_keypair::<EncryptedKeySigner>(input)
+                    .await
+                    .handle_error()?
+                    .to_serializable();
+
+                serde_json::to_value(output).handle_error()
+            } else if let Ok(input) = serde_json::from_str::<DerivedKeyPassword>(&input) {
+                let input = input.to_nekoton();
+
+                let output = keystore
+                    .export_keypair::<DerivedKeySigner>(input)
+                    .await
+                    .handle_error()?
+                    .to_serializable();
 
                 serde_json::to_value(output).handle_error()
             } else {
@@ -310,7 +358,7 @@ pub unsafe extern "C" fn nt_keystore_encrypt(
                     .encrypt::<EncryptedKeySigner>(&data, &public_keys, algorithm, input)
                     .await
                     .handle_error()?
-            } else if let Ok(input) = serde_json::from_str::<DerivedKeySignParams>(&input) {
+            } else if let Ok(input) = serde_json::from_str::<DerivedKeyPassword>(&input) {
                 let input = input.to_nekoton();
 
                 keystore
@@ -361,7 +409,7 @@ pub unsafe extern "C" fn nt_keystore_decrypt(
                     .decrypt::<EncryptedKeySigner>(&data, input)
                     .await
                     .handle_error()?
-            } else if let Ok(input) = serde_json::from_str::<DerivedKeySignParams>(&input) {
+            } else if let Ok(input) = serde_json::from_str::<DerivedKeyPassword>(&input) {
                 let input = input.to_nekoton();
 
                 keystore
@@ -683,7 +731,7 @@ async fn sign(keystore: &KeyStore, data: &[u8], input: String, signature_id: Opt
             .sign::<EncryptedKeySigner>(data, signature_id, input)
             .await
             .handle_error()
-    } else if let Ok(input) = serde_json::from_str::<DerivedKeySignParams>(&input) {
+    } else if let Ok(input) = serde_json::from_str::<DerivedKeyPassword>(&input) {
         let input = input.to_nekoton();
 
         keystore

@@ -50,15 +50,15 @@ impl ToNekoton<crypto::DerivedKeyCreateInput> for DerivedKeyCreateInput {
 }
 
 #[derive(Deserialize)]
-pub struct DerivedKeyExportParams {
+pub struct DerivedKeyExportSeedParams {
     #[serde(with = "serde_public_key")]
     pub master_key: ed25519_dalek::PublicKey,
     pub password: Password,
 }
 
-impl ToNekoton<crypto::DerivedKeyExportParams> for DerivedKeyExportParams {
-    fn to_nekoton(self) -> crypto::DerivedKeyExportParams {
-        crypto::DerivedKeyExportParams {
+impl ToNekoton<crypto::DerivedKeyExportSeedParams> for DerivedKeyExportSeedParams {
+    fn to_nekoton(self) -> crypto::DerivedKeyExportSeedParams {
+        crypto::DerivedKeyExportSeedParams {
             master_key: self.master_key,
             password: self.password.to_nekoton(),
         }
@@ -110,7 +110,7 @@ impl ToNekoton<crypto::DerivedKeyUpdateParams> for DerivedKeyUpdateParams {
 
 #[derive(Deserialize)]
 #[serde(tag = "runtimeType")]
-pub enum DerivedKeySignParams {
+pub enum DerivedKeyPassword {
     ByAccountId {
         #[serde(with = "serde_public_key")]
         master_key: ed25519_dalek::PublicKey,
@@ -126,23 +126,23 @@ pub enum DerivedKeySignParams {
     },
 }
 
-impl ToNekoton<crypto::DerivedKeySignParams> for DerivedKeySignParams {
-    fn to_nekoton(self) -> crypto::DerivedKeySignParams {
+impl ToNekoton<crypto::DerivedKeyPassword> for DerivedKeyPassword {
+    fn to_nekoton(self) -> crypto::DerivedKeyPassword {
         match self {
-            DerivedKeySignParams::ByAccountId {
+            DerivedKeyPassword::ByAccountId {
                 master_key,
                 account_id,
                 password,
-            } => crypto::DerivedKeySignParams::ByAccountId {
+            } => crypto::DerivedKeyPassword::ByAccountId {
                 master_key,
                 account_id,
                 password: password.to_nekoton(),
             },
-            DerivedKeySignParams::ByPublicKey {
+            DerivedKeyPassword::ByPublicKey {
                 master_key,
                 public_key,
                 password,
-            } => crypto::DerivedKeySignParams::ByPublicKey {
+            } => crypto::DerivedKeyPassword::ByPublicKey {
                 master_key,
                 public_key,
                 password: password.to_nekoton(),

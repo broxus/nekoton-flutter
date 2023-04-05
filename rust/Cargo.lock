@@ -809,7 +809,7 @@ dependencies = [
 [[package]]
 name = "nekoton"
 version = "0.11.0"
-source = "git+https://github.com/broxus/nekoton.git#0c7ab4f72ce7f07868864bf97d9af479b016b133"
+source = "git+https://github.com/broxus/nekoton.git#6e47c73f300e19d58542da4fe067170140eeab0b"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -853,7 +853,7 @@ dependencies = [
 [[package]]
 name = "nekoton-abi"
 version = "0.11.0"
-source = "git+https://github.com/broxus/nekoton.git#0c7ab4f72ce7f07868864bf97d9af479b016b133"
+source = "git+https://github.com/broxus/nekoton.git#6e47c73f300e19d58542da4fe067170140eeab0b"
 dependencies = [
  "anyhow",
  "base64",
@@ -879,7 +879,7 @@ dependencies = [
 [[package]]
 name = "nekoton-contracts"
 version = "0.11.0"
-source = "git+https://github.com/broxus/nekoton.git#0c7ab4f72ce7f07868864bf97d9af479b016b133"
+source = "git+https://github.com/broxus/nekoton.git#6e47c73f300e19d58542da4fe067170140eeab0b"
 dependencies = [
  "anyhow",
  "nekoton-abi",
@@ -893,7 +893,7 @@ dependencies = [
 [[package]]
 name = "nekoton-derive"
 version = "0.11.0"
-source = "git+https://github.com/broxus/nekoton.git#0c7ab4f72ce7f07868864bf97d9af479b016b133"
+source = "git+https://github.com/broxus/nekoton.git#6e47c73f300e19d58542da4fe067170140eeab0b"
 dependencies = [
  "either",
  "proc-macro2",
@@ -934,7 +934,7 @@ dependencies = [
 [[package]]
 name = "nekoton-transport"
 version = "0.11.0"
-source = "git+https://github.com/broxus/nekoton.git#0c7ab4f72ce7f07868864bf97d9af479b016b133"
+source = "git+https://github.com/broxus/nekoton.git#6e47c73f300e19d58542da4fe067170140eeab0b"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -951,7 +951,7 @@ dependencies = [
 [[package]]
 name = "nekoton-utils"
 version = "0.11.0"
-source = "git+https://github.com/broxus/nekoton.git#0c7ab4f72ce7f07868864bf97d9af479b016b133"
+source = "git+https://github.com/broxus/nekoton.git#6e47c73f300e19d58542da4fe067170140eeab0b"
 dependencies = [
  "anyhow",
  "base64",
@@ -1687,7 +1687,7 @@ dependencies = [
 [[package]]
 name = "ton_abi"
 version = "2.1.0"
-source = "git+https://github.com/broxus/ton-labs-abi#b22e4eb305c691d1f7f1298efc4a4dc1843b6be9"
+source = "git+https://github.com/broxus/ton-labs-abi#7c0c82f65d94e6fff8ea5822808cbc0ffeb1d0d7"
 dependencies = [
  "anyhow",
  "base64",

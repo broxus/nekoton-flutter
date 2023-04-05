@@ -33,7 +33,7 @@ pub struct EncryptedKeyExportOutput {
     pub mnemonic_type: MnemonicType,
 }
 
-impl ToSerializable<EncryptedKeyExportOutput> for crypto::EncryptedKeyExportOutput {
+impl ToSerializable<EncryptedKeyExportOutput> for crypto::EncryptedKeyExportSeedOutput {
     fn to_serializable(self) -> EncryptedKeyExportOutput {
         EncryptedKeyExportOutput {
             phrase: self.phrase,
