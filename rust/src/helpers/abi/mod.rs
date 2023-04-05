@@ -124,7 +124,11 @@ pub unsafe extern "C" fn nt_get_expected_address(
     ) -> Result<serde_json::Value, String> {
         let mut state_init = ton_block::StateInit::construct_from_base64(&tvc).handle_error()?;
         let contract_abi = parse_contract_abi(&contract_abi)?;
-        let public_key = public_key.as_deref().map(parse_public_key).transpose().handle_error()?;
+        let public_key = public_key
+            .as_deref()
+            .map(parse_public_key)
+            .transpose()
+            .handle_error()?;
 
         let params = contract_abi
             .data

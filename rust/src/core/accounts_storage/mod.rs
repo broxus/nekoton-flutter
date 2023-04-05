@@ -222,8 +222,8 @@ pub unsafe extern "C" fn nt_accounts_storage_add_token_wallet(
             network_group,
             root_token_contract,
         )
-            .await
-            .match_result();
+        .await
+        .match_result();
 
         Isolate::new(result_port)
             .post_with_result(result.to_ptr_address())
@@ -268,8 +268,8 @@ pub unsafe extern "C" fn nt_accounts_storage_remove_token_wallet(
             network_group,
             root_token_contract,
         )
-            .await
-            .match_result();
+        .await
+        .match_result();
 
         Isolate::new(result_port)
             .post_with_result(result.to_ptr_address())

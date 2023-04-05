@@ -536,7 +536,8 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_deploy_with_multiple_owners(
                 .handle_error()?
                 .into_iter()
                 .map(parse_public_key)
-                .collect::<Result<Vec<_>, anyhow::Error>>().handle_error()?;
+                .collect::<Result<Vec<_>, anyhow::Error>>()
+                .handle_error()?;
 
             let unsigned_message = ton_wallet
                 .prepare_deploy_with_multiple_owners(expiration, &custodians, req_confirms, None)

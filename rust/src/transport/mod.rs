@@ -5,6 +5,7 @@ use std::{
 };
 
 use allo_isolate::Isolate;
+pub use gql_transport::gql_connection_new;
 use nekoton::{
     core::models::{Transaction, TransactionsBatchInfo, TransactionsBatchType},
     transport::{models::RawContractState, Transport},
@@ -13,15 +14,19 @@ use nekoton_abi::TransactionId;
 use nekoton_utils::SimpleClock;
 use ton_block::Serializable;
 
-use crate::{parse_address, parse_hash, runtime, transport::{
-    gql_transport::gql_transport_from_native_ptr,
-    jrpc_transport::jrpc_transport_from_native_ptr,
-    models::{
-        AccountsList, FullContractState, RawContractStateHelper, TransactionsList,
-        TransportType,
+use crate::{
+    parse_address, parse_hash, runtime,
+    transport::{
+        gql_transport::gql_transport_from_native_ptr,
+        jrpc_transport::jrpc_transport_from_native_ptr,
+        models::{
+            AccountsList, FullContractState, RawContractStateHelper, TransactionsList,
+            TransportType,
+        },
     },
-}, HandleError, MatchResult, PostWithResult, ToOptionalStringFromPtr, ToPtrAddress, ToStringFromPtr, RUNTIME};
-pub use gql_transport::{gql_connection_new};
+    HandleError, MatchResult, PostWithResult, ToOptionalStringFromPtr, ToPtrAddress,
+    ToStringFromPtr, RUNTIME,
+};
 
 mod gql_transport;
 mod jrpc_transport;
@@ -110,7 +115,7 @@ pub unsafe extern "C" fn nt_transport_get_full_contract_state(
                         code_hash: None,
                         boc,
                     })
-                }
+                },
                 RawContractState::NotExists => None,
             };
 
@@ -297,10 +302,38 @@ pub unsafe extern "C" fn nt_transport_get_signature_id(
     let transport = match_transport(transport, &transport_type);
 
     runtime!().spawn(async move {
-        async fn internal_fn(
-            transport: Arc<dyn Transport>,
-        ) -> Result<serde_json::Value, String> {
-            let id = transport.get_capabilities(&SimpleClock).await.handle_error()?.signature_id();
+        async fn internal_fn(transport: Arc<dyn Transport>) -> Result<serde_json::Value, String> {
+            let id = transport
+                .get_capabilities(&SimpleClock)
+                .await
+                .handle_error()?
+                .signature_id();
+            serde_json::to_value(id).handle_error()
+        }
+
+        let result = internal_fn(transport).await.match_result();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
+    });
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn nt_transport_get_network_id(
+    result_port: c_longlong,
+    transport: *mut c_void,
+    transport_type: *mut c_char,
+) {
+    let transport_type = transport_type.to_string_from_ptr();
+    let transport = match_transport(transport, &transport_type);
+
+    runtime!().spawn(async move {
+        async fn internal_fn(transport: Arc<dyn Transport>) -> Result<serde_json::Value, String> {
+            let id = transport
+                .get_capabilities(&SimpleClock)
+                .await
+                .handle_error()?
+                .global_id;
             serde_json::to_value(id).handle_error()
         }
 
@@ -317,9 +350,9 @@ pub unsafe fn match_transport(transport: *mut c_void, transport_type: &str) -> A
     match transport_type {
         TransportType::Jrpc => {
             jrpc_transport_from_native_ptr(transport).clone() as Arc<dyn Transport>
-        }
+        },
         TransportType::Gql => {
             gql_transport_from_native_ptr(transport).clone() as Arc<dyn Transport>
-        }
+        },
     }
 }

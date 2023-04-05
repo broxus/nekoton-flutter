@@ -1,9 +1,9 @@
 #![warn(clippy::as_ptr_cast_mut, clippy::ptr_as_ptr, clippy::borrow_as_ptr)]
 #![allow(
-clippy::missing_safety_doc,
-clippy::too_many_arguments,
-clippy::large_enum_variant,
-clippy::borrowed_box
+    clippy::missing_safety_doc,
+    clippy::too_many_arguments,
+    clippy::large_enum_variant,
+    clippy::borrowed_box
 )]
 
 mod core;
@@ -92,8 +92,8 @@ pub unsafe extern "C" fn nt_free_cstring(ptr: *mut c_char) {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase", tag = "type", content = "data")]
 pub enum ExecutionResult<T>
-    where
-        T: Serialize,
+where
+    T: Serialize,
 {
     Ok(T),
     Err(String),
@@ -104,8 +104,8 @@ pub trait MatchResult {
 }
 
 impl<T> MatchResult for Result<T, String>
-    where
-        T: Serialize,
+where
+    T: Serialize,
 {
     fn match_result(self) -> *mut c_char {
         let result = match self {
@@ -124,8 +124,8 @@ pub trait HandleError {
 }
 
 impl<T, E> HandleError for Result<T, E>
-    where
-        E: ToString,
+where
+    E: ToString,
 {
     type Output = T;
 
@@ -152,7 +152,9 @@ fn parse_hash(hash: &str) -> Result<ton_types::UInt256, String> {
 }
 
 fn parse_public_key(public_key: &str) -> Result<ed25519_dalek::PublicKey, anyhow::Error> {
-    Ok(ed25519_dalek::PublicKey::from_bytes(&hex::decode(public_key).context("Bad hex data")?)?)
+    Ok(ed25519_dalek::PublicKey::from_bytes(
+        &hex::decode(public_key).context("Bad hex data")?,
+    )?)
 }
 
 fn parse_address(address: &str) -> Result<MsgAddressInt, String> {
