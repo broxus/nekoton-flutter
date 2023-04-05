@@ -318,6 +318,32 @@ pub unsafe extern "C" fn nt_transport_get_signature_id(
     });
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn nt_transport_get_network_id(
+    result_port: c_longlong,
+    transport: *mut c_void,
+    transport_type: *mut c_char,
+) {
+    let transport_type = transport_type.to_string_from_ptr();
+    let transport = match_transport(transport, &transport_type);
+
+    runtime!().spawn(async move {
+        async fn internal_fn(transport: Arc<dyn Transport>) -> Result<serde_json::Value, String> {
+            let id = transport
+                .get_capabilities(&SimpleClock)
+                .await
+                .handle_error()?
+                .global_id;
+            serde_json::to_value(id).handle_error()
+        }
+
+        let result = internal_fn(transport).await.match_result();
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
+    });
+}
+
 pub unsafe fn match_transport(transport: *mut c_void, transport_type: &str) -> Arc<dyn Transport> {
     let transport_type = serde_json::from_str::<TransportType>(transport_type).unwrap();
 

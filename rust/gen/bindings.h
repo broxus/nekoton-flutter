@@ -460,6 +460,8 @@ void nt_transport_get_transaction(long long result_port,
 
 void nt_transport_get_signature_id(long long result_port, void *transport, char *transport_type);
 
+void nt_transport_get_network_id(long long result_port, void *transport, char *transport_type);
+
 char *nt_gql_transport_create(void *gql_connection);
 
 void nt_gql_transport_get_latest_block_id(long long result_port,
