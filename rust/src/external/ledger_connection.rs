@@ -23,7 +23,7 @@ impl LedgerConnectionImpl {
     pub fn new(get_public_key_port: i64, sign_port: i64) -> Self {
         Self {
             get_public_key_port: Isolate::new(get_public_key_port),
-           _sign_port: Isolate::new(sign_port),
+            _sign_port: Isolate::new(sign_port),
         }
     }
 }
@@ -51,7 +51,7 @@ impl LedgerConnection for LedgerConnectionImpl {
                 unsafe { nt_channel_err_free_ptr(tx.to_ptr_from_address()) }
 
                 bail!(ISOLATE_MESSAGE_POST_ERROR)
-            }
+            },
         }
     }
 

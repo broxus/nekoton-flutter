@@ -1,9 +1,9 @@
 use std::{
     os::raw::{c_char, c_longlong, c_ulonglong, c_void},
+    str::FromStr,
     sync::Arc,
     time::Duration,
 };
-use std::str::FromStr;
 
 use allo_isolate::Isolate;
 use anyhow::Context;
@@ -20,18 +20,23 @@ use nekoton::{
 };
 use sha2::Digest;
 
-use crate::{crypto::{
-    derived_key::DERIVED_KEY_SIGNER_NAME,
-    encrypted_key::{
-        EncryptedKeyCreateInputHelper, EncryptedKeyExportOutputHelper,
-        ENCRYPTED_KEY_SIGNER_NAME,
+use crate::{
+    crypto::{
+        derived_key::DERIVED_KEY_SIGNER_NAME,
+        encrypted_key::{
+            EncryptedKeyCreateInputHelper, EncryptedKeyExportOutputHelper,
+            ENCRYPTED_KEY_SIGNER_NAME,
+        },
+        ledger_key::LEDGER_KEY_SIGNER_NAME,
+        models::{SignatureParts, SignedData, SignedDataRaw},
     },
-    ledger_key::LEDGER_KEY_SIGNER_NAME,
-    models::{SignatureParts, SignedData, SignedDataRaw},
-}, external::{
-    ledger_connection::{ledger_connection_from_native_ptr_opt, LedgerConnectionImpl},
-    storage::StorageImpl,
-}, ffi_box, parse_public_key, runtime, HandleError, MatchResult, PostWithResult, ToPtrAddress, ToStringFromPtr, RUNTIME, ToOptionalStringFromPtr};
+    external::{
+        ledger_connection::{ledger_connection_from_native_ptr_opt, LedgerConnectionImpl},
+        storage::StorageImpl,
+    },
+    ffi_box, parse_public_key, runtime, HandleError, MatchResult, PostWithResult,
+    ToOptionalStringFromPtr, ToPtrAddress, ToStringFromPtr, RUNTIME,
+};
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_keystore_create(
@@ -424,24 +429,33 @@ pub unsafe extern "C" fn nt_keystore_encrypt(
                 .handle_error()?
                 .into_iter()
                 .map(parse_public_key)
-                .collect::<Result<Vec<_>, anyhow::Error>>().context("Bad keys").handle_error()?;
+                .collect::<Result<Vec<_>, anyhow::Error>>()
+                .context("Bad keys")
+                .handle_error()?;
 
-            let algorithm = EncryptionAlgorithm::from_str(&algorithm).context("Bad algorythm").
-                handle_error()?;
+            let algorithm = EncryptionAlgorithm::from_str(&algorithm)
+                .context("Bad algorythm")
+                .handle_error()?;
 
             let data = if signer == ENCRYPTED_KEY_SIGNER_NAME {
-                let input = serde_json::from_str::<EncryptedKeyPassword>(&input).context("Invalid EncryptedKeyPassword").handle_error()?;
+                let input = serde_json::from_str::<EncryptedKeyPassword>(&input)
+                    .context("Invalid EncryptedKeyPassword")
+                    .handle_error()?;
 
                 keystore
                     .encrypt::<EncryptedKeySigner>(&data, &public_keys, algorithm, input)
-                    .await.context("Failed to encrypt")
+                    .await
+                    .context("Failed to encrypt")
                     .handle_error()?
             } else if signer == DERIVED_KEY_SIGNER_NAME {
-                let input = serde_json::from_str::<DerivedKeySignParams>(&input).context("Invalid DerivedKeySignParams").handle_error()?;
+                let input = serde_json::from_str::<DerivedKeySignParams>(&input)
+                    .context("Invalid DerivedKeySignParams")
+                    .handle_error()?;
 
                 keystore
                     .encrypt::<DerivedKeySigner>(&data, &public_keys, algorithm, input)
-                    .await.context("DerivedKeySigner encrypt fail")
+                    .await
+                    .context("DerivedKeySigner encrypt fail")
                     .handle_error()?
             } else if signer == LEDGER_KEY_SIGNER_NAME {
                 let input = serde_json::from_str::<LedgerSignInput>(&input).handle_error()?;
@@ -599,7 +613,7 @@ pub unsafe extern "C" fn nt_keystore_sign_data(
         ) -> Result<serde_json::Value, String> {
             let data = base64::decode(data).handle_error()?;
             let hash: [u8; 32] = sha2::Sha256::digest(&data).into();
-            let signature_id = signature_id.and_then(|x|x.parse().ok());
+            let signature_id = signature_id.and_then(|x| x.parse().ok());
 
             let signature = sign(keystore, signer, &hash, input, signature_id).await?;
 
@@ -652,7 +666,6 @@ pub unsafe extern "C" fn nt_keystore_sign_data_raw(
         ) -> Result<serde_json::Value, String> {
             let data = base64::decode(data).handle_error()?;
             let signature_id = signature_id.and_then(|x| x.parse().ok());
-
 
             let signature = sign(keystore, signer, &data, input, signature_id).await?;
 
@@ -723,11 +736,13 @@ pub unsafe extern "C" fn nt_keystore_remove_keys(
             keystore: &KeyStore,
             public_keys: String,
         ) -> Result<serde_json::Value, String> {
-            let public_keys = serde_json::from_str::<Vec<&str>>(&public_keys).context("invalid pubkeys")
+            let public_keys = serde_json::from_str::<Vec<&str>>(&public_keys)
+                .context("invalid pubkeys")
                 .handle_error()?
                 .into_iter()
                 .map(parse_public_key)
-                .collect::<Result<Vec<_>, anyhow::Error>>().handle_error()?;
+                .collect::<Result<Vec<_>, anyhow::Error>>()
+                .handle_error()?;
 
             let entries = keystore.remove_keys(&public_keys).await.handle_error()?;
 

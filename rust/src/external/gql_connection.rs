@@ -1,5 +1,7 @@
-use std::os::raw::{c_char, c_longlong, c_uint};
-use std::sync::Arc;
+use std::{
+    os::raw::{c_char, c_longlong, c_uint},
+    sync::Arc,
+};
 
 use allo_isolate::Isolate;
 use anyhow::{bail, Result};
@@ -8,10 +10,9 @@ use nekoton::external::{GqlConnection, GqlRequest};
 use tokio::sync::oneshot::channel;
 
 use crate::{
-    channel_err_new, nt_channel_err_free_ptr, HandleError, MatchResult, ToPtrAddress,
-    ToPtrFromAddress, ISOLATE_MESSAGE_POST_ERROR,
+    channel_err_new, nt_channel_err_free_ptr, transport::gql_connection_new, HandleError,
+    MatchResult, ToPtrAddress, ToPtrFromAddress, ISOLATE_MESSAGE_POST_ERROR,
 };
-use crate::transport::gql_connection_new;
 
 pub struct GqlConnectionImpl {
     is_local: bool,
