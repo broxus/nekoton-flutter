@@ -139,5 +139,19 @@ abstract class Transport {
     return value;
   }
 
+  Future<int> getNetworkId() async {
+    final transportTypeStr = jsonEncode(type.toString());
+
+    final result = await executeAsync(
+      (port) => NekotonFlutter.instance().bindings.nt_transport_get_network_id(
+            port,
+            ptr,
+            transportTypeStr.toNativeUtf8().cast<Char>(),
+          ),
+    );
+    final value = result as int;
+    return value;
+  }
+
   Future<void> dispose();
 }
