@@ -97,6 +97,8 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
     nt_transport_get_signature_id(0, nil, nil);
 
+    nt_transport_get_network_id(0, nil, nil);
+
     nt_keystore_remove_key(0, nil, nil);
 
     nt_keystore_remove_keys(0, nil, nil);
