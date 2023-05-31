@@ -135,8 +135,9 @@ abstract class Transport {
             transportTypeStr.toNativeUtf8().cast<Char>(),
           ),
     );
-    final value = result as String?;
-    return value;
+    final value = result as int?;
+    if (value == null) return null;
+    return value.toString();
   }
 
   Future<int> getNetworkId() async {
