@@ -5,6 +5,7 @@ use std::os::raw::{c_char, c_uint};
 
 use nekoton_abi::{get_code_salt, set_code_salt};
 use ton_block::{Deserializable, MaybeDeserialize, Serializable};
+use ton_types::SliceData;
 
 use crate::{
     helpers::models::SplittedTvc,
@@ -214,16 +215,16 @@ fn parse_account_stuff(boc: &str) -> Result<ton_block::AccountStuff, String> {
     let bytes = base64::decode(boc).handle_error()?;
     ton_types::deserialize_tree_of_cells(&mut bytes.as_slice())
         .and_then(|cell| {
-            let slice = &mut cell.into();
+            let mut slice = SliceData::load_cell(cell)?;
             Ok(ton_block::AccountStuff {
-                addr: Deserializable::construct_from(slice)?,
-                storage_stat: Deserializable::construct_from(slice)?,
+                addr: Deserializable::construct_from(&mut slice)?,
+                storage_stat: Deserializable::construct_from(&mut slice)?,
                 storage: ton_block::AccountStorage {
-                    last_trans_lt: Deserializable::construct_from(slice)?,
-                    balance: Deserializable::construct_from(slice)?,
-                    state: Deserializable::construct_from(slice)?,
+                    last_trans_lt: Deserializable::construct_from(&mut slice)?,
+                    balance: Deserializable::construct_from(&mut slice)?,
+                    state: Deserializable::construct_from(&mut slice)?,
                     init_code_hash: if slice.remaining_bits() > 0 {
-                        ton_types::UInt256::read_maybe_from(slice)?
+                        ton_types::UInt256::read_maybe_from(&mut slice)?
                     } else {
                         None
                     },

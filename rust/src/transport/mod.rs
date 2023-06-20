@@ -103,7 +103,7 @@ pub unsafe extern "C" fn nt_transport_get_full_contract_state(
                     );
 
                     Some(FullContractState {
-                        balance: state.account.storage.balance.grams.0.to_string(),
+                        balance: state.account.storage.balance.grams.as_u128().to_string(),
                         gen_timings: state.timings,
                         last_transaction_id: Some(state.last_transaction_id),
                         is_deployed,
@@ -299,10 +299,12 @@ pub unsafe extern "C" fn nt_transport_get_signature_id(
     let transport = match_transport(transport, transport_type);
 
     runtime!().spawn(async move {
-        async fn internal_fn(
-            transport: Arc<dyn Transport>,
-        ) -> Result<serde_json::Value, String> {
-            let id = transport.get_capabilities(&SimpleClock).await.handle_error()?.signature_id();
+        async fn internal_fn(transport: Arc<dyn Transport>) -> Result<serde_json::Value, String> {
+            let id = transport
+                .get_capabilities(&SimpleClock)
+                .await
+                .handle_error()?
+                .signature_id();
             serde_json::to_value(id).handle_error()
         }
 

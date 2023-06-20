@@ -28,12 +28,11 @@ use crate::{
     },
     external::storage::storage_from_ptr,
     models::{
-        HandleError, MatchResult, PostWithResult, ToCStringPtr, ToNekoton, ToPtrAddress,
-        ToSerializable,
+        HandleError, MatchResult, PostWithResult, ToCStringPtr, ToNekoton, ToOptionalStringFromPtr,
+        ToPtrAddress, ToSerializable,
     },
     parse_public_key, runtime, ToStringFromPtr, RUNTIME,
 };
-use crate::models::ToOptionalStringFromPtr;
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_keystore_storage_key() -> *mut c_char {
@@ -447,7 +446,6 @@ pub unsafe extern "C" fn nt_keystore_sign(
     let input = input.to_string_from_ptr();
     let signature_id = signature_id.to_optional_string_from_ptr();
 
-
     runtime!().spawn(async move {
         async fn internal_fn(
             keystore: &KeyStore,
@@ -464,7 +462,9 @@ pub unsafe extern "C" fn nt_keystore_sign(
             serde_json::to_value(signature).handle_error()
         }
 
-        let result = internal_fn(&keystore, data, input, signature_id).await.match_result();
+        let result = internal_fn(&keystore, data, input, signature_id)
+            .await
+            .match_result();
 
         Isolate::new(result_port)
             .post_with_result(result.to_ptr_address())
@@ -485,7 +485,6 @@ pub unsafe extern "C" fn nt_keystore_sign_data(
     let data = data.to_string_from_ptr();
     let input = input.to_string_from_ptr();
     let signature_id = signature_id.to_optional_string_from_ptr();
-
 
     runtime!().spawn(async move {
         async fn internal_fn(
@@ -513,7 +512,9 @@ pub unsafe extern "C" fn nt_keystore_sign_data(
             serde_json::to_value(signed_data).handle_error()
         }
 
-        let result = internal_fn(&keystore, data, input, signature_id).await.match_result();
+        let result = internal_fn(&keystore, data, input, signature_id)
+            .await
+            .match_result();
 
         Isolate::new(result_port)
             .post_with_result(result.to_ptr_address())
@@ -559,7 +560,9 @@ pub unsafe extern "C" fn nt_keystore_sign_data_raw(
             serde_json::to_value(signed_data_raw).handle_error()
         }
 
-        let result = internal_fn(&keystore, data, input, signature_id).await.match_result();
+        let result = internal_fn(&keystore, data, input, signature_id)
+            .await
+            .match_result();
 
         Isolate::new(result_port)
             .post_with_result(result.to_ptr_address())
@@ -723,7 +726,12 @@ fn build_keystore() -> Result<KeyStoreBuilder, String> {
         .handle_error()
 }
 
-async fn sign(keystore: &KeyStore, data: &[u8], input: String, signature_id: Option<i32>) -> Result<Signature, String> {
+async fn sign(
+    keystore: &KeyStore,
+    data: &[u8],
+    input: String,
+    signature_id: Option<i32>,
+) -> Result<Signature, String> {
     if let Ok(input) = serde_json::from_str::<EncryptedKeyPassword>(&input) {
         let input = input.to_nekoton();
 

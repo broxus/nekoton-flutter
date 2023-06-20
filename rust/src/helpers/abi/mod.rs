@@ -19,6 +19,7 @@ use nekoton::{
 };
 use nekoton_abi::{guess_method_by_input, insert_state_init_data, FunctionExt, MethodName};
 use ton_block::{Deserializable, Serializable};
+use ton_types::SliceData;
 
 use crate::{
     clock,
@@ -135,9 +136,14 @@ pub unsafe extern "C" fn nt_get_expected_address(
 
         state_init.data = if let Some(data) = state_init.data.take() {
             Some(
-                insert_state_init_data(&contract_abi, data.into(), &public_key, init_data)
-                    .handle_error()?
-                    .into_cell(),
+                insert_state_init_data(
+                    &contract_abi,
+                    SliceData::load_cell(data).handle_error()?,
+                    &public_key,
+                    init_data,
+                )
+                .handle_error()?
+                .into_cell(),
             )
         } else {
             None
@@ -266,7 +272,7 @@ pub unsafe extern "C" fn nt_create_external_message_without_signature(
             message.set_state_init(state_init);
         }
 
-        message.set_body(body.into());
+        message.set_body(SliceData::load_builder(body).handle_error()?);
 
         let signed_message = SignedMessage {
             message,
@@ -524,7 +530,7 @@ pub unsafe extern "C" fn nt_decode_transaction(
         let internal = transaction.in_msg.src.is_some();
 
         let in_msg_body = match transaction.in_msg.body {
-            Some(body) => body.data.into(),
+            Some(body) => SliceData::load_cell(body.data).handle_error()?,
             None => return Ok(serde_json::Value::Null),
         };
 
@@ -547,7 +553,7 @@ pub unsafe extern "C" fn nt_decode_transaction(
                 };
 
                 Some(match e.body.to_owned() {
-                    Some(body) => Ok(body.data.into()),
+                    Some(body) => Ok(SliceData::load_cell(body.data).ok()?),
                     None => Err("Expected message body").handle_error(),
                 })
             })
@@ -589,7 +595,7 @@ pub unsafe extern "C" fn nt_decode_transaction_events(
                 };
 
                 Some(match e.body.to_owned() {
-                    Some(body) => Ok(body.data.into()),
+                    Some(body) => Ok(SliceData::load_cell(body.data).ok()?),
                     None => Err("Expected message body").handle_error(),
                 })
             })
@@ -683,9 +689,14 @@ pub unsafe extern "C" fn nt_unpack_from_cell(
         let cell = ton_types::deserialize_tree_of_cells(&mut body.as_slice()).handle_error()?;
         let version = ton_abi::contract::AbiVersion { major: 2, minor: 2 };
 
-        let tokens = nekoton_abi::unpack_from_cell(&params, cell.into(), allow_partial, version)
-            .handle_error()
-            .and_then(|e| nekoton_abi::make_abi_tokens(&e).handle_error())?;
+        let tokens = nekoton_abi::unpack_from_cell(
+            &params,
+            SliceData::load_cell(cell).handle_error()?,
+            allow_partial,
+            version,
+        )
+        .handle_error()
+        .and_then(|e| nekoton_abi::make_abi_tokens(&e).handle_error())?;
 
         serde_json::to_value(tokens).handle_error()
     }
@@ -715,7 +726,7 @@ fn parse_method_name(value: Option<String>) -> Result<MethodName, String> {
 fn parse_slice(boc: &str) -> Result<ton_types::SliceData, String> {
     let body = base64::decode(boc).handle_error()?;
     let cell = ton_types::deserialize_tree_of_cells(&mut body.as_slice()).handle_error()?;
-    Ok(cell.into())
+    Ok(SliceData::load_cell(cell).handle_error()?)
 }
 
 fn parse_params_list(params: &str) -> Result<Vec<ton_abi::Param>, String> {
