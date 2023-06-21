@@ -127,6 +127,10 @@ void nt_keystore_sign_data(long long result_port, void *keystore, char *data, ch
 
 void nt_keystore_sign_data_raw(long long result_port, void *keystore, char *data, char *input);
 
+void nt_transport_get_signature_id(long long result_port, void *transport, int transport_type);
+
+void nt_transport_get_network_id(long long result_port, void *transport, int transport_type);
+
 void nt_keystore_remove_key(long long result_port, void *keystore, char *public_key);
 
 void nt_keystore_remove_keys(long long result_port, void *keystore, char *public_keys);
