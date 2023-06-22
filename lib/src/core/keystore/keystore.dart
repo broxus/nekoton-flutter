@@ -113,7 +113,7 @@ class Keystore implements Pointed {
     final inputStr = jsonEncode(input);
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.instance().bindings.nt_keystore_export_key(
+      (port) => NekotonFlutter.instance().bindings.nt_keystore_export_seed(
             port,
             ptr,
             inputStr.toNativeUtf8().cast<Char>(),

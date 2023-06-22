@@ -110,7 +110,7 @@ void nt_keystore_add_keys(long long result_port, void *keystore, char *input);
 
 void nt_keystore_update_key(long long result_port, void *keystore, char *input);
 
-void nt_keystore_export_key(long long result_port, void *keystore, char *input);
+void nt_keystore_export_seed(long long result_port, void *keystore, char *input);
 
 void nt_keystore_encrypt(long long result_port,
                          void *keystore,

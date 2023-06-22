@@ -85,7 +85,7 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
         nt_keystore_update_key(0, nil, nil);
 
-        nt_keystore_export_key(0, nil, nil);
+        nt_keystore_export_seed(0, nil, nil);
 
         nt_keystore_encrypt(0, nil, nil, nil, nil, nil);
 
