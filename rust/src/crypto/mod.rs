@@ -182,10 +182,6 @@ pub unsafe extern "C" fn nt_verify_signature(
             },
         };
 
-        if data_hash.len() != 32 {
-            return Err("Invalid data hash. Expected 32 bytes").handle_error();
-        }
-
         let signature = match base64::decode(&signature) {
             Ok(signature) => signature,
             Err(e) => match hex::decode(&signature) {
