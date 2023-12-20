@@ -247,7 +247,7 @@ macro_rules! ffi_box {
             #[no_mangle]
             #[allow(clippy::disallowed_methods,clippy::ptr_as_ptr,dead_code)]
             pub unsafe extern "C" fn [< nt_ $name _free_ptr >](ptr: *mut std::ffi::c_void) {
-                 #[allow(clippy::disallowed-methods)]
+                 #[allow(clippy::disallowed_methods)]
                  if (ptr as u64) < 65536 {
                      log::error!(concat!("nt_", stringify!($name), "_free_ptr: ptr is null"));
                      panic!(concat!("nt_", stringify!($name), "_free_ptr: ptr is null"));
