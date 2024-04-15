@@ -10,8 +10,8 @@ use anyhow::Context;
 use nekoton::{
     core::keystore::{KeyStore, KeyStoreBuilder},
     crypto::{
-        DerivedKeyCreateInput, DerivedKeyExportParams, DerivedKeyGetPublicKeys,
-        DerivedKeySignParams, DerivedKeySigner, DerivedKeyUpdateParams, EncryptedData,
+        DerivedKeyCreateInput, DerivedKeyExportSeedParams, DerivedKeyGetPublicKeys,
+        DerivedKeyPassword, DerivedKeySigner, DerivedKeyUpdateParams, EncryptedData,
         EncryptedKeyCreateInput, EncryptedKeyGetPublicKeys, EncryptedKeyPassword,
         EncryptedKeySigner, EncryptedKeyUpdateParams, EncryptionAlgorithm, LedgerKeyCreateInput,
         LedgerKeyGetPublicKeys, LedgerKeySigner, LedgerSignInput, LedgerUpdateKeyInput, Signature,
@@ -298,17 +298,17 @@ pub unsafe extern "C" fn nt_keystore_export_key(
                 let input = serde_json::from_str::<EncryptedKeyPassword>(&input).handle_error()?;
 
                 let output = keystore
-                    .export_key::<EncryptedKeySigner>(input)
+                    .export_seed::<EncryptedKeySigner>(input)
                     .await
                     .handle_error()?;
 
                 serde_json::to_value(EncryptedKeyExportOutputHelper(output)).handle_error()
             } else if signer == DERIVED_KEY_SIGNER_NAME {
                 let input =
-                    serde_json::from_str::<DerivedKeyExportParams>(&input).handle_error()?;
+                    serde_json::from_str::<DerivedKeyExportSeedParams>(&input).handle_error()?;
 
                 let output = keystore
-                    .export_key::<DerivedKeySigner>(input)
+                    .export_seed::<DerivedKeySigner>(input)
                     .await
                     .handle_error()?;
 
@@ -448,7 +448,7 @@ pub unsafe extern "C" fn nt_keystore_encrypt(
                     .context("Failed to encrypt")
                     .handle_error()?
             } else if signer == DERIVED_KEY_SIGNER_NAME {
-                let input = serde_json::from_str::<DerivedKeySignParams>(&input)
+                let input = serde_json::from_str::<DerivedKeyPassword>(&input)
                     .context("Invalid DerivedKeySignParams")
                     .handle_error()?;
 
@@ -512,7 +512,7 @@ pub unsafe extern "C" fn nt_keystore_decrypt(
                     .await
                     .handle_error()?
             } else if signer == DERIVED_KEY_SIGNER_NAME {
-                let input = serde_json::from_str::<DerivedKeySignParams>(&input).handle_error()?;
+                let input = serde_json::from_str::<DerivedKeyPassword>(&input).handle_error()?;
 
                 keystore
                     .decrypt::<DerivedKeySigner>(&data, input)
@@ -856,7 +856,6 @@ async fn sign(
     input: String,
     signature_id: Option<i32>,
 ) -> Result<Signature, String> {
-    let signature_id = signature_id;
     if signer == ENCRYPTED_KEY_SIGNER_NAME {
         let input = serde_json::from_str::<EncryptedKeyPassword>(&input).handle_error()?;
 
@@ -865,7 +864,7 @@ async fn sign(
             .await
             .handle_error()
     } else if signer == DERIVED_KEY_SIGNER_NAME {
-        let input = serde_json::from_str::<DerivedKeySignParams>(&input).handle_error()?;
+        let input = serde_json::from_str::<DerivedKeyPassword>(&input).handle_error()?;
 
         keystore
             .sign::<DerivedKeySigner>(data, signature_id, input)
