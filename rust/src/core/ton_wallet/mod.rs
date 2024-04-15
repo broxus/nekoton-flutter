@@ -595,7 +595,7 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_transfer(
                 .handle_error()?;
 
             let current_state = match contract_state {
-                nekoton::transport::models::RawContractState::NotExists => {
+                nekoton::transport::models::RawContractState::NotExists { .. } => {
                     return Err("Not exists").handle_error();
                 },
                 nekoton::transport::models::RawContractState::Exists(contract) => contract.account,
@@ -688,7 +688,7 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_confirm_transaction(
                 .handle_error()?;
 
             let current_state = match contract_state {
-                nekoton::transport::models::RawContractState::NotExists => {
+                nekoton::transport::models::RawContractState::NotExists { .. } => {
                     return Err("Not exists").handle_error();
                 },
                 nekoton::transport::models::RawContractState::Exists(contract) => contract.account,
@@ -974,7 +974,7 @@ pub unsafe extern "C" fn nt_get_existing_wallet_info(
 
             let existing_contract = match raw_contract_state {
                 nekoton::transport::models::RawContractState::Exists(state) => state,
-                nekoton::transport::models::RawContractState::NotExists => {
+                nekoton::transport::models::RawContractState::NotExists { .. } => {
                     return Err("Account not exists").handle_error();
                 },
             };
@@ -1026,7 +1026,7 @@ pub unsafe extern "C" fn nt_get_wallet_custodians(
 
             let existing_contract = match raw_contract_state {
                 nekoton::transport::models::RawContractState::Exists(state) => state,
-                nekoton::transport::models::RawContractState::NotExists => {
+                nekoton::transport::models::RawContractState::NotExists { .. } => {
                     return Err("Account not exists").handle_error();
                 },
             };

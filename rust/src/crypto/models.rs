@@ -25,7 +25,8 @@ impl ToSerializable<SignedMessage> for crypto::SignedMessage {
             .write_to_new_cell()
             .handle_error()
             .unwrap()
-            .into();
+            .into_cell()
+            .unwrap();
 
         let hash = cell.repr_hash();
 

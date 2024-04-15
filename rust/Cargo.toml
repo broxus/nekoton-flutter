@@ -33,7 +33,7 @@ sha2 = "0.9.9"
 thiserror = "1.0.30"
 tokio = { version = "1.17.0", features = ["rt-multi-thread", "sync"] }
 ton_abi = { git = "https://github.com/broxus/ton-labs-abi" }
-ton_block = { git = "https://github.com/broxus/ton-labs-block.git" }
+ton_block = { git = "https://github.com/broxus/ton-labs-block.git", features = ["venom"] }
 ton_types = { git = "https://github.com/broxus/ton-labs-types.git" }
 
 log = "0.4.17"

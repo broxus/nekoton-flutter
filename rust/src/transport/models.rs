@@ -25,7 +25,7 @@ pub struct RawContractStateHelper(#[serde(with = "RawContractStateDef")] pub Raw
     content = "data"
 )]
 pub enum RawContractStateDef {
-    NotExists,
+    NotExists { timings: GenTimings },
     Exists(ExistingContract),
 }
 

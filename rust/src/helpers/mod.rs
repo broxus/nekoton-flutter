@@ -4,6 +4,7 @@ use std::os::raw::{c_char, c_uint};
 
 use nekoton_abi::{get_code_salt, set_code_salt};
 use ton_block::{Deserializable, MaybeDeserialize, Serializable};
+use ton_types::SliceData;
 
 use crate::{parse_address, HandleError, MatchResult, ToStringFromPtr};
 
@@ -207,7 +208,7 @@ fn parse_account_stuff(boc: &str) -> Result<ton_block::AccountStuff, String> {
     let bytes = base64::decode(boc).handle_error()?;
     ton_types::deserialize_tree_of_cells(&mut bytes.as_slice())
         .and_then(|cell| {
-            let slice = &mut cell.into();
+            let slice = &mut SliceData::load_cell(cell).unwrap();
             Ok(ton_block::AccountStuff {
                 addr: Deserializable::construct_from(slice)?,
                 storage_stat: Deserializable::construct_from(slice)?,
