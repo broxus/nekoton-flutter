@@ -22,6 +22,21 @@ type InitializeProviderOptions = {
     shouldSetOnWindow?: boolean
 }
 
+interface TVMAnnounceProviderEvent extends CustomEvent {
+    type: 'tvm:announceProvider';
+    detail: TVMProviderDetail;
+}
+
+interface TVMProviderDetail {
+    info: TVMProviderInfo;
+    provider: NekotonInpageProvider;
+}
+
+interface TVMProviderInfo {
+    name: string;
+    rdns: string;
+}
+
 export const initializeProvider = ({
                                        logger = console,
                                        maxEventListeners = 100,
@@ -49,6 +64,26 @@ export function setGlobalProvider(
     // TODO: remove later
     ;(window as Record<string, any>).ton = providerInstance
     window.dispatchEvent(new Event('ton#initialized'))
+
+    const announceEvent = new CustomEvent<TVMProviderDetail>('tvm:announceProvider', {
+        detail: Object.freeze({
+            info: {
+                name: 'EVER Wallet',
+                rdns: 'com.broxus.crystal.app',
+            },
+            provider: providerInstance,
+        }),
+    }) as TVMAnnounceProviderEvent
+
+    // The Wallet dispatches an announce event which is heard by
+    // the DApp code that had run earlier
+    window.dispatchEvent(announceEvent)
+
+    // The Wallet listens to the request events which may be
+    // dispatched later and re-dispatches the `TVMAnnounceProviderEvent`
+    window.addEventListener('tvm:requestProvider', () => {
+        window.dispatchEvent(announceEvent)
+    })
 }
 
 interface UnvalidatedJsonRpcRequest {
