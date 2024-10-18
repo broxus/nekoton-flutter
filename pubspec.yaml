@@ -35,12 +35,6 @@ flutter:
         pluginClass: NekotonFlutterPlugin
       ios:
         pluginClass: NekotonFlutterPlugin
-      linux:
-        pluginClass: NekotonFlutterPlugin
-      macos:
-        pluginClass: NekotonFlutterPlugin
-      windows:
-        pluginClass: NekotonFlutterPluginCApi
 
   assets:
     - assets/
