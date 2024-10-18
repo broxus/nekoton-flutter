@@ -70,10 +70,6 @@ target/x86_64-linux-android/release/libnekoton_flutter.so: $(SOURCES)
 	cargo +nightly ndk --target x86_64 --output-dir ../android/src/main/jniLibs build --release
 	@echo "[DONE] $@"
 
-## macos: Compile the macOS libraries
-macos: target/x86_64-apple-darwin/release/libnekoton_flutter.dylib \
-	target/aarch64-apple-darwin/release/libnekoton_flutter.dylib
-
 target/x86_64-apple-darwin/release/libnekoton_flutter.dylib: $(SOURCES)
 	@if [ $$(uname) == "Darwin" ] ; then \
 		cargo lipo --release --targets x86_64-apple-darwin ; \
@@ -92,16 +88,10 @@ target/aarch64-apple-darwin/release/libnekoton_flutter.dylib: $(SOURCES)
 	fi
 	@echo "[DONE] $@"
 
-## windows: Compile the Windows libraries
-windows: target/x86_64-pc-windows-gnu/release/nekoton_flutter.dll
-
 target/x86_64-pc-windows-gnu/release/nekoton_flutter.dll: $(SOURCES)
 	cargo build --target x86_64-pc-windows-gnu --release
 	cp $@ ../windows/include/nekoton_flutter.dll
 	@echo "[DONE] $@"
-
-## linux: Compile the Linux libraries
-linux: target/x86_64-unknown-linux-gnu/release/libnekoton_flutter.so
 
 target/x86_64-unknown-linux-gnu/release/libnekoton_flutter.so: $(SOURCES)
 	cargo build --target x86_64-unknown-linux-gnu --release ; \

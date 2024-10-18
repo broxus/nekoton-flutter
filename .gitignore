@@ -40,3 +40,6 @@ build/
 *.a
 *.dylib
 *.dll
+
+# FVM Version Cache
+.fvm/
