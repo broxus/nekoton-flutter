@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi';
+import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
 import 'package:nekoton_flutter/src/bindings.dart';
@@ -9,8 +10,10 @@ import 'package:nekoton_flutter/src/core/models/full_contract_state.dart';
 import 'package:nekoton_flutter/src/core/models/raw_contract_state.dart';
 import 'package:nekoton_flutter/src/core/models/transaction.dart';
 import 'package:nekoton_flutter/src/core/models/transactions_list.dart';
+import 'package:nekoton_flutter/src/crypto/models/signed_message.dart';
 import 'package:nekoton_flutter/src/ffi_utils.dart';
 import 'package:nekoton_flutter/src/transport/models/transport_type.dart';
+import 'package:nekoton_flutter/src/transport/models/tx_tree_simulation_error_item.dart';
 
 abstract class Transport {
   Pointer<Void> get ptr;
@@ -27,12 +30,13 @@ abstract class Transport {
     final transportTypeStr = jsonEncode(type.toString());
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.instance().bindings.nt_transport_get_contract_state(
-            port,
-            ptr,
-            transportTypeStr.toNativeUtf8().cast<Char>(),
-            address.toNativeUtf8().cast<Char>(),
-          ),
+      (port) =>
+          NekotonFlutter.instance().bindings.nt_transport_get_contract_state(
+                port,
+                ptr,
+                transportTypeStr.toNativeUtf8().cast<Char>(),
+                address.toNativeUtf8().cast<Char>(),
+              ),
     );
 
     final json = result as Map<String, dynamic>;
@@ -45,7 +49,9 @@ abstract class Transport {
     final transportTypeStr = jsonEncode(type.toString());
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.instance().bindings.nt_transport_get_full_contract_state(
+      (port) => NekotonFlutter.instance()
+          .bindings
+          .nt_transport_get_full_contract_state(
             port,
             ptr,
             transportTypeStr.toNativeUtf8().cast<Char>(),
@@ -54,7 +60,8 @@ abstract class Transport {
     );
 
     final json = result as Map<String, dynamic>?;
-    final fullContractState = json != null ? FullContractState.fromJson(json) : null;
+    final fullContractState =
+        json != null ? FullContractState.fromJson(json) : null;
 
     return fullContractState;
   }
@@ -67,7 +74,9 @@ abstract class Transport {
     final transportTypeStr = jsonEncode(type.toString());
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.instance().bindings.nt_transport_get_accounts_by_code_hash(
+      (port) => NekotonFlutter.instance()
+          .bindings
+          .nt_transport_get_accounts_by_code_hash(
             port,
             ptr,
             transportTypeStr.toNativeUtf8().cast<Char>(),
@@ -91,14 +100,15 @@ abstract class Transport {
     final transportTypeStr = jsonEncode(type.toString());
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.instance().bindings.nt_transport_get_transactions(
-            port,
-            ptr,
-            transportTypeStr.toNativeUtf8().cast<Char>(),
-            address.toNativeUtf8().cast<Char>(),
-            fromLt?.toNativeUtf8().cast<Char>() ?? nullptr,
-            limit,
-          ),
+      (port) =>
+          NekotonFlutter.instance().bindings.nt_transport_get_transactions(
+                port,
+                ptr,
+                transportTypeStr.toNativeUtf8().cast<Char>(),
+                address.toNativeUtf8().cast<Char>(),
+                fromLt?.toNativeUtf8().cast<Char>() ?? nullptr,
+                limit,
+              ),
     );
 
     final json = result as Map<String, dynamic>;
@@ -129,11 +139,12 @@ abstract class Transport {
     final transportTypeStr = jsonEncode(type.toString());
 
     final result = await executeAsync(
-      (port) => NekotonFlutter.instance().bindings.nt_transport_get_signature_id(
-            port,
-            ptr,
-            transportTypeStr.toNativeUtf8().cast<Char>(),
-          ),
+      (port) =>
+          NekotonFlutter.instance().bindings.nt_transport_get_signature_id(
+                port,
+                ptr,
+                transportTypeStr.toNativeUtf8().cast<Char>(),
+              ),
     );
     final value = result as int?;
     if (value == null) return null;
@@ -152,6 +163,38 @@ abstract class Transport {
     );
     final value = result as int;
     return value;
+  }
+
+  Future<List<TxTreeSimulationErrorItem>> simulateTransactionTree({
+    required SignedMessage signedMessage,
+    required Int32List ignoredComputePhaseCodes,
+    required Int32List ignoredActionPhaseCodes,
+  }) async {
+    final transportTypeStr = jsonEncode(type.toString());
+    final signedMessageStr = jsonEncode(signedMessage);
+    final ignoredComputePhaseCodesStr = jsonEncode(ignoredComputePhaseCodes);
+    final ignoredActionPhaseCodesStr = jsonEncode(ignoredActionPhaseCodes);
+
+    final result = await executeAsync(
+      (port) => NekotonFlutter.instance()
+          .bindings
+          .nt_transport_simulate_transaction_tree(
+            port,
+            ptr,
+            transportTypeStr.toNativeUtf8().cast<Char>(),
+            signedMessageStr.toNativeUtf8().cast<Char>(),
+            ignoredComputePhaseCodesStr.toNativeUtf8().cast<Char>(),
+            ignoredActionPhaseCodesStr.toNativeUtf8().cast<Char>(),
+          ),
+    );
+
+    final json = result as List<dynamic>;
+
+    return json
+        .map<TxTreeSimulationErrorItem>(
+          (e) => TxTreeSimulationErrorItem.fromJson(e as Map<String, dynamic>),
+        )
+        .toList();
   }
 
   Future<void> dispose();

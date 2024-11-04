@@ -162,5 +162,5 @@ export 'src/helpers/validate_address.dart';
 export 'src/models/nekoton_exception.dart';
 export 'src/transport/gql_transport.dart';
 export 'src/transport/jrpc_transport.dart';
-export 'src/transport/models/transport_type.dart';
+export 'src/transport/models/models.dart';
 export 'src/transport/transport.dart';

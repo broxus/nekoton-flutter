@@ -326,6 +326,8 @@ void nt_unsigned_message_hash(long long result_port, void *unsigned_message);
 
 void nt_unsigned_message_sign(long long result_port, void *unsigned_message, char *signature);
 
+void nt_unsigned_message_sign_fake(long long result_port, void *unsigned_message);
+
 char *nt_verify_signature(char *public_key, char *data_hash, char *signature);
 
 void nt_unsigned_message_free_ptr(void *ptr);
@@ -461,6 +463,8 @@ void nt_transport_get_transaction(long long result_port,
 void nt_transport_get_signature_id(long long result_port, void *transport, char *transport_type);
 
 void nt_transport_get_network_id(long long result_port, void *transport, char *transport_type);
+
+void nt_transport_simulate_transaction_tree(long long result_port, void *transport, char *transport_type, char *signed_message, char *ignored_compute_phase_codes, char *ignored_action_phase_codes);
 
 char *nt_gql_transport_create(void *gql_connection);
 

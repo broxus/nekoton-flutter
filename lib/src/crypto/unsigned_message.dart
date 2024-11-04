@@ -6,8 +6,8 @@ import 'package:nekoton_flutter/src/bindings.dart';
 import 'package:nekoton_flutter/src/crypto/models/signed_message.dart';
 import 'package:nekoton_flutter/src/ffi_utils.dart';
 
-final _nativeFinalizer =
-    NativeFinalizer(NekotonFlutter.instance().bindings.addresses.nt_unsigned_message_free_ptr);
+final _nativeFinalizer = NativeFinalizer(
+    NekotonFlutter.instance().bindings.addresses.nt_unsigned_message_free_ptr);
 
 class UnsignedMessage implements Finalizable {
   final Pointer<Void> _ptr;
@@ -26,7 +26,9 @@ class UnsignedMessage implements Finalizable {
 
   Future<void> refreshTimeout() async {
     await executeAsync(
-      (port) => NekotonFlutter.instance().bindings.nt_unsigned_message_refresh_timeout(
+      (port) => NekotonFlutter.instance()
+          .bindings
+          .nt_unsigned_message_refresh_timeout(
             port,
             ptr,
           ),
@@ -39,10 +41,11 @@ class UnsignedMessage implements Finalizable {
 
   Future<int> get __expireAt async {
     final expireAt = await executeAsync(
-      (port) => NekotonFlutter.instance().bindings.nt_unsigned_message_expire_at(
-            port,
-            ptr,
-          ),
+      (port) =>
+          NekotonFlutter.instance().bindings.nt_unsigned_message_expire_at(
+                port,
+                ptr,
+              ),
     );
 
     return expireAt as int;
@@ -70,6 +73,21 @@ class UnsignedMessage implements Finalizable {
             ptr,
             signature.toNativeUtf8().cast<Char>(),
           ),
+    );
+
+    final json = result as Map<String, dynamic>;
+    final signedMessage = SignedMessage.fromJson(json);
+
+    return signedMessage;
+  }
+
+  Future<SignedMessage> signFake() async {
+    final result = await executeAsync(
+      (port) =>
+          NekotonFlutter.instance().bindings.nt_unsigned_message_sign_fake(
+                port,
+                ptr,
+              ),
     );
 
     final json = result as Map<String, dynamic>;

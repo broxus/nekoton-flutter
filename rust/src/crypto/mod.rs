@@ -135,6 +135,32 @@ pub unsafe extern "C" fn nt_unsigned_message_sign(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn nt_unsigned_message_sign_fake(
+    result_port: c_longlong,
+    unsigned_message: *mut c_void,
+) {
+    let unsigned_message = unsigned_message_from_native_ptr(unsigned_message);
+
+    runtime!().spawn(async move {
+        fn internal_fn(
+            unsigned_message: &Box<dyn UnsignedMessage>,
+        ) -> Result<serde_json::Value, String> {
+            let signed_message = unsigned_message.sign(&[0; 64]).handle_error()?;
+
+            serde_json::to_value(signed_message).handle_error()
+        }
+
+        let unsigned_message = unsigned_message.read().await;
+
+        let result = internal_fn(&unsigned_message).match_result();
+
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
+    });
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn nt_verify_signature(
     public_key: *mut c_char,
     data_hash: *mut c_char,

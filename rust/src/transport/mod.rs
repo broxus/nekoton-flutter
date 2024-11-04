@@ -6,6 +6,7 @@ use std::{
 
 use allo_isolate::Isolate;
 pub use gql_transport::gql_connection_new;
+use nekoton::crypto::SignedMessage;
 use nekoton::{
     core::models::{Transaction, TransactionsBatchInfo, TransactionsBatchType},
     transport::{models::RawContractState, Transport},
@@ -15,7 +16,7 @@ use nekoton_utils::SimpleClock;
 use ton_block::Serializable;
 
 use crate::{
-    parse_address, parse_hash, runtime,
+    clock, parse_address, parse_hash, runtime,
     transport::{
         gql_transport::gql_transport_from_native_ptr,
         jrpc_transport::jrpc_transport_from_native_ptr,
@@ -25,7 +26,7 @@ use crate::{
         },
     },
     HandleError, MatchResult, PostWithResult, ToOptionalStringFromPtr, ToPtrAddress,
-    ToStringFromPtr, RUNTIME,
+    ToStringFromPtr, RUNTIME, CLOCK,
 };
 
 mod gql_transport;
@@ -344,6 +345,136 @@ pub unsafe extern "C" fn nt_transport_get_network_id(
     });
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn nt_transport_simulate_transaction_tree(
+    result_port: c_longlong,
+    transport: *mut c_void,
+    transport_type: *mut c_char,
+    signed_message: *mut c_char,
+    ignored_compute_phase_codes: *mut c_char,
+    ignored_action_phase_codes: *mut c_char,
+) {
+    let transport_type = transport_type.to_string_from_ptr();
+    let transport = match_transport(transport, &transport_type);
+    let signed_message = signed_message.to_string_from_ptr();
+    let ignored_compute_phase_codes = ignored_compute_phase_codes.to_string_from_ptr();
+    let ignored_action_phase_codes = ignored_action_phase_codes.to_string_from_ptr();
+
+    runtime!().spawn(async move {
+        async fn internal_fn(
+            transport: Arc<dyn Transport>,
+            signed_message: String,
+            ignored_compute_phase_codes: String,
+            ignored_action_phase_codes: String,
+        ) -> Result<serde_json::Value, String> {
+            let signed_message = serde_json::from_str::<SignedMessage>(&signed_message).handle_error()?;
+            let ignored_compute_phase_codes: Vec<i32> = serde_json::from_str(&ignored_compute_phase_codes).handle_error()?;
+            let ignored_action_phase_codes: Vec<i32> = serde_json::from_str(&ignored_action_phase_codes).handle_error()?;
+
+            let config = transport
+                .get_blockchain_config(clock!().as_ref(), false)
+                .await
+                .handle_error()
+                .unwrap();
+
+            let mut transactions_tree =
+                nekoton::core::transactions_tree::TransactionsTreeStream::new(
+                    signed_message.message,
+                    config,
+                    transport,
+                    clock!(),
+                );
+
+            let errors = simulate_transaction_tree(
+                &mut transactions_tree,
+                &ignored_compute_phase_codes,
+                &ignored_action_phase_codes,
+            )
+            .await
+            .handle_error()
+            .unwrap();
+
+            let result = errors
+                .into_iter()
+                .map(|(address, error)| make_tx_tree_simulation_error(&address, &error))
+                .collect::<Result<Vec<_>, String>>()
+                .unwrap();
+
+            serde_json::to_value(result).handle_error()
+        }
+
+        async fn simulate_transaction_tree(
+            stream: &mut nekoton::core::transactions_tree::TransactionsTreeStream,
+            ignored_compute_phase_codes: &[i32],
+            ignored_action_phase_codes: &[i32],
+        ) -> Result<Vec<(ton_block::MsgAddressInt, TxTreeSimulationError)>, String> {
+            let mut result = Vec::new();
+            stream.disable_signature_check();
+            'stream: while let Some(tx) = stream.next().await.map_err(|e| e.to_string())? {
+                let address = 'address: {
+                    if let Some(in_msg) = &tx.in_msg {
+                        if let Some(dst) = in_msg.read_struct().map_err(|e| e.to_string())?.dst() {
+                            break 'address dst;
+                        }
+                    }
+                    continue 'stream;
+                };
+
+                if tx.end_status == ton_block::AccountStatus::AccStateFrozen {
+                    result.push((address, TxTreeSimulationError::Frozen));
+                    continue;
+                } else if tx.orig_status == ton_block::AccountStatus::AccStateFrozen
+                    && tx.end_status == ton_block::AccountStatus::AccStateNonexist
+                {
+                    result.push((address, TxTreeSimulationError::Deleted));
+                    continue;
+                }
+
+                let ton_block::TransactionDescr::Ordinary(descr) =
+                    tx.read_description().map_err(|e| e.to_string())?
+                else {
+                    continue;
+                };
+
+                if let ton_block::TrComputePhase::Vm(compute) = descr.compute_ph {
+                    if !compute.success && !ignored_compute_phase_codes.contains(&compute.exit_code)
+                    {
+                        result.push((
+                            address,
+                            TxTreeSimulationError::ComputePhase {
+                                code: compute.exit_code,
+                            },
+                        ));
+                        continue;
+                    }
+                }
+
+                if let Some(action) = descr.action {
+                    if !action.success && !ignored_action_phase_codes.contains(&action.result_code)
+                    {
+                        result.push((
+                            address,
+                            TxTreeSimulationError::ActionPhase {
+                                code: action.result_code,
+                            },
+                        ));
+                        continue;
+                    }
+                }
+            }
+            Ok(result)
+        }
+
+        let result = internal_fn(transport, signed_message, ignored_compute_phase_codes, ignored_action_phase_codes)
+            .await
+            .match_result();
+
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
+    });
+}
+
 pub unsafe fn match_transport(transport: *mut c_void, transport_type: &str) -> Arc<dyn Transport> {
     let transport_type = serde_json::from_str::<TransportType>(transport_type).unwrap();
 
@@ -355,4 +486,38 @@ pub unsafe fn match_transport(transport: *mut c_void, transport_type: &str) -> A
             gql_transport_from_native_ptr(transport).clone() as Arc<dyn Transport>
         },
     }
+}
+
+enum TxTreeSimulationError {
+    ComputePhase { code: i32 },
+    ActionPhase { code: i32 },
+    Frozen,
+    Deleted,
+}
+
+fn make_tx_tree_simulation_error(
+    address: &ton_block::MsgAddressInt,
+    error: &TxTreeSimulationError,
+) -> Result<serde_json::Value, String> {
+    let error = match error {
+        TxTreeSimulationError::ComputePhase { code } => serde_json::json!({
+            "type" : "compute_phase",
+            "code": *code,
+        }),
+        TxTreeSimulationError::ActionPhase { code } => serde_json::json!({
+            "type" : "action_phase",
+            "code": *code,
+        }),
+        TxTreeSimulationError::Frozen => serde_json::json!({
+            "type" : "frozen",
+        }),
+        TxTreeSimulationError::Deleted => serde_json::json!({
+            "type" : "deleted",
+        }),
+    };
+
+    Ok(serde_json::json!({
+        "address" : address.to_string(),
+        "error": error,
+    }))
 }
