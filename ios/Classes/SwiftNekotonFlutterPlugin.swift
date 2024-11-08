@@ -99,6 +99,8 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
     nt_transport_get_network_id(0, nil, nil);
 
+    nt_transport_simulate_transaction_tree(0, nil, nil, nil, nil, nil);
+
     nt_keystore_remove_key(0, nil, nil);
 
     nt_keystore_remove_keys(0, nil, nil);
@@ -202,6 +204,8 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
     nt_unsigned_message_hash(0, nil);
 
     nt_unsigned_message_sign(0, nil, nil);
+
+    nt_unsigned_message_sign_fake(0, nil);
 
     nt_unsigned_message_free_ptr(nil);
 

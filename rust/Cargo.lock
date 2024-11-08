@@ -810,7 +810,7 @@ dependencies = [
 
 [[package]]
 name = "nekoton-flutter"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "allo-isolate",
  "android_logger",

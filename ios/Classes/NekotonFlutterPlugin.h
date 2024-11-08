@@ -145,6 +145,8 @@ void nt_transport_get_signature_id(long long result_port, void *transport, char 
 
 void nt_transport_get_network_id(long long result_port, void *transport, char *transport_type);
 
+void nt_transport_simulate_transaction_tree(long long result_port, void *transport, char *transport_type, char *signed_message, char *ignored_compute_phase_codes, char *ignored_action_phase_codes);
+
 void nt_keystore_remove_key(long long result_port, void *keystore, char *public_key);
 
 void nt_keystore_remove_keys(long long result_port, void *keystore, char *public_keys);
@@ -321,6 +323,8 @@ void nt_unsigned_message_expire_at(long long result_port, void *unsigned_message
 void nt_unsigned_message_hash(long long result_port, void *unsigned_message);
 
 void nt_unsigned_message_sign(long long result_port, void *unsigned_message, char *signature);
+
+void nt_unsigned_message_sign_fake(long long result_port, void *unsigned_message);
 
 void nt_unsigned_message_free_ptr(void *ptr);
 

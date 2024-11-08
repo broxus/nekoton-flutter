@@ -20,13 +20,9 @@ help: makefile
 .PHONY: init
 init:
 	@if [ $$(uname) == "Darwin" ] ; then cargo +nightly install cargo-lipo ; fi
-	# rustup target add armv7-apple-ios armv7s-apple-ios i386-apple-ios ## deprecated
 	rustup target add aarch64-apple-ios x86_64-apple-ios --toolchain nightly
 	cargo install cargo-ndk
 	rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android --toolchain nightly
-	rustup target add aarch64-apple-darwin x86_64-apple-darwin --toolchain nightly
-	rustup target add x86_64-pc-windows-gnu --toolchain nightly
-	rustup target add x86_64-unknown-linux-gnu --toolchain nightly
 
 ## :
 
@@ -68,34 +64,6 @@ target/i686-linux-android/release/libnekoton_flutter.so: $(SOURCES)
 
 target/x86_64-linux-android/release/libnekoton_flutter.so: $(SOURCES)
 	cargo +nightly ndk --target x86_64 --output-dir ../android/src/main/jniLibs build --release
-	@echo "[DONE] $@"
-
-target/x86_64-apple-darwin/release/libnekoton_flutter.dylib: $(SOURCES)
-	@if [ $$(uname) == "Darwin" ] ; then \
-		cargo lipo --release --targets x86_64-apple-darwin ; \
-		install_name_tool -id @rpath/../Frameworks/libnekoton_flutter_x86_64.dylib $@ ; \
-		cp $@ ../macos/libnekoton_flutter_x86_64.dylib ; \
-		else echo "Skipping macOS compilation on $$(uname)" ; \
-	fi
-	@echo "[DONE] $@"
-
-target/aarch64-apple-darwin/release/libnekoton_flutter.dylib: $(SOURCES)
-	@if [ $$(uname) == "Darwin" ] ; then \
-		cargo lipo --release --targets aarch64-apple-darwin ; \
-		install_name_tool -id @rpath/../Frameworks/libnekoton_flutter_aarch64.dylib $@ ; \
-		cp $@ ../macos/libnekoton_flutter_aarch64.dylib ; \
-		else echo "Skipping macOS compilation on $$(uname)" ; \
-	fi
-	@echo "[DONE] $@"
-
-target/x86_64-pc-windows-gnu/release/nekoton_flutter.dll: $(SOURCES)
-	cargo build --target x86_64-pc-windows-gnu --release
-	cp $@ ../windows/include/nekoton_flutter.dll
-	@echo "[DONE] $@"
-
-target/x86_64-unknown-linux-gnu/release/libnekoton_flutter.so: $(SOURCES)
-	cargo build --target x86_64-unknown-linux-gnu --release ; \
-	cp $@ ../linux/include/libnekoton_flutter.so ; \
 	@echo "[DONE] $@"
 
 # ##############################################################################

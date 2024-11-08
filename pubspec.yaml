@@ -1,6 +1,6 @@
 name: nekoton_flutter
 description: Flutter plugin for TON wallets core
-version: 0.0.1
+version: 0.0.2
 homepage: "https://github.com/broxus/nekoton-flutter"
 
 environment:

@@ -2,7 +2,7 @@
 authors = ["Vadim Ledyaev <v.o.ledyaev@gmail.com>"]
 edition = "2021"
 name = "nekoton-flutter"
-version = "0.0.1"
+version = "0.0.2"
 
 [lib]
 crate-type = ["staticlib", "cdylib"]
