@@ -228,12 +228,68 @@ pub unsafe extern "C" fn nt_token_wallet_contract_state(
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn nt_token_wallet_estimate_min_attached_amount(
+    result_port: c_longlong,
+    token_wallet: *mut c_void,
+    destination: *mut c_char,
+    amount: *mut c_char,
+    notify_receiver: c_uint,
+    payload: *mut c_char,
+) {
+    let token_wallet = token_wallet_from_native_ptr(token_wallet);
+    let destination = destination.to_string_from_ptr();
+    let amount = amount.to_string_from_ptr();
+    let notify_receiver = notify_receiver != 0;
+    let payload = payload.to_optional_string_from_ptr();
+
+    runtime!().spawn(async move {
+        async fn internal_fn(
+            token_wallet: &TokenWallet,
+            destination: String,
+            amount: String,
+            notify_receiver: bool,
+            payload: Option<String>,
+        ) -> Result<serde_json::Value, String> {
+            let destination = parse_address(&destination)?;
+            let destination = TransferRecipient::OwnerWallet(destination);
+            let tokens = BigUint::from_str(&amount).handle_error()?;
+
+            let payload = match payload {
+                Some(payload) => create_boc_or_comment_payload(&payload)
+                    .handle_error()?
+                    .into_cell(),
+                None => ton_types::Cell::default(),
+            };
+
+            let amount = token_wallet
+                .estimate_min_attached_amount(destination, tokens, notify_receiver, payload)
+                .await
+                .handle_error()?
+                .to_string();
+
+            serde_json::to_value(amount).handle_error()
+        }
+
+        let token_wallet = token_wallet.read().await;
+
+        let result = internal_fn(&token_wallet, destination, amount, notify_receiver, payload)
+            .await
+            .match_result();
+
+        Isolate::new(result_port)
+            .post_with_result(result.to_ptr_address())
+            .unwrap();
+    });
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn nt_token_wallet_prepare_transfer(
     result_port: c_longlong,
     token_wallet: *mut c_void,
     destination: *mut c_char,
     tokens: *mut c_char,
     notify_receiver: c_uint,
+    attached_amount: *mut c_char,
     payload: *mut c_char,
 ) {
     let token_wallet = token_wallet_from_native_ptr(token_wallet);
@@ -241,6 +297,7 @@ pub unsafe extern "C" fn nt_token_wallet_prepare_transfer(
     let destination = destination.to_string_from_ptr();
     let tokens = tokens.to_string_from_ptr();
     let notify_receiver = notify_receiver != 0;
+    let attached_amount = attached_amount.to_optional_string_from_ptr();
     let payload = payload.to_optional_string_from_ptr();
 
     runtime!().spawn(async move {
@@ -249,6 +306,7 @@ pub unsafe extern "C" fn nt_token_wallet_prepare_transfer(
             destination: String,
             tokens: String,
             notify_receiver: bool,
+            attached_amount: Option<String>,
             payload: Option<String>,
         ) -> Result<serde_json::Value, String> {
             let destination = parse_address(&destination)?;
@@ -264,8 +322,13 @@ pub unsafe extern "C" fn nt_token_wallet_prepare_transfer(
                 None => ton_types::Cell::default(),
             };
 
+            let attached_amount = match attached_amount {
+                None => 400000000,
+                Some(amount) => amount.parse::<u64>().handle_error()?,
+            };
+
             let internal_message = token_wallet
-                .prepare_transfer(destination, tokens, notify_receiver, payload, 400000000)
+                .prepare_transfer(destination, tokens, notify_receiver, payload, attached_amount)
                 .handle_error()?;
 
             serde_json::to_value(internal_message).handle_error()
@@ -273,7 +336,7 @@ pub unsafe extern "C" fn nt_token_wallet_prepare_transfer(
 
         let token_wallet = token_wallet.read().await;
 
-        let result = internal_fn(&token_wallet, destination, tokens, notify_receiver, payload)
+        let result = internal_fn(&token_wallet, destination, tokens, notify_receiver, attached_amount, payload)
             .await
             .match_result();
 

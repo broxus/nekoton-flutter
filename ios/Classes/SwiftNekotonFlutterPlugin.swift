@@ -129,7 +129,9 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
 
     nt_token_wallet_contract_state(0, nil);
 
-    nt_token_wallet_prepare_transfer(0, nil, nil, nil, 0, nil);
+    nt_token_wallet_prepare_transfer(0, nil, nil, nil, 0, nil, nil);
+    
+    nt_token_wallet_estimate_min_attached_amount(0, nil, nil, nil, 0, nil);
 
     nt_token_wallet_refresh(0, nil);
 

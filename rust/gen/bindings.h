@@ -190,7 +190,15 @@ void nt_token_wallet_prepare_transfer(long long result_port,
                                       char *destination,
                                       char *tokens,
                                       unsigned int notify_receiver,
+                                      char *attached_amount,
                                       char *payload);
+
+void nt_token_wallet_estimate_min_attached_amount(long long result_port,
+                                                  void *token_wallet,
+                                                  char *destination,
+                                                  char *tokens,
+                                                  unsigned int notify_receiver,
+                                                  char *payload);
 
 void nt_token_wallet_refresh(long long result_port, void *token_wallet);
 
