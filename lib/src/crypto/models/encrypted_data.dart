@@ -5,7 +5,7 @@ part 'encrypted_data.freezed.dart';
 part 'encrypted_data.g.dart';
 
 @freezed
-class EncryptedData with _$EncryptedData {
+abstract class EncryptedData with _$EncryptedData {
   const factory EncryptedData({
     required EncryptionAlgorithm algorithm,
     required String sourcePublicKey,
@@ -14,5 +14,6 @@ class EncryptedData with _$EncryptedData {
     required String nonce,
   }) = _EncryptedData;
 
-  factory EncryptedData.fromJson(Map<String, dynamic> json) => _$EncryptedDataFromJson(json);
+  factory EncryptedData.fromJson(Map<String, dynamic> json) =>
+      _$EncryptedDataFromJson(json);
 }

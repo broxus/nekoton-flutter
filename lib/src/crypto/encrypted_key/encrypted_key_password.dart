@@ -7,7 +7,9 @@ part 'encrypted_key_password.freezed.dart';
 part 'encrypted_key_password.g.dart';
 
 @freezed
-class EncryptedKeyPassword with _$EncryptedKeyPassword implements ExportKeyInput, SignInput {
+abstract class EncryptedKeyPassword
+    with _$EncryptedKeyPassword
+    implements ExportKeyInput, SignInput {
   @JsonSerializable(fieldRename: FieldRename.snake)
   const factory EncryptedKeyPassword({
     required String publicKey,

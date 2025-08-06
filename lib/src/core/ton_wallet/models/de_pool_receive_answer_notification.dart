@@ -4,7 +4,8 @@ part 'de_pool_receive_answer_notification.freezed.dart';
 part 'de_pool_receive_answer_notification.g.dart';
 
 @freezed
-class DePoolReceiveAnswerNotification with _$DePoolReceiveAnswerNotification {
+abstract class DePoolReceiveAnswerNotification
+    with _$DePoolReceiveAnswerNotification {
   const factory DePoolReceiveAnswerNotification({
     required int errorCode,
     required String comment,

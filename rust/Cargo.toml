@@ -20,6 +20,8 @@ log-panics = "2.1.0"
 nekoton = { git = "https://github.com/broxus/nekoton.git", features = [
     "gql_transport",
     "jrpc_transport",
+    "proto_transport",
+    "extended_models",
 ] }
 nekoton-abi = { git = "https://github.com/broxus/nekoton.git" }
 nekoton-utils = { git = "https://github.com/broxus/nekoton.git" }
@@ -35,6 +37,8 @@ tokio = { version = "1.17.0", features = ["rt-multi-thread", "sync"] }
 ton_abi = { git = "https://github.com/broxus/ton-labs-abi" }
 ton_block = { git = "https://github.com/broxus/ton-labs-block.git", features = ["venom"] }
 ton_types = { git = "https://github.com/broxus/ton-labs-types.git" }
+ton_executor = { git = "https://github.com/broxus/ton-labs-executor" }
+ton_vm = { git = "https://github.com/broxus/ton-labs-vm.git" }
 
 log = "0.4.17"
 paste = "1.0.9"

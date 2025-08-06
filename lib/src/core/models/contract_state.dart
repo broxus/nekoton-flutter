@@ -6,7 +6,7 @@ part 'contract_state.freezed.dart';
 part 'contract_state.g.dart';
 
 @freezed
-class ContractState with _$ContractState {
+abstract class ContractState with _$ContractState {
   const factory ContractState({
     required String balance,
     required GenTimings genTimings,
@@ -15,5 +15,6 @@ class ContractState with _$ContractState {
     String? codeHash,
   }) = _ContractState;
 
-  factory ContractState.fromJson(Map<String, dynamic> json) => _$ContractStateFromJson(json);
+  factory ContractState.fromJson(Map<String, dynamic> json) =>
+      _$ContractStateFromJson(json);
 }

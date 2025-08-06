@@ -6,7 +6,7 @@ part 'known_payload.freezed.dart';
 part 'known_payload.g.dart';
 
 @Freezed(unionKey: 'type', unionValueCase: FreezedUnionCase.snake)
-class KnownPayload with _$KnownPayload {
+abstract class KnownPayload with _$KnownPayload {
   const factory KnownPayload.comment(String data) = _Comment;
 
   const factory KnownPayload.tokenOutgoingTransfer(TokenOutgoingTransfer data) =
@@ -14,5 +14,6 @@ class KnownPayload with _$KnownPayload {
 
   const factory KnownPayload.tokenSwapBack(TokenSwapBack data) = _TokenSwapBack;
 
-  factory KnownPayload.fromJson(Map<String, dynamic> json) => _$KnownPayloadFromJson(json);
+  factory KnownPayload.fromJson(Map<String, dynamic> json) =>
+      _$KnownPayloadFromJson(json);
 }

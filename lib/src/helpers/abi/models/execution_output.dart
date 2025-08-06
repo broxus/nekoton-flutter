@@ -5,11 +5,12 @@ part 'execution_output.freezed.dart';
 part 'execution_output.g.dart';
 
 @freezed
-class ExecutionOutput with _$ExecutionOutput {
+abstract class ExecutionOutput with _$ExecutionOutput {
   const factory ExecutionOutput({
     @JsonKey(includeIfNull: false) TokensObject? output,
     required int code,
   }) = _ExecutionOutput;
 
-  factory ExecutionOutput.fromJson(Map<String, dynamic> json) => _$ExecutionOutputFromJson(json);
+  factory ExecutionOutput.fromJson(Map<String, dynamic> json) =>
+      _$ExecutionOutputFromJson(json);
 }

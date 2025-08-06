@@ -4,7 +4,7 @@ part 'internal_message.freezed.dart';
 part 'internal_message.g.dart';
 
 @freezed
-class InternalMessage with _$InternalMessage {
+abstract class InternalMessage with _$InternalMessage {
   const factory InternalMessage({
     String? source,
     required String destination,
@@ -13,5 +13,6 @@ class InternalMessage with _$InternalMessage {
     required String body,
   }) = _InternalMessage;
 
-  factory InternalMessage.fromJson(Map<String, dynamic> json) => _$InternalMessageFromJson(json);
+  factory InternalMessage.fromJson(Map<String, dynamic> json) =>
+      _$InternalMessageFromJson(json);
 }

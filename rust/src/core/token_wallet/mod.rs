@@ -61,7 +61,7 @@ pub unsafe extern "C" fn nt_token_wallet_subscribe(
             ));
 
             let token_wallet =
-                TokenWallet::subscribe(clock!(), transport, owner, root_token_contract, handler)
+                TokenWallet::subscribe(clock!(), transport, owner, root_token_contract, handler, true)
                     .await
                     .handle_error()?;
 
@@ -324,11 +324,12 @@ pub unsafe extern "C" fn nt_token_wallet_prepare_transfer(
 
             let attached_amount = match attached_amount {
                 None => 400000000,
-                Some(amount) => amount.parse::<u64>().handle_error()?,
+                Some(amount) => amount.parse::<u128>().handle_error()?,
             };
 
             let internal_message = token_wallet
                 .prepare_transfer(destination, tokens, notify_receiver, payload, attached_amount)
+                .await
                 .handle_error()?;
 
             serde_json::to_value(internal_message).handle_error()

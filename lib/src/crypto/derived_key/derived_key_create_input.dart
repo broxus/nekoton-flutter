@@ -7,10 +7,14 @@ part 'derived_key_create_input.freezed.dart';
 part 'derived_key_create_input.g.dart';
 
 @Freezed(unionKey: 'type')
-class DerivedKeyCreateInput with _$DerivedKeyCreateInput implements CreateKeyInput {
-  const factory DerivedKeyCreateInput.import(DerivedKeyCreateInputImport data) = _Import;
+abstract class DerivedKeyCreateInput
+    with _$DerivedKeyCreateInput
+    implements CreateKeyInput {
+  const factory DerivedKeyCreateInput.import(DerivedKeyCreateInputImport data) =
+      _Import;
 
-  const factory DerivedKeyCreateInput.derive(DerivedKeyCreateInputDerive data) = _Derive;
+  const factory DerivedKeyCreateInput.derive(DerivedKeyCreateInputDerive data) =
+      _Derive;
 
   factory DerivedKeyCreateInput.fromJson(Map<String, dynamic> json) =>
       _$DerivedKeyCreateInputFromJson(json);

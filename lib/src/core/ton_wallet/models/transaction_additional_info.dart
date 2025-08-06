@@ -8,7 +8,7 @@ part 'transaction_additional_info.freezed.dart';
 part 'transaction_additional_info.g.dart';
 
 @Freezed(unionKey: 'type', unionValueCase: FreezedUnionCase.snake)
-class TransactionAdditionalInfo with _$TransactionAdditionalInfo {
+abstract class TransactionAdditionalInfo with _$TransactionAdditionalInfo {
   const factory TransactionAdditionalInfo.comment(String data) = _Comment;
 
   const factory TransactionAdditionalInfo.dePoolOnRoundComplete(
@@ -23,8 +23,8 @@ class TransactionAdditionalInfo with _$TransactionAdditionalInfo {
     TokenWalletDeployedNotification data,
   ) = _TokenWalletDeployed;
 
-  const factory TransactionAdditionalInfo.walletInteraction(WalletInteractionInfo data) =
-      _WalletInteraction;
+  const factory TransactionAdditionalInfo.walletInteraction(
+      WalletInteractionInfo data) = _WalletInteraction;
 
   factory TransactionAdditionalInfo.fromJson(Map<String, dynamic> json) =>
       _$TransactionAdditionalInfoFromJson(json);

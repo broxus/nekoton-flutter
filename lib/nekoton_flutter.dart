@@ -98,6 +98,7 @@ export 'src/crypto/ledger_key/ledger_update_key_input_rename.dart';
 export 'src/crypto/mnemonic/derive_from_phrase.dart';
 export 'src/crypto/mnemonic/generate_key.dart';
 export 'src/crypto/mnemonic/get_hints.dart';
+export 'src/crypto/mnemonic/models/bip39_mnemonic_data.dart';
 export 'src/crypto/mnemonic/models/generated_key.dart';
 export 'src/crypto/mnemonic/models/keypair.dart';
 export 'src/crypto/mnemonic/models/mnemonic_type.dart';

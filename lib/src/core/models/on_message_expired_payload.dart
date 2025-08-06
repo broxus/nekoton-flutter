@@ -6,7 +6,7 @@ part 'on_message_expired_payload.freezed.dart';
 part 'on_message_expired_payload.g.dart';
 
 @freezed
-class OnMessageExpiredPayload with _$OnMessageExpiredPayload {
+abstract class OnMessageExpiredPayload with _$OnMessageExpiredPayload {
   @JsonSerializable(
     fieldRename: FieldRename.snake,
     explicitToJson: true,

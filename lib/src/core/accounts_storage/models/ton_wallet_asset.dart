@@ -5,14 +5,15 @@ part 'ton_wallet_asset.freezed.dart';
 part 'ton_wallet_asset.g.dart';
 
 @freezed
-class TonWalletAsset with _$TonWalletAsset {
+abstract class TonWalletAsset with _$TonWalletAsset {
   const factory TonWalletAsset({
     required String address,
     required String publicKey,
     required WalletType contract,
   }) = _TonWalletAsset;
 
-  factory TonWalletAsset.fromJson(Map<String, dynamic> json) => _$TonWalletAssetFromJson(json);
+  factory TonWalletAsset.fromJson(Map<String, dynamic> json) =>
+      _$TonWalletAssetFromJson(json);
 
   const TonWalletAsset._();
 

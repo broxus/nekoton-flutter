@@ -4,7 +4,7 @@ part 'ton_wallet_details.freezed.dart';
 part 'ton_wallet_details.g.dart';
 
 @freezed
-class TonWalletDetails with _$TonWalletDetails {
+abstract class TonWalletDetails with _$TonWalletDetails {
   @JsonSerializable(fieldRename: FieldRename.snake)
   const factory TonWalletDetails({
     required bool requiresSeparateDeploy,
@@ -15,5 +15,6 @@ class TonWalletDetails with _$TonWalletDetails {
     required int? requiredConfirmations,
   }) = _TonWalletDetails;
 
-  factory TonWalletDetails.fromJson(Map<String, dynamic> json) => _$TonWalletDetailsFromJson(json);
+  factory TonWalletDetails.fromJson(Map<String, dynamic> json) =>
+      _$TonWalletDetailsFromJson(json);
 }

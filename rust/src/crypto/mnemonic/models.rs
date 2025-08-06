@@ -1,4 +1,4 @@
-use nekoton::crypto::{GeneratedKey, MnemonicType};
+use nekoton::crypto::{Bip39MnemonicData, GeneratedKey, MnemonicType};
 use nekoton_utils::{serde_public_key, serde_secret_key};
 use serde::{Deserialize, Serialize};
 
@@ -25,7 +25,7 @@ pub struct MnemonicTypeHelper(#[serde(with = "MnemonicTypeDef")] pub MnemonicTyp
 )]
 pub enum MnemonicTypeDef {
     Legacy,
-    Labs(u16),
+    Bip39(Bip39MnemonicData),
 }
 
 #[derive(Serialize)]

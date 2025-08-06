@@ -7,7 +7,9 @@ part 'key_store_entry.freezed.dart';
 part 'key_store_entry.g.dart';
 
 @freezed
-class KeyStoreEntry with _$KeyStoreEntry implements Comparable<KeyStoreEntry> {
+abstract class KeyStoreEntry
+    with _$KeyStoreEntry
+    implements Comparable<KeyStoreEntry> {
   @JsonSerializable(fieldRename: FieldRename.snake)
   const factory KeyStoreEntry({
     required String signerName,
@@ -17,13 +19,15 @@ class KeyStoreEntry with _$KeyStoreEntry implements Comparable<KeyStoreEntry> {
     required int accountId,
   }) = _KeyStoreEntry;
 
-  factory KeyStoreEntry.fromJson(Map<String, dynamic> json) => _$KeyStoreEntryFromJson(json);
+  factory KeyStoreEntry.fromJson(Map<String, dynamic> json) =>
+      _$KeyStoreEntryFromJson(json);
 
   const KeyStoreEntry._();
 
   bool get isLegacy => signerName == kEncryptedKeySignerName;
 
-  bool get isNotLegacy => signerName == kDerivedKeySignerName || signerName == kLedgerKeySignerName;
+  bool get isNotLegacy =>
+      signerName == kDerivedKeySignerName || signerName == kLedgerKeySignerName;
 
   bool get isMaster => publicKey == masterKey;
 

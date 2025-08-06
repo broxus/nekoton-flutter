@@ -5,7 +5,7 @@ part 'signed_data.freezed.dart';
 part 'signed_data.g.dart';
 
 @freezed
-class SignedData with _$SignedData {
+abstract class SignedData with _$SignedData {
   const factory SignedData({
     required String dataHash,
     required String signature,
@@ -13,5 +13,6 @@ class SignedData with _$SignedData {
     required SignatureParts signatureParts,
   }) = _SignedData;
 
-  factory SignedData.fromJson(Map<String, dynamic> json) => _$SignedDataFromJson(json);
+  factory SignedData.fromJson(Map<String, dynamic> json) =>
+      _$SignedDataFromJson(json);
 }

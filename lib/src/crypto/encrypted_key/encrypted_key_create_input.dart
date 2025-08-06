@@ -7,7 +7,9 @@ part 'encrypted_key_create_input.freezed.dart';
 part 'encrypted_key_create_input.g.dart';
 
 @freezed
-class EncryptedKeyCreateInput with _$EncryptedKeyCreateInput implements CreateKeyInput {
+abstract class EncryptedKeyCreateInput
+    with _$EncryptedKeyCreateInput
+    implements CreateKeyInput {
   const factory EncryptedKeyCreateInput({
     String? name,
     required String phrase,

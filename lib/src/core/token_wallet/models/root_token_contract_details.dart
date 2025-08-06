@@ -5,7 +5,7 @@ part 'root_token_contract_details.freezed.dart';
 part 'root_token_contract_details.g.dart';
 
 @freezed
-class RootTokenContractDetails with _$RootTokenContractDetails {
+abstract class RootTokenContractDetails with _$RootTokenContractDetails {
   @JsonSerializable(fieldRename: FieldRename.snake)
   const factory RootTokenContractDetails({
     required TokenWalletVersion version,

@@ -5,7 +5,7 @@ part 'derived_key_create_input_import.freezed.dart';
 part 'derived_key_create_input_import.g.dart';
 
 @freezed
-class DerivedKeyCreateInputImport with _$DerivedKeyCreateInputImport {
+abstract class DerivedKeyCreateInputImport with _$DerivedKeyCreateInputImport {
   @JsonSerializable(fieldRename: FieldRename.snake)
   const factory DerivedKeyCreateInputImport({
     String? keyName,

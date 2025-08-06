@@ -7,7 +7,7 @@ part 'ton_wallet_transaction_with_data.freezed.dart';
 part 'ton_wallet_transaction_with_data.g.dart';
 
 @freezed
-class TonWalletTransactionWithData
+abstract class TonWalletTransactionWithData
     with _$TonWalletTransactionWithData
     implements Comparable<TonWalletTransactionWithData> {
   const factory TonWalletTransactionWithData({

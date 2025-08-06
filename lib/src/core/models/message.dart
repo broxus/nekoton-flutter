@@ -4,7 +4,7 @@ part 'message.freezed.dart';
 part 'message.g.dart';
 
 @freezed
-class Message with _$Message {
+abstract class Message with _$Message {
   const factory Message({
     required String hash,
     String? src,
@@ -16,5 +16,6 @@ class Message with _$Message {
     String? bodyHash,
   }) = _Message;
 
-  factory Message.fromJson(Map<String, dynamic> json) => _$MessageFromJson(json);
+  factory Message.fromJson(Map<String, dynamic> json) =>
+      _$MessageFromJson(json);
 }

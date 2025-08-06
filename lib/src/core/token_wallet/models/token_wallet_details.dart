@@ -4,7 +4,7 @@ part 'token_wallet_details.freezed.dart';
 part 'token_wallet_details.g.dart';
 
 @freezed
-class TokenWalletDetails with _$TokenWalletDetails {
+abstract class TokenWalletDetails with _$TokenWalletDetails {
   const factory TokenWalletDetails({
     required String rootAddress,
     required String ownerAddress,

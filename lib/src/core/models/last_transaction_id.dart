@@ -4,7 +4,7 @@ part 'last_transaction_id.freezed.dart';
 part 'last_transaction_id.g.dart';
 
 @freezed
-class LastTransactionId with _$LastTransactionId {
+abstract class LastTransactionId with _$LastTransactionId {
   const factory LastTransactionId({
     required bool isExact,
     required String lt,

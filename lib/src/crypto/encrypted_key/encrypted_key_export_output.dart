@@ -6,7 +6,9 @@ part 'encrypted_key_export_output.freezed.dart';
 part 'encrypted_key_export_output.g.dart';
 
 @freezed
-class EncryptedKeyExportOutput with _$EncryptedKeyExportOutput implements ExportKeyOutput {
+abstract class EncryptedKeyExportOutput
+    with _$EncryptedKeyExportOutput
+    implements ExportKeyOutput {
   const factory EncryptedKeyExportOutput({
     required String phrase,
     required MnemonicType mnemonicType,

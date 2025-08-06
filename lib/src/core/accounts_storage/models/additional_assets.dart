@@ -6,12 +6,13 @@ part 'additional_assets.freezed.dart';
 part 'additional_assets.g.dart';
 
 @freezed
-class AdditionalAssets with _$AdditionalAssets {
+abstract class AdditionalAssets with _$AdditionalAssets {
   @JsonSerializable(fieldRename: FieldRename.snake)
   const factory AdditionalAssets({
     required List<TokenWalletAsset> tokenWallets,
     required List<DePoolAsset> depools,
   }) = _AdditionalAssets;
 
-  factory AdditionalAssets.fromJson(Map<String, dynamic> json) => _$AdditionalAssetsFromJson(json);
+  factory AdditionalAssets.fromJson(Map<String, dynamic> json) =>
+      _$AdditionalAssetsFromJson(json);
 }

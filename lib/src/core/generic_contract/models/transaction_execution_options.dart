@@ -4,7 +4,7 @@ part 'transaction_execution_options.freezed.dart';
 part 'transaction_execution_options.g.dart';
 
 @freezed
-class TransactionExecutionOptions with _$TransactionExecutionOptions {
+abstract class TransactionExecutionOptions with _$TransactionExecutionOptions {
   const factory TransactionExecutionOptions({
     required bool disableSignatureCheck,
     int? overrideBalance,

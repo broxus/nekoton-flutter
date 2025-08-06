@@ -19,6 +19,11 @@ pub struct WalletTypeHelper(#[serde(with = "WalletTypeDef")] pub WalletType);
 pub enum WalletTypeDef {
     Multisig(MultisigType),
     WalletV3,
+    WalletV3R1,
+    WalletV3R2,
+    WalletV4R1,
+    WalletV4R2,
+    WalletV5R1,
     HighloadWalletV2,
     EverWallet,
 }

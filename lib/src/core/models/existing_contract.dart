@@ -6,12 +6,13 @@ part 'existing_contract.freezed.dart';
 part 'existing_contract.g.dart';
 
 @freezed
-class ExistingContract with _$ExistingContract {
+abstract class ExistingContract with _$ExistingContract {
   const factory ExistingContract({
     required String account,
     required GenTimings timings,
     required LastTransactionId lastTransactionId,
   }) = _ExistingContract;
 
-  factory ExistingContract.fromJson(Map<String, dynamic> json) => _$ExistingContractFromJson(json);
+  factory ExistingContract.fromJson(Map<String, dynamic> json) =>
+      _$ExistingContractFromJson(json);
 }

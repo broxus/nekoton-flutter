@@ -6,7 +6,7 @@ part 'full_contract_state.freezed.dart';
 part 'full_contract_state.g.dart';
 
 @freezed
-class FullContractState with _$FullContractState {
+abstract class FullContractState with _$FullContractState {
   const factory FullContractState({
     required String balance,
     required GenTimings genTimings,

@@ -5,7 +5,7 @@ part 'account_to_add.freezed.dart';
 part 'account_to_add.g.dart';
 
 @freezed
-class AccountToAdd with _$AccountToAdd {
+abstract class AccountToAdd with _$AccountToAdd {
   const factory AccountToAdd({
     required String name,
     required String publicKey,
@@ -14,5 +14,6 @@ class AccountToAdd with _$AccountToAdd {
     String? explicitAddress,
   }) = _AccountToAdd;
 
-  factory AccountToAdd.fromJson(Map<String, dynamic> json) => _$AccountToAddFromJson(json);
+  factory AccountToAdd.fromJson(Map<String, dynamic> json) =>
+      _$AccountToAddFromJson(json);
 }

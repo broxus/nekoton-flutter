@@ -534,7 +534,7 @@ pub unsafe extern "C" fn nt_decode_transaction(
             None => return Ok(serde_json::Value::Null),
         };
 
-        let input = method.decode_input(in_msg_body, internal).handle_error()?;
+        let input = method.decode_input(in_msg_body, internal, false).handle_error()?;
         let input = nekoton_abi::make_abi_tokens(&input).handle_error()?;
 
         let ext_out_msgs = transaction
@@ -698,7 +698,7 @@ pub unsafe extern "C" fn nt_unpack_from_cell(
 }
 
 fn parse_contract_abi(contract_abi: &str) -> Result<ton_abi::Contract, String> {
-    ton_abi::Contract::load(contract_abi).handle_error()
+    ton_abi::Contract::load(contract_abi.as_bytes()).handle_error()
 }
 
 fn parse_method_name(value: Option<String>) -> Result<MethodName, String> {

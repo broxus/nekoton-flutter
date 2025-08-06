@@ -5,7 +5,7 @@ part 'tx_tree_simulation_error.freezed.dart';
 part 'tx_tree_simulation_error.g.dart';
 
 @freezed
-class TxTreeSimulationError with _$TxTreeSimulationError {
+abstract class TxTreeSimulationError with _$TxTreeSimulationError {
   const factory TxTreeSimulationError({
     required TxTreeSimulationErrorType type,
     num? code,

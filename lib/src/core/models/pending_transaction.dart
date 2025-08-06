@@ -4,7 +4,9 @@ part 'pending_transaction.freezed.dart';
 part 'pending_transaction.g.dart';
 
 @freezed
-class PendingTransaction with _$PendingTransaction implements Comparable<PendingTransaction> {
+abstract class PendingTransaction
+    with _$PendingTransaction
+    implements Comparable<PendingTransaction> {
   const factory PendingTransaction({
     required String messageHash,
     String? src,
@@ -17,5 +19,6 @@ class PendingTransaction with _$PendingTransaction implements Comparable<Pending
   const PendingTransaction._();
 
   @override
-  int compareTo(PendingTransaction other) => -expireAt.compareTo(other.expireAt);
+  int compareTo(PendingTransaction other) =>
+      -expireAt.compareTo(other.expireAt);
 }

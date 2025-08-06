@@ -6,7 +6,7 @@ part 'on_state_changed_payload.freezed.dart';
 part 'on_state_changed_payload.g.dart';
 
 @freezed
-class OnStateChangedPayload with _$OnStateChangedPayload {
+abstract class OnStateChangedPayload with _$OnStateChangedPayload {
   @JsonSerializable(
     fieldRename: FieldRename.snake,
     explicitToJson: true,

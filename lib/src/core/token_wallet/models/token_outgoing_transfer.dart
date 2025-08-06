@@ -5,7 +5,7 @@ part 'token_outgoing_transfer.freezed.dart';
 part 'token_outgoing_transfer.g.dart';
 
 @freezed
-class TokenOutgoingTransfer with _$TokenOutgoingTransfer {
+abstract class TokenOutgoingTransfer with _$TokenOutgoingTransfer {
   const factory TokenOutgoingTransfer({
     required TransferRecipient to,
     required String tokens,

@@ -4,7 +4,7 @@ part 'jrpc_network_settings.freezed.dart';
 part 'jrpc_network_settings.g.dart';
 
 @freezed
-class JrpcNetworkSettings with _$JrpcNetworkSettings {
+abstract class JrpcNetworkSettings with _$JrpcNetworkSettings {
   const factory JrpcNetworkSettings({
     required String endpoint,
   }) = _JrpcNetworkSettings;

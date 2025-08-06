@@ -7,7 +7,7 @@ part 'on_message_sent_payload.freezed.dart';
 part 'on_message_sent_payload.g.dart';
 
 @freezed
-class OnMessageSentPayload with _$OnMessageSentPayload {
+abstract class OnMessageSentPayload with _$OnMessageSentPayload {
   @JsonSerializable(
     fieldRename: FieldRename.snake,
     explicitToJson: true,

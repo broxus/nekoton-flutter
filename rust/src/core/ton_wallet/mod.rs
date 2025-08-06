@@ -605,7 +605,7 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_transfer(
 
             let destination = parse_address(&destination)?;
 
-            let amount = amount.parse::<u64>().handle_error()?;
+            let amount = amount.parse::<u128>().handle_error()?;
 
             let bounce = bounce != 0;
 
@@ -626,7 +626,7 @@ pub unsafe extern "C" fn nt_ton_wallet_prepare_transfer(
             };
 
             let action = ton_wallet
-                .prepare_transfer(&current_state, &public_key, gift, expiration)
+                .prepare_transfer(&current_state, &public_key, vec![gift], expiration)
                 .handle_error()?;
 
             let unsigned_message = match action {

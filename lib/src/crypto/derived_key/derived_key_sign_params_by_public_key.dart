@@ -5,7 +5,8 @@ part 'derived_key_sign_params_by_public_key.freezed.dart';
 part 'derived_key_sign_params_by_public_key.g.dart';
 
 @freezed
-class DerivedKeySignParamsByPublicKey with _$DerivedKeySignParamsByPublicKey {
+abstract class DerivedKeySignParamsByPublicKey
+    with _$DerivedKeySignParamsByPublicKey {
   @JsonSerializable(fieldRename: FieldRename.snake)
   const factory DerivedKeySignParamsByPublicKey({
     required String masterKey,

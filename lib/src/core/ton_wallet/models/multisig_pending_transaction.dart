@@ -4,7 +4,7 @@ part 'multisig_pending_transaction.freezed.dart';
 part 'multisig_pending_transaction.g.dart';
 
 @freezed
-class MultisigPendingTransaction with _$MultisigPendingTransaction {
+abstract class MultisigPendingTransaction with _$MultisigPendingTransaction {
   @JsonSerializable(fieldRename: FieldRename.snake)
   const factory MultisigPendingTransaction({
     required String id,

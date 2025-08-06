@@ -5,11 +5,12 @@ part 'decoded_input.freezed.dart';
 part 'decoded_input.g.dart';
 
 @freezed
-class DecodedInput with _$DecodedInput {
+abstract class DecodedInput with _$DecodedInput {
   const factory DecodedInput({
     required String method,
     required TokensObject input,
   }) = _DecodedInput;
 
-  factory DecodedInput.fromJson(Map<String, dynamic> json) => _$DecodedInputFromJson(json);
+  factory DecodedInput.fromJson(Map<String, dynamic> json) =>
+      _$DecodedInputFromJson(json);
 }

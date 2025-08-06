@@ -6,7 +6,7 @@ part 'existing_wallet_info.freezed.dart';
 part 'existing_wallet_info.g.dart';
 
 @freezed
-class ExistingWalletInfo with _$ExistingWalletInfo {
+abstract class ExistingWalletInfo with _$ExistingWalletInfo {
   const factory ExistingWalletInfo({
     required String address,
     required String publicKey,

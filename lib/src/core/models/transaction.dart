@@ -7,7 +7,7 @@ part 'transaction.freezed.dart';
 part 'transaction.g.dart';
 
 @freezed
-class Transaction with _$Transaction implements Comparable<Transaction> {
+sealed class Transaction with _$Transaction implements Comparable<Transaction> {
   const factory Transaction({
     required TransactionId id,
     TransactionId? prevTransactionId,
@@ -22,7 +22,8 @@ class Transaction with _$Transaction implements Comparable<Transaction> {
     required List<Message> outMessages,
   }) = _Transaction;
 
-  factory Transaction.fromJson(Map<String, dynamic> json) => _$TransactionFromJson(json);
+  factory Transaction.fromJson(Map<String, dynamic> json) =>
+      _$TransactionFromJson(json);
 
   const Transaction._();
 

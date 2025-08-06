@@ -5,7 +5,8 @@ part 'derived_key_update_params_change_password.freezed.dart';
 part 'derived_key_update_params_change_password.g.dart';
 
 @freezed
-class DerivedKeyUpdateParamsChangePassword with _$DerivedKeyUpdateParamsChangePassword {
+abstract class DerivedKeyUpdateParamsChangePassword
+    with _$DerivedKeyUpdateParamsChangePassword {
   @JsonSerializable(fieldRename: FieldRename.snake)
   const factory DerivedKeyUpdateParamsChangePassword({
     required String masterKey,
@@ -13,6 +14,7 @@ class DerivedKeyUpdateParamsChangePassword with _$DerivedKeyUpdateParamsChangePa
     required Password newPassword,
   }) = _DerivedKeyUpdateParamsChangePasswordChangePassword;
 
-  factory DerivedKeyUpdateParamsChangePassword.fromJson(Map<String, dynamic> json) =>
+  factory DerivedKeyUpdateParamsChangePassword.fromJson(
+          Map<String, dynamic> json) =>
       _$DerivedKeyUpdateParamsChangePasswordFromJson(json);
 }

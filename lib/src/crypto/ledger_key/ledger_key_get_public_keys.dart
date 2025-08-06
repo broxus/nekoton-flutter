@@ -5,7 +5,9 @@ part 'ledger_key_get_public_keys.freezed.dart';
 part 'ledger_key_get_public_keys.g.dart';
 
 @freezed
-class LedgerKeyGetPublicKeys with _$LedgerKeyGetPublicKeys implements GetPublicKeys {
+abstract class LedgerKeyGetPublicKeys
+    with _$LedgerKeyGetPublicKeys
+    implements GetPublicKeys {
   const factory LedgerKeyGetPublicKeys({
     required int offset,
     required int limit,
