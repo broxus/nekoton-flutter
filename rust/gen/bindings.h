@@ -185,6 +185,13 @@ void nt_token_wallet_balance(long long result_port, void *token_wallet);
 
 void nt_token_wallet_contract_state(long long result_port, void *token_wallet);
 
+void nt_token_wallet_estimate_min_attached_amount(long long result_port,
+                                                  void *token_wallet,
+                                                  char *destination,
+                                                  char *amount,
+                                                  unsigned int notify_receiver,
+                                                  char *payload);
+
 void nt_token_wallet_prepare_transfer(long long result_port,
                                       void *token_wallet,
                                       char *destination,
@@ -192,13 +199,6 @@ void nt_token_wallet_prepare_transfer(long long result_port,
                                       unsigned int notify_receiver,
                                       char *attached_amount,
                                       char *payload);
-
-void nt_token_wallet_estimate_min_attached_amount(long long result_port,
-                                                  void *token_wallet,
-                                                  char *destination,
-                                                  char *tokens,
-                                                  unsigned int notify_receiver,
-                                                  char *payload);
 
 void nt_token_wallet_refresh(long long result_port, void *token_wallet);
 
@@ -362,6 +362,10 @@ char *nt_ledger_connection_create(long long get_public_key_port, long long sign_
 
 void nt_ledger_connection_free_ptr(void *ptr);
 
+char *nt_proto_connection_create(long long port);
+
+void nt_proto_connection_free_ptr(void *ptr);
+
 char *nt_storage_create(long long get_port,
                         long long set_port,
                         long long set_unchecked_port,
@@ -472,7 +476,12 @@ void nt_transport_get_signature_id(long long result_port, void *transport, char 
 
 void nt_transport_get_network_id(long long result_port, void *transport, char *transport_type);
 
-void nt_transport_simulate_transaction_tree(long long result_port, void *transport, char *transport_type, char *signed_message, char *ignored_compute_phase_codes, char *ignored_action_phase_codes);
+void nt_transport_simulate_transaction_tree(long long result_port,
+                                            void *transport,
+                                            char *transport_type,
+                                            char *signed_message,
+                                            char *ignored_compute_phase_codes,
+                                            char *ignored_action_phase_codes);
 
 char *nt_gql_transport_create(void *gql_connection);
 
@@ -495,3 +504,7 @@ void nt_gql_transport_free_ptr(void *ptr);
 char *nt_jrpc_transport_create(void *jrpc_connection);
 
 void nt_jrpc_transport_free_ptr(void *ptr);
+
+char *nt_proto_transport_create(void *proto_connection);
+
+void nt_proto_transport_free_ptr(void *ptr);

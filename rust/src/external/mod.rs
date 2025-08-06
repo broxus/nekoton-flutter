@@ -1,6 +1,7 @@
 pub mod gql_connection;
 pub mod jrpc_connection;
 pub mod ledger_connection;
+pub mod proto_connection;
 pub mod storage;
 
 use std::os::raw::{c_char, c_void};

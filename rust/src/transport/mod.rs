@@ -24,14 +24,16 @@ use crate::{
             AccountsList, FullContractState, RawContractStateHelper, TransactionsList,
             TransportType,
         },
+        proto_transport::proto_transport_from_native_ptr,
     },
     HandleError, MatchResult, PostWithResult, ToOptionalStringFromPtr, ToPtrAddress,
-    ToStringFromPtr, RUNTIME, CLOCK,
+    ToStringFromPtr, CLOCK, RUNTIME,
 };
 
 mod gql_transport;
 mod jrpc_transport;
 pub mod models;
+mod proto_transport;
 
 #[no_mangle]
 pub unsafe extern "C" fn nt_transport_get_contract_state(
@@ -367,9 +369,12 @@ pub unsafe extern "C" fn nt_transport_simulate_transaction_tree(
             ignored_compute_phase_codes: String,
             ignored_action_phase_codes: String,
         ) -> Result<serde_json::Value, String> {
-            let signed_message = serde_json::from_str::<SignedMessage>(&signed_message).handle_error()?;
-            let ignored_compute_phase_codes: Vec<i32> = serde_json::from_str(&ignored_compute_phase_codes).handle_error()?;
-            let ignored_action_phase_codes: Vec<i32> = serde_json::from_str(&ignored_action_phase_codes).handle_error()?;
+            let signed_message =
+                serde_json::from_str::<SignedMessage>(&signed_message).handle_error()?;
+            let ignored_compute_phase_codes: Vec<i32> =
+                serde_json::from_str(&ignored_compute_phase_codes).handle_error()?;
+            let ignored_action_phase_codes: Vec<i32> =
+                serde_json::from_str(&ignored_action_phase_codes).handle_error()?;
 
             let config = transport
                 .get_blockchain_config(clock!().as_ref(), false)
@@ -465,9 +470,14 @@ pub unsafe extern "C" fn nt_transport_simulate_transaction_tree(
             Ok(result)
         }
 
-        let result = internal_fn(transport, signed_message, ignored_compute_phase_codes, ignored_action_phase_codes)
-            .await
-            .match_result();
+        let result = internal_fn(
+            transport,
+            signed_message,
+            ignored_compute_phase_codes,
+            ignored_action_phase_codes,
+        )
+        .await
+        .match_result();
 
         Isolate::new(result_port)
             .post_with_result(result.to_ptr_address())
@@ -484,6 +494,9 @@ pub unsafe fn match_transport(transport: *mut c_void, transport_type: &str) -> A
         },
         TransportType::Gql => {
             gql_transport_from_native_ptr(transport).clone() as Arc<dyn Transport>
+        },
+        TransportType::Proto => {
+            proto_transport_from_native_ptr(transport).clone() as Arc<dyn Transport>
         },
     }
 }

@@ -11,11 +11,13 @@ class NekotonRepository {
   final _storageMemoizer = AsyncMemoizer<Storage>();
   final _gqlConnectionMemoizer = AsyncMemoizer<GqlConnection>();
   final _jrpcConnectionMemoizer = AsyncMemoizer<JrpcConnection>();
+  final _protoConnectionMemoizer = AsyncMemoizer<ProtoConnection>();
   final _ledgerConnectionMemoizer = AsyncMemoizer<LedgerConnection>();
   final _keystoreMemoizer = AsyncMemoizer<Keystore>();
   final _accountsStorageMemoizer = AsyncMemoizer<AccountsStorage>();
   final _gqlTransportMemoizer = AsyncMemoizer<GqlTransport>();
   final _jrpcTransportMemoizer = AsyncMemoizer<JrpcTransport>();
+  final _protoTransportMemoizer = AsyncMemoizer<ProtoTransport>();
 
   NekotonRepository();
 
@@ -116,14 +118,42 @@ class NekotonRepository {
           name: 'Mainnet (ADNL)',
           networkId: 1,
           group: 'mainnet',
-          settings: const JrpcNetworkSettings(endpoint: 'https://jrpc.everwallet.net/rpc'),
+          settings: const JrpcNetworkSettings(
+              endpoint: 'https://jrpc.everwallet.net/rpc'),
         ),
       );
 
-  Future<LedgerConnection> get ledgerConnection => _ledgerConnectionMemoizer.runOnce(
+  Future<ProtoConnection> get protoConnection =>
+      _protoConnectionMemoizer.runOnce(
+        () => ProtoConnection(
+          post: ({
+            required endpoint,
+            required headers,
+            required data,
+          }) =>
+              http
+                  .post(
+                    Uri.parse(endpoint),
+                    headers: headers,
+                    body: data,
+                  )
+                  .then((v) => v.bodyBytes),
+          name: 'Mainnet (ADNL)',
+          networkId: 1,
+          group: 'mainnet',
+          settings: const ProtoNetworkSettings(
+            endpoint: 'https://jrpc.everwallet.net',
+          ),
+        ),
+      );
+
+  Future<LedgerConnection> get ledgerConnection =>
+      _ledgerConnectionMemoizer.runOnce(
         () {
-          final fakePublicKey = HEX.encode(List.generate(32, (index) => index).toList());
-          final fakeSignature = HEX.encode(List.generate(64, (index) => index).toList());
+          final fakePublicKey =
+              HEX.encode(List.generate(32, (index) => index).toList());
+          final fakeSignature =
+              HEX.encode(List.generate(64, (index) => index).toList());
 
           return LedgerConnection(
             getPublicKey: (accountId) async => fakePublicKey,
@@ -149,12 +179,15 @@ class NekotonRepository {
         ),
       );
 
-  Future<AccountsStorage> get accountsStorage =>
-      _accountsStorageMemoizer.runOnce(() async => AccountsStorage.create(await storage));
+  Future<AccountsStorage> get accountsStorage => _accountsStorageMemoizer
+      .runOnce(() async => AccountsStorage.create(await storage));
 
-  Future<GqlTransport> get gqlTransport =>
-      _gqlTransportMemoizer.runOnce(() async => GqlTransport(await gqlConnection));
+  Future<GqlTransport> get gqlTransport => _gqlTransportMemoizer
+      .runOnce(() async => GqlTransport(await gqlConnection));
 
-  Future<JrpcTransport> get jrpcTransport =>
-      _jrpcTransportMemoizer.runOnce(() async => JrpcTransport(await jrpcConnection));
+  Future<JrpcTransport> get jrpcTransport => _jrpcTransportMemoizer
+      .runOnce(() async => JrpcTransport(await jrpcConnection));
+
+  Future<ProtoTransport> get protoTransport => _protoTransportMemoizer
+      .runOnce(() async => ProtoTransport(await protoConnection));
 }

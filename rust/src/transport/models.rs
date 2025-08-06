@@ -12,6 +12,7 @@ use ton_block::MsgAddressInt;
 pub enum TransportType {
     Jrpc,
     Gql,
+    Proto,
 }
 
 #[derive(Serialize, Deserialize)]
