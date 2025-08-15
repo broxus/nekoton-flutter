@@ -316,5 +316,13 @@ public class SwiftNekotonFlutterPlugin: NSObject, FlutterPlugin {
     nt_jrpc_transport_create(nil);
 
     nt_jrpc_transport_free_ptr(nil);
+
+    nt_proto_connection_create(0);
+
+    nt_proto_connection_free_ptr(nil);
+
+    nt_proto_transport_create(nil);
+
+    nt_proto_transport_free_ptr(nil);
   }
 }

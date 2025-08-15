@@ -489,3 +489,13 @@ char *nt_jrpc_transport_create(void *jrpc_connection);
 void *nt_jrpc_transport_clone_ptr(void *ptr);
 
 void nt_jrpc_transport_free_ptr(void *ptr);
+
+char *nt_proto_connection_create(long long port);
+
+void nt_proto_connection_free_ptr(void *ptr);
+
+char *nt_proto_transport_create(void *proto_connection);
+
+void *nt_proto_transport_clone_ptr(void *ptr);
+
+void nt_proto_transport_free_ptr(void *ptr);
